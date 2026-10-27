@@ -1,0 +1,8 @@
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+# Test-mode login details stay on this machine only
+TEST_MODE.local.md
+.env*
+!.env.example

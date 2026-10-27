@@ -1,0 +1,135 @@
+<section class="divider" data-ch="2">
+  <div class="gridlines"></div><div class="beam"></div>
+  <p class="num pixel">02</p>
+  <h1>Company Structure &amp; Internal Operations</h1>
+  <p class="lede">How a founder-led Zebrain should be organised now, who it hires next, and the operating procedures that keep a small team fast without dropping things.</p>
+  <ul class="in"><li>2.1 Organisation and ownership</li><li>2.2 Hiring roadmap</li><li>2.3 Operating rhythm and decisions</li><li>2.4 Standard operating procedures</li><li>2.5 Vendors, partners and outsourcing</li><li>2.6 Remote work and onboarding</li><li>2.7 Legal documents and IP hygiene</li></ul>
+</section>
+
+<section>
+<h2 id="s2-1"><span class="n">2.1</span>Organisational structure and ownership</h2>
+<p>The current team size is not recorded anywhere this manual could check. <span class="tag u">Unknown</span> The structure below assumes <strong>one founder today</strong>, growing to about six people in 12 months. Each box is a <em>role</em>, not a person: at first the founder holds most of them, and the point of the chart is that every responsibility has exactly one named owner. <span class="tag r">Recommendation</span></p>
+<figure>
+<svg viewBox="0 0 700 300" font-family="Inter,Arial" font-size="11">
+  <defs><style>.b{fill:#fff;stroke:#3d7bff;stroke-width:1.4}.f{fill:#000;stroke:#000}.t{fill:#10131c;font-weight:600}.s{fill:#5a6275;font-size:9.5px}.w{fill:#fff;font-weight:600}.ln{stroke:#8a93a8;stroke-width:1.2;fill:none}.p{fill:#eef3ff;stroke:#3d7bff;stroke-dasharray:4 3}</style></defs>
+  <rect class="f" x="270" y="12" width="160" height="46" rx="8"/><text class="w" x="350" y="32" text-anchor="middle">Founder / CEO</text><text x="350" y="48" text-anchor="middle" fill="#b9c1d4" font-size="9.5">Strategy · Finance · Sales (now)</text>
+  <path class="ln" d="M350 58 V86 M70 86 H630 M70 86 V104 M210 86 V104 M350 86 V104 M490 86 V104 M630 86 V104"/>
+  <rect class="b" x="10" y="104" width="120" height="50" rx="8"/><text class="t" x="70" y="124" text-anchor="middle">CTO (founder now)</text><text class="s" x="70" y="140" text-anchor="middle">Platform · ML · Security</text>
+  <rect class="b" x="150" y="104" width="120" height="50" rx="8"/><text class="t" x="210" y="124" text-anchor="middle">Product &amp; Design</text><text class="s" x="210" y="140" text-anchor="middle">Roadmap · UX · Brand</text>
+  <rect class="b" x="290" y="104" width="120" height="50" rx="8"/><text class="t" x="350" y="124" text-anchor="middle">Growth</text><text class="s" x="350" y="140" text-anchor="middle">Marketing · Content</text>
+  <rect class="b" x="430" y="104" width="120" height="50" rx="8"/><text class="t" x="490" y="124" text-anchor="middle">Customer Success</text><text class="s" x="490" y="140" text-anchor="middle">Sales delivery · Support</text>
+  <rect class="b" x="570" y="104" width="120" height="50" rx="8"/><text class="t" x="630" y="124" text-anchor="middle">Finance &amp; Ops</text><text class="s" x="630" y="140" text-anchor="middle">Books · Legal · HR</text>
+  <path class="ln" d="M70 154 V182 M210 154 V182 M350 154 V182 M490 154 V182 M630 154 V182"/>
+  <rect class="p" x="10" y="182" width="120" height="58" rx="8"/><text class="t" x="70" y="202" text-anchor="middle">Hire #1 (M3)</text><text class="s" x="70" y="216" text-anchor="middle">Full-stack/ML engineer</text><text class="s" x="70" y="230" text-anchor="middle">Hire #4 (M10) DevOps</text>
+  <rect class="p" x="150" y="182" width="120" height="58" rx="8"/><text class="t" x="210" y="202" text-anchor="middle">Contract (M2)</text><text class="s" x="210" y="216" text-anchor="middle">Product designer</text><text class="s" x="210" y="230" text-anchor="middle">part-time</text>
+  <rect class="p" x="290" y="182" width="120" height="58" rx="8"/><text class="t" x="350" y="202" text-anchor="middle">Hire #3 (M8)</text><text class="s" x="350" y="216" text-anchor="middle">Growth marketer</text>
+  <rect class="p" x="430" y="182" width="120" height="58" rx="8"/><text class="t" x="490" y="202" text-anchor="middle">Hire #2 (M6)</text><text class="s" x="490" y="216" text-anchor="middle">Solutions &amp; success</text><text class="s" x="490" y="230" text-anchor="middle">(Business plan delivery)</text>
+  <rect class="p" x="570" y="182" width="120" height="58" rx="8"/><text class="t" x="630" y="202" text-anchor="middle">Outsourced</text><text class="s" x="630" y="216" text-anchor="middle">CA firm · Company secretary</text><text class="s" x="630" y="230" text-anchor="middle">Legal counsel</text>
+  <text x="10" y="272" class="s">Solid boxes: functions (one owner each). Dashed boxes: proposed hires and outsourced partners, with target month.</text>
+</svg>
+<figcaption><b>FIG 2.1</b>Proposed organisation chart, months 0–12. <span class="tag r">Recommendation</span></figcaption>
+</figure>
+
+<h3>Responsibility matrix (RACI)</h3>
+<table>
+<thead><tr><th>Responsibility</th><th>CEO</th><th>CTO</th><th>Product</th><th>Growth</th><th>Success</th><th>Finance</th></tr></thead>
+<tbody>
+<tr><td>Strategy, fundraising, investor updates</td><td>A/R</td><td>C</td><td>C</td><td>C</td><td>I</td><td>C</td></tr>
+<tr><td>Roadmap and prioritisation</td><td>A</td><td>C</td><td>R</td><td>C</td><td>C</td><td>I</td></tr>
+<tr><td>Training job, tester, model quality</td><td>I</td><td>A/R</td><td>C</td><td>I</td><td>C</td><td>I</td></tr>
+<tr><td>Security, keys, incidents</td><td>I</td><td>A/R</td><td>I</td><td>I</td><td>C</td><td>I</td></tr>
+<tr><td>Brand, website, content</td><td>C</td><td>I</td><td>C</td><td>A/R</td><td>I</td><td>I</td></tr>
+<tr><td>Business-plan delivery</td><td>A</td><td>C</td><td>I</td><td>I</td><td>R</td><td>I</td></tr>
+<tr><td>Support queue and SLAs</td><td>I</td><td>C</td><td>I</td><td>I</td><td>A/R</td><td>I</td></tr>
+<tr><td>Books, GST, payroll, compliance</td><td>A</td><td>I</td><td>I</td><td>I</td><td>I</td><td>R</td></tr>
+</tbody></table>
+<p class="small">R = does the work · A = accountable, makes the final call · C = consulted · I = informed. Exactly one A per row.</p>
+
+<h2 id="s2-2"><span class="n">2.2</span>Hiring roadmap and key job descriptions</h2>
+<table>
+<thead><tr><th style="width:12mm">When</th><th style="width:36mm">Role</th><th>Why then</th><th class="n">Monthly cost (₹)</th></tr></thead>
+<tbody>
+<tr><td>M2</td><td>Product designer (contract, 40%)</td><td>Onboarding is the main conversion risk (three external accounts).</td><td class="n">40,000</td></tr>
+<tr><td>M3</td><td>Full-stack / ML engineer</td><td>Hosting, payments and paid GPUs can't all be built by one person.</td><td class="n">1,20,000</td></tr>
+<tr><td>M6</td><td>Solutions &amp; customer success</td><td>Business pilots need a dedicated owner.</td><td class="n">70,000</td></tr>
+<tr><td>M8</td><td>Growth marketer</td><td>After the message and ICP are validated, not before.</td><td class="n">80,000</td></tr>
+<tr><td>M10</td><td>DevOps / SRE (part-time to start)</td><td>Hosting reliability once paying customers depend on it.</td><td class="n">60,000</td></tr>
+</tbody></table>
+<p class="small"><span class="tag i">Illustrative</span> Costs are placeholder Bengaluru-market figures for planning only. Benchmark against current offers before hiring.</p>
+<div class="cols">
+<div class="tpl"><h3>JD · Full-stack / ML engineer</h3>
+<p><strong>Mission:</strong> make every Zebrain model train, test and serve reliably at lower cost.</p>
+<ul><li>Own the Python job (<code>zebrain_train.py</code>): data checks, QLoRA, tester, serving.</li><li>Build paid GPU training and hosting.</li><li>Next.js/TypeScript API routes, Supabase, CI.</li></ul>
+<p><strong>Must:</strong> PyTorch, Hugging Face transformers/PEFT, TypeScript, SQL. <strong>Nice:</strong> vLLM/TGI, GPU cost tuning.</p>
+<p><strong>90-day outcome:</strong> hosting for ≤3B models live with under 1% failed requests.</p></div>
+<div class="tpl"><h3>JD · Solutions &amp; customer success</h3>
+<p><strong>Mission:</strong> turn Business-plan clients into happy, renewing customers.</p>
+<ul><li>Run discovery calls, collect FAQs and documents, write test questions with the client.</li><li>Use Zebrain to build, fix and Testify client models, then go live.</li><li>Own onboarding, support SLAs and renewals.</li></ul>
+<p><strong>Must:</strong> clear writing, client handling, comfort with data. <strong>Nice:</strong> SQL, chatbot deployments.</p>
+<p><strong>90-day outcome:</strong> 5 live clients, average CSAT 4.5/5 or higher.</p></div>
+</div>
+
+<h2 id="s2-3"><span class="n">2.3</span>Operating rhythm, communication and decisions</h2>
+<table>
+<thead><tr><th style="width:34mm">Ritual</th><th style="width:22mm">Cadence</th><th>Purpose and output</th></tr></thead>
+<tbody>
+<tr><td>Daily async check-in</td><td>Daily, written</td><td>Yesterday / today / blocked, in one Slack thread. No meeting.</td></tr>
+<tr><td>Weekly planning</td><td>Monday, 45 min</td><td>Review KPIs (Appendix A17), commit the week's top 3 outcomes per owner.</td></tr>
+<tr><td>Demo &amp; retro</td><td>Friday, 30 min</td><td>Show shipped work on a real model. One improvement for next week.</td></tr>
+<tr><td>Monthly business review</td><td>First Tuesday</td><td>P&amp;L, runway, funnel, model quality, risks. Written memo first.</td></tr>
+<tr><td>Quarterly planning</td><td>Quarterly</td><td>OKRs, budget re-forecast, hiring decisions.</td></tr>
+</tbody></table>
+<h3>Decision rules</h3>
+<ul>
+<li><strong>Two-way doors</strong> (reversible: copy, UI, prompts): the owner decides and tells the team.</li>
+<li><strong>One-way doors</strong> (pricing, data handling, contracts, hires, anything touching user keys): a written one-page decision record (context, options, decision, owner, review date), stored in <code>/decisions</code> in the repo.</li>
+<li><strong>Approvals:</strong> spend under ₹25,000 needs the budget owner. ₹25,000–₹2,00,000 needs CEO approval. Over ₹2,00,000 needs CEO plus a second signatory or a board note (§3.10).</li>
+</ul>
+<h3>Documentation and tools</h3>
+<p><span class="tag r">Recommendation</span> One home for each kind of knowledge: code and technical decisions in the Git repository; specs, SOPs and meeting notes in a shared docs space; tasks in a single tracker (Linear or GitHub Projects); customer conversations in the CRM (§8.3). If it isn't written down in its home, it didn't happen.</p>
+<h3>Project management and accountability</h3>
+<p>Every task has one owner, a due date and a definition of done. Work is planned in 2-week cycles (§6.2). Slipped commitments are discussed at the retro, without blame, and the plan is re-cut rather than silently extended.</p>
+
+<h2 id="s2-4"><span class="n">2.4</span>Standard operating procedures</h2>
+<table>
+<thead><tr><th style="width:38mm">SOP</th><th>Trigger → steps → done</th><th style="width:20mm">Owner</th></tr></thead>
+<tbody>
+<tr><td>New user activation check</td><td>Sign-up without a trained model after 48 h → check whether Connect failed (Kaggle phone verification is the usual blocker) → send a targeted help email → log the reason in the CRM.</td><td>Success</td></tr>
+<tr><td>Failed run triage</td><td>Run ends in error → read the stage and message in <code>/runs</code> → classify (user account / data / Zebrain bug / Kaggle) → if Zebrain's fault, file a bug at the right severity (§6.5) and credit the user once paid runs exist.</td><td>CTO</td></tr>
+<tr><td>Business client delivery</td><td>Signed SOW → kickoff → collect data → write 25+ acceptance questions with the client → train → Testify → client UAT → go live → 30-day review.</td><td>Success</td></tr>
+<tr><td>Release</td><td>See release checklist (§6.3).</td><td>CTO</td></tr>
+<tr><td>Key/security incident</td><td>See incident checklist (Appendix A15).</td><td>CTO</td></tr>
+<tr><td>Month-end close</td><td>See §3.5.</td><td>Finance</td></tr>
+</tbody></table>
+
+<h2 id="s2-5"><span class="n">2.5</span>Vendors, procurement, partnerships and outsourcing</h2>
+<table>
+<thead><tr><th>Vendor</th><th>Used for</th><th>Status</th><th>Risk and mitigation</th></tr></thead>
+<tbody>
+<tr><td>Kaggle (Google)</td><td>Free T4 GPU for user jobs, via users' own accounts</td><td><span class="tag v">Verified</span></td><td>Terms and quota changes. Get a legal opinion. Keep the paid GPU fallback.</td></tr>
+<tr><td>Hugging Face</td><td>Model repos, private state repo, static chat Space</td><td><span class="tag v">Verified</span></td><td>Gradio/Docker Spaces need PRO. Static Space used instead.</td></tr>
+<tr><td>Google Gemini API</td><td>Planning, data review, grading, Testify</td><td><span class="tag v">Verified</span></td><td>Free-tier data terms <sup class="c">[9]</sup>, overload/503s. Probing and fallback built.</td></tr>
+<tr><td>Supabase</td><td>Auth, Postgres, row-level security (Mumbai region)</td><td><span class="tag v">Verified</span></td><td>Move to a paid plan with backups and PITR before launch.</td></tr>
+<tr><td>Vercel</td><td>Web hosting (planned in README)</td><td><span class="tag a">Assumption</span></td><td>Function timeouts. <code>/api/plan</code> needs up to 300 s.</td></tr>
+<tr><td>Razorpay / Stripe</td><td>Payments</td><td><span class="tag r">Recommendation</span></td><td>Razorpay for INR plus GST invoices. Stripe for international customers later.</td></tr>
+<tr><td>GPU cloud (TBD)</td><td>Paid training and hosting</td><td><span class="tag u">Unknown</span></td><td>Shortlist 3 providers. Compare $/hour, availability, India latency, DPA.</td></tr>
+</tbody></table>
+<p><strong>Procurement rule:</strong> any vendor that will receive user data needs a signed data processing agreement (DPA) and an entry in the vendor register (name, data shared, region, DPA link, owner, renewal date). <span class="tag r">Recommendation</span></p>
+
+<h2 id="s2-6"><span class="n">2.6</span>Remote operations and onboarding</h2>
+<p><span class="tag r">Recommendation</span> Remote-first with a monthly in-person day. New-hire onboarding:</p>
+<ul class="checklist">
+<li>Day 0: signed offer, NDA and IP assignment (§2.7), company accounts, password manager, 2FA everywhere.</li>
+<li>Day 1: read this manual's chapters 1, 4 and 6. Set up the dev environment (<code>npm install</code>, <code>npm run dev</code>, Python job tests).</li>
+<li>Day 2–3: train, chat with, fix and Testify your own model end to end as a user. Write down every point of friction.</li>
+<li>Week 1: ship one small fix to production with a reviewed PR.</li>
+<li>Day 30 / 60 / 90: check-ins against the role's 90-day outcome.</li>
+</ul>
+
+<h2 id="s2-7"><span class="n">2.7</span>Legal documentation, IP and contracts</h2>
+<ul>
+<li><strong>IP assignment:</strong> every founder, employee and contractor signs an invention/IP assignment, so all of Zebrain's code (including <code>zebrain_train.py</code>) belongs to the company. <span class="tag r">Recommendation</span> Founders assign pre-incorporation code to the company at incorporation.</li>
+<li><strong>Third-party licences:</strong> keep a register of model and dataset licences. Base models carry their own licences (e.g. Qwen2.5-Coder-1.5B-Instruct is Apache-2.0 <sup class="c">[11]</sup>; Llama fine-tunes must carry "Built with Llama" and a <code>llama-</code> name prefix, which the job already does <sup class="c">[10]</sup>). The planner prefers open-licensed datasets. <span class="tag v">Verified</span></li>
+<li><strong>Contract set:</strong> Terms of Service, Privacy Policy, DPA, Business-plan MSA + SOW, contractor agreement, employment agreement, NDA. See Chapter 9.</li>
+</ul>
+</section>

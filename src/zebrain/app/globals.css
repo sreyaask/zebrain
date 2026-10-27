@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --font-body: "Inter";
+  --font-mono: "Geist Mono";
+  --font-pixel: "Silkscreen";
+}
+body { @apply bg-ink text-paper font-sans antialiased; }
+:focus-visible { outline: 2px solid #3d7bff; outline-offset: 2px; }
+
+@layer components {
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#5a8fff] disabled:cursor-not-allowed disabled:opacity-40; }
+  .btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-full border border-line bg-transparent px-5 py-2.5 text-sm font-medium text-paper transition-colors hover:border-paper/60 disabled:cursor-not-allowed disabled:opacity-40; }
+  .input { @apply w-full rounded-lg border border-line bg-panel px-3 py-2.5 text-sm text-paper placeholder:text-mute focus:border-accent focus:outline-none; }
+  .label { @apply mb-1.5 block text-[13px] text-mute; }
+  /* Toggle buttons (one choice from a set). aria-pressed carries the state. */
+  .chip { @apply rounded-full border border-line px-3.5 py-1.5 text-sm transition-colors hover:border-paper/60; }
+  .chip-on { @apply border-accent bg-accent text-white; }
+  .link { @apply underline decoration-line underline-offset-4 transition-colors hover:decoration-paper; }
+  /* Pixel lettering for a few emphasised words, as on the brand's hero. */
+  .pixel { @apply font-pixel font-normal uppercase tracking-[0.06em]; }
+}
+
+/* The brand light beam: a bright blue band falling from the top left into black. */
+.beam {
+  background:
+    radial-gradient(28% 75% at 6% 0%, rgba(165, 215, 255, 0.95) 0%, rgba(95, 165, 255, 0.75) 30%, rgba(40, 90, 240, 0.3) 62%, transparent 80%),
+    radial-gradient(22% 60% at 16% 10%, rgba(120, 190, 255, 0.45) 0%, transparent 75%),
+    radial-gradient(50% 65% at 100% 0%, rgba(50, 95, 255, 0.8) 0%, rgba(25, 50, 190, 0.35) 40%, transparent 70%),
+    linear-gradient(180deg, #050a26 0%, #02040f 55%, #000 100%);
+}
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ---------- Landing page motion. One orchestrated load sequence, then motion only in answer to the user.
+   Everything here is transform/opacity (GPU-cheap); the reduced-motion rule above turns it all off. ---------- */
+
+/* The beam slowly drifts and breathes behind the hero. */
+.beam-drift { position: relative; isolation: isolate; overflow: hidden; }
+.beam-drift::before {
+  content: ""; position: absolute; inset: -20% -10% auto -10%; height: 120%; z-index: -1; pointer-events: none;
+  background: radial-gradient(30% 60% at 10% 0%, rgba(140, 200, 255, 0.35), transparent 70%),
+              radial-gradient(35% 55% at 90% 5%, rgba(61, 123, 255, 0.35), transparent 70%);
+  filter: blur(30px);
+  animation: zb-drift 14s ease-in-out infinite alternate;
+}
+@keyframes zb-drift {
+  from { transform: translate3d(-3%, -2%, 0) scale(1); opacity: 0.75; }
+  to { transform: translate3d(4%, 3%, 0) scale(1.08); opacity: 1; }
+}
+
+/* Headline words rise in, one after another. */
+.zb-word { display: inline-block; opacity: 0; transform: translateY(0.6em); animation: zb-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+@keyframes zb-rise { to { opacity: 1; transform: none; } }
+.zb-fade { opacity: 0; animation: zb-rise 800ms cubic-bezier(0.16, 1, 0.3, 1) forwards; transform: translateY(12px); }
+
+/* The prompt box: a light ring circles it while it has focus or text. */
+@property --zb-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.zb-shell { position: relative; border-radius: 22px; padding: 1.5px; background: rgba(255, 255, 255, 0.14); transition: background 300ms; }
+.zb-shell::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; opacity: 0; transition: opacity 400ms;
+  background: conic-gradient(from var(--zb-angle), transparent 0 55%, #3d7bff 70%, #a5d7ff 78%, #3d7bff 86%, transparent 95%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: zb-spin 3.2s linear infinite;
+}
+.zb-shell::after {
+  content: ""; position: absolute; inset: -18px; border-radius: 40px; z-index: -1; opacity: 0; transition: opacity 500ms;
+  background: radial-gradient(60% 60% at 50% 50%, rgba(61, 123, 255, 0.28), transparent 70%); filter: blur(10px);
+}
+.zb-shell:focus-within::before, .zb-shell[data-filled="true"]::before { opacity: 1; }
+.zb-shell:focus-within::after { opacity: 1; }
+@keyframes zb-spin { to { --zb-angle: 360deg; } }
+/* Sending: a flash runs along the box. */
+.zb-shell[data-sending="true"]::after { opacity: 1; animation: zb-pulse 450ms ease-out; }
+@keyframes zb-pulse { from { transform: scale(0.96); } to { transform: scale(1.04); opacity: 0; } }
+
+.zb-caret { display: inline-block; width: 1px; height: 1.1em; margin-left: 1px; vertical-align: -0.15em; background: #a5d7ff; animation: zb-blink 1s steps(1) infinite; }
+@keyframes zb-blink { 50% { opacity: 0; } }
+
+/* Send button: wakes up when there's text, the arrow launches on send. */
+.zb-send { transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 200ms, opacity 200ms, box-shadow 300ms; }
+.zb-send:not(:disabled):hover { transform: scale(1.06); box-shadow: 0 0 0 6px rgba(61, 123, 255, 0.18); }
+.zb-send:not(:disabled):active { transform: scale(0.94); }
+.zb-send:not(:disabled) .zb-arrow { animation: zb-nudge 1.6s ease-in-out infinite; }
+@keyframes zb-nudge { 0%, 70%, 100% { transform: none; } 80% { transform: translateY(-3px); } }
+.zb-send[data-sending="true"] .zb-arrow { animation: zb-launch 380ms cubic-bezier(0.55, 0, 1, 0.45) forwards; }
+@keyframes zb-launch { to { transform: translateY(-28px) scale(0.6); opacity: 0; } }
+.zb-send[data-sending="true"] .zb-ring { opacity: 1; animation: zb-spin-r 700ms linear infinite; }
+.zb-ring { opacity: 0; transition: opacity 150ms; }
+@keyframes zb-spin-r { to { transform: rotate(360deg); } }
+
+/* Live run demo lines and its training bar. */
+.zb-line { opacity: 0; transform: translateX(-6px); transition: opacity 350ms, transform 350ms cubic-bezier(0.16, 1, 0.3, 1); }
+.zb-line[data-on="true"] { opacity: 1; transform: none; }
+.zb-bar { transform-origin: left; transform: scaleX(0); transition: transform 1.6s cubic-bezier(0.65, 0, 0.35, 1); }
+.zb-line[data-on="true"] .zb-bar { transform: scaleX(1); }
+
+/* Scroll reveal for the steps, with the joining line drawing down. */
+.zb-reveal { opacity: 0; transform: translateY(14px); transition: opacity 600ms, transform 600ms cubic-bezier(0.16, 1, 0.3, 1); }
+.zb-reveal[data-in="true"] { opacity: 1; transform: none; }
+.zb-track { transform-origin: top; transform: scaleY(0); transition: transform 1.4s cubic-bezier(0.65, 0, 0.35, 1); }
+.zb-track[data-in="true"] { transform: scaleY(1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .zb-word, .zb-fade, .zb-line, .zb-reveal { opacity: 1 !important; transform: none !important; }
+  .zb-bar, .zb-track { transform: none !important; }
+}

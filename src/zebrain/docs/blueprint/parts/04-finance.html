@@ -1,0 +1,263 @@
+<section class="divider" data-ch="3">
+  <div class="gridlines"></div><div class="beam"></div>
+  <p class="num pixel">03</p>
+  <h1>Accounting, Finance &amp; Financial Management</h1>
+  <p class="lede">A practical finance operating system for a pre-revenue Indian SaaS company: books, revenue rules, closing, statements, unit economics, forecasting, controls and tax.</p>
+  <ul class="in"><li>3.1 Assumptions and principles</li><li>3.2 Chart of accounts</li><li>3.3 Bookkeeping and transactions</li><li>3.4 Revenue recognition</li><li>3.5 Payables, receivables, closing</li><li>3.6 Unit economics</li><li>3.7 Financial statements</li><li>3.8 Cash, runway and scenarios</li><li>3.9 Fundraising and equity</li><li>3.10 Controls and fraud prevention</li><li>3.11 Tax and compliance</li></ul>
+</section>
+
+<section>
+<h2 id="s3-1"><span class="n">3.1</span>Assumptions and principles</h2>
+<div class="box u"><span class="tag u">Unknown</span><p>No company financials exist in any source this manual could check: no bank balance, revenue, payroll or entity details. <strong>Every number in this chapter is illustrative.</strong> It exists to show the method and to be replaced by real figures.</p></div>
+<table>
+<thead><tr><th>Planning assumption</th><th class="n">Value</th><th>Basis</th></tr></thead>
+<tbody>
+<tr><td>Entity and jurisdiction</td><td class="n">Indian Pvt Ltd</td><td><span class="tag a">Assumption</span> INR pricing, GST copy and a Mumbai database region in the product <sup class="c">[1][2]</sup></td></tr>
+<tr><td>Exchange rate</td><td class="n">$1 = ₹88</td><td><span class="tag a">Assumption</span> Planning rate only. Update monthly.</td></tr>
+<tr><td>Paid GPU cost: L40S / H100</td><td class="n">$1.10 / $2.60 per hour</td><td><span class="tag a">Assumption</span> All-in (compute, storage, idle). Confirm with the chosen provider.</td></tr>
+<tr><td>Hosting compute per model per month: Starter / Pro (1.5B)</td><td class="n">₹150 / ₹400</td><td><span class="tag a">Assumption</span> Shared serverless GPU with scale-to-zero</td></tr>
+<tr><td>Payment gateway fee</td><td class="n">2% of revenue</td><td><span class="tag a">Assumption</span> Typical domestic card/UPI pricing. Confirm with the gateway.</td></tr>
+<tr><td>Starting cash</td><td class="n">₹10,00,000</td><td><span class="tag i">Illustrative</span></td></tr>
+<tr><td>Monthly logo churn (hosting)</td><td class="n">6%</td><td><span class="tag a">Assumption</span> Replace after 3 months of data</td></tr>
+<tr><td>Blended CAC (self-serve hosting)</td><td class="n">₹1,500</td><td><span class="tag a">Assumption</span></td></tr>
+</tbody></table>
+<p><strong>Principles:</strong> books are kept on the accrual basis from day one. One bank account is used for business only. Every transaction has a document. The books close by the 7th working day of each month. A chartered accountant (CA) reviews them quarterly, and they are audited annually as Indian company law requires <span class="tag a">Assumption: confirm with CA</span>.</p>
+
+<h2 id="s3-2"><span class="n">3.2</span>Chart of accounts</h2>
+<table>
+<thead><tr><th style="width:14mm">Code</th><th>Account</th><th>Use at Zebrain</th></tr></thead>
+<tbody>
+<tr><td colspan="3"><strong>1000 Assets</strong></td></tr>
+<tr><td>1010</td><td>Bank: operating (INR)</td><td>All receipts and payments</td></tr>
+<tr><td>1020</td><td>Payment gateway clearing</td><td>Razorpay balance before settlement</td></tr>
+<tr><td>1100</td><td>Accounts receivable</td><td>Business-plan invoices</td></tr>
+<tr><td>1200</td><td>GST input tax credit</td><td>GST paid on vendor bills</td></tr>
+<tr><td>1210</td><td>TDS receivable</td><td>Tax deducted by clients</td></tr>
+<tr><td>1300</td><td>Prepaid expenses</td><td>Annual SaaS tools, domain</td></tr>
+<tr><td>1500</td><td>Computer equipment</td><td>Laptops (depreciated)</td></tr>
+<tr><td colspan="3"><strong>2000 Liabilities</strong></td></tr>
+<tr><td>2010</td><td>Accounts payable</td><td>Vendor bills due</td></tr>
+<tr><td>2100</td><td>GST output payable</td><td>GST charged to customers</td></tr>
+<tr><td>2110</td><td>TDS payable</td><td>Deducted from contractor/salary payments</td></tr>
+<tr><td>2200</td><td>Deferred revenue</td><td>Unused top-ups, prepaid plans and setup fees</td></tr>
+<tr><td>2300</td><td>Customer credits</td><td>GPU-hour credits for failed paid runs</td></tr>
+<tr><td>2400</td><td>Payroll liabilities</td><td>Salaries, PF and professional tax payable</td></tr>
+<tr><td colspan="3"><strong>3000 Equity</strong></td></tr>
+<tr><td>3010</td><td>Share capital</td><td>Founder and investor shares</td></tr>
+<tr><td>3020</td><td>Securities premium</td><td>Investor money above face value</td></tr>
+<tr><td>3100</td><td>Retained earnings</td><td>Accumulated profit or loss</td></tr>
+<tr><td colspan="3"><strong>4000 Revenue</strong></td></tr>
+<tr><td>4010</td><td>Hosting subscriptions</td><td>Starter, Pro</td></tr>
+<tr><td>4020</td><td>Message top-ups</td><td>Recognised when used or on expiry</td></tr>
+<tr><td>4030</td><td>Paid training (GPU-hours)</td><td>L40S and H100 runs</td></tr>
+<tr><td>4040</td><td>Business plan: setup</td><td>Done-for-you builds</td></tr>
+<tr><td>4050</td><td>Business plan: managed hosting</td><td>Monthly retainers</td></tr>
+<tr><td colspan="3"><strong>5000 Cost of revenue</strong></td></tr>
+<tr><td>5010</td><td>GPU compute: training</td><td>Paid runs only (free runs cost Zebrain nothing)</td></tr>
+<tr><td>5020</td><td>GPU compute: hosting</td><td>Inference</td></tr>
+<tr><td>5030</td><td>LLM API usage</td><td>Gemini/Qwen for planning, grading and data</td></tr>
+<tr><td>5040</td><td>Payment processing fees</td><td>Gateway charges</td></tr>
+<tr><td>5050</td><td>Business delivery labour</td><td>Contractor time on client builds</td></tr>
+<tr><td colspan="3"><strong>6000 Operating expenses</strong></td></tr>
+<tr><td>6010</td><td>Salaries and benefits</td><td>Employees</td></tr>
+<tr><td>6020</td><td>Contractors</td><td>Design, freelance engineering</td></tr>
+<tr><td>6100</td><td>Software and infrastructure</td><td>Supabase, Vercel, GitHub, Google Workspace</td></tr>
+<tr><td>6200</td><td>Marketing and advertising</td><td>Ads, content, events</td></tr>
+<tr><td>6300</td><td>Legal and professional</td><td>CA, CS, counsel, trademark</td></tr>
+<tr><td>6400</td><td>Travel and meetings</td><td>Client visits</td></tr>
+<tr><td>6500</td><td>Bank charges and FX</td><td>Wire fees, currency loss</td></tr>
+<tr><td>6900</td><td>Depreciation</td><td>Equipment</td></tr>
+</tbody></table>
+
+<h2 id="s3-3"><span class="n">3.3</span>Bookkeeping procedures and transaction recording</h2>
+<ol>
+<li><strong>Capture.</strong> Every bill and receipt is forwarded to a single finance inbox and attached in the accounting software (Zoho Books or Tally are common choices for Indian GST). <span class="tag r">Recommendation</span></li>
+<li><strong>Code.</strong> Assign the account (§3.2), the GST rate and the vendor's GSTIN, and tag the cost to product or overhead.</li>
+<li><strong>Reconcile weekly.</strong> Match the bank feed and the Razorpay settlement reports to entries. The gateway clearing account (1020) should net to zero after each settlement.</li>
+<li><strong>Invoices.</strong> Self-serve customers get automatic GST invoices from the gateway or billing system. Business clients get numbered invoices (<code>ZB/2026-27/0001</code>), due in 15 days.</li>
+<li><strong>Refunds.</strong> Refunds are issued against the original payment, with a credit note referencing the invoice. Failed paid runs caused by Zebrain get GPU-hour credits (account 2300) instead of cash, as the pricing page promises. <span class="tag v">Verified</span> (pricing copy)</li>
+<li><strong>Reimbursements.</strong> Claimed monthly with receipts, approved by the budget owner and paid with payroll.</li>
+<li><strong>Payroll.</strong> Processed monthly with TDS on salaries, PF and professional tax as applicable, using a payroll service.</li>
+</ol>
+<div class="box i"><span class="tag i">Illustrative</span> Journal entry for a ₹499 Starter subscription paid by UPI (GST 18% added):
+<pre>Dr 1020 Gateway clearing        588.82
+    Cr 4010 Hosting subscriptions        499.00
+    Cr 2100 GST output payable            89.82
+Dr 5040 Payment processing fees  11.78   (2% of 588.82)
+    Cr 1020 Gateway clearing              11.78
+On settlement: Dr 1010 Bank 577.04 / Cr 1020 Gateway clearing 577.04</pre></div>
+
+<h2 id="s3-4"><span class="n">3.4</span>Revenue recognition and expense categorisation</h2>
+<table>
+<thead><tr><th style="width:36mm">Stream</th><th>When revenue is recognised</th></tr></thead>
+<tbody>
+<tr><td>Monthly hosting plans</td><td>Evenly over the service month. Annual plans are deferred and recognised monthly.</td></tr>
+<tr><td>Message top-ups</td><td>Deferred when sold. Recognised as messages are used, with any remainder recognised on expiry (state an expiry, e.g. 12 months, in the terms).</td></tr>
+<tr><td>Paid training</td><td>When the run completes and the model is delivered. Prepaid hours not yet used stay deferred. Credits issued for failures are a liability, not revenue.</td></tr>
+<tr><td>Business setup fee</td><td>On delivery milestones agreed in the SOW (e.g. 50% at a model that passes acceptance tests, 50% at go-live).</td></tr>
+<tr><td>Business managed hosting</td><td>Monthly, as delivered.</td></tr>
+</tbody></table>
+<p class="small">Indian accounting standards (AS or Ind AS, depending on company size) govern the details. Confirm the treatment, especially for top-up expiry, with the CA. <span class="tag u">Confirm</span></p>
+<p><strong>Expense rule of thumb:</strong> anything that scales with each unit served (GPU, LLM API, gateway fees, delivery labour) is <em>cost of revenue</em>. Everything else is <em>operating expense</em>. That split is what makes the gross margin meaningful.</p>
+
+<h2 id="s3-5"><span class="n">3.5</span>Payables, receivables and the closing calendar</h2>
+<div class="cols">
+<div><h3>Accounts payable</h3><ul><li>Pay vendors on net-15/30 terms, in two weekly payment runs.</li><li>Check the GSTIN and the bill against the PO or contract before paying.</li><li>Deduct TDS where applicable and deposit it by the due date.</li></ul></div>
+<div><h3>Accounts receivable</h3><ul><li>Business invoices are due in 15 days.</li><li>Reminders at day +3, +10 and +20. Service pauses at +30 (stated in the MSA).</li><li>Track DSO monthly. Target under 30 days.</li></ul></div>
+</div>
+<table>
+<caption>Closing calendar</caption>
+<thead><tr><th style="width:24mm">Cycle</th><th>Steps</th><th style="width:22mm">Deadline</th></tr></thead>
+<tbody>
+<tr><td>Monthly</td><td>Reconcile bank and gateway → record accruals (GPU usage not yet billed) → move deferred revenue → payroll entries → review the P&amp;L against budget → write the 1-page finance memo (Appendix A4)</td><td>Working day 7</td></tr>
+<tr><td>Monthly tax</td><td>GST returns (GSTR-1, GSTR-3B) and TDS deposit, per current due dates</td><td>Statutory dates</td></tr>
+<tr><td>Quarterly</td><td>TDS returns. CA review. Re-forecast (§3.8). Investor update (§3.9).</td><td>Quarter end + 30 days</td></tr>
+<tr><td>Annual</td><td>Statutory audit, financial statements, income tax return, ROC annual filings, GST annual return where applicable</td><td>Statutory dates</td></tr>
+</tbody></table>
+
+<h2 id="s3-6"><span class="n">3.6</span>Pricing, margins and unit economics</h2>
+<div class="formula">Gross margin = (Revenue − Cost of revenue) ÷ Revenue<br>Contribution margin = Price − variable cost per unit (compute + API + gateway)<br>CAC = (Sales + marketing spend in period) ÷ new paying customers in period<br>LTV = (ARPU × gross margin %) ÷ monthly churn &nbsp;·&nbsp; Payback (months) = CAC ÷ (ARPU × GM %)<br>Break-even revenue = Fixed operating costs ÷ gross margin %</div>
+<table>
+<caption>Worked example · Starter customer, 1.5B model <span class="tag i">Illustrative</span></caption>
+<thead><tr><th>Line</th><th class="n">₹ per month</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>Starter plan</td><td class="n">499.00</td><td>From pricing file <span class="tag v">Verified</span></td></tr>
+<tr><td>Top-ups (25% of customers buy one)</td><td class="n">74.75</td><td>0.25 × ₹299</td></tr>
+<tr><td><strong>ARPU</strong></td><td class="n"><strong>573.75</strong></td><td></td></tr>
+<tr><td>Hosting compute</td><td class="n">−150.00</td><td>Assumption</td></tr>
+<tr><td>Top-up compute</td><td class="n">−22.50</td><td>0.25 × ₹90</td></tr>
+<tr><td>Gateway fees (2%)</td><td class="n">−11.48</td><td></td></tr>
+<tr class="tot"><td>Contribution per customer per month</td><td class="n">389.77</td><td>68% margin</td></tr>
+<tr><td>Expected lifetime at 6% monthly churn</td><td class="n">16.7 months</td><td>1 ÷ 0.06</td></tr>
+<tr><td><strong>LTV</strong></td><td class="n"><strong>6,496</strong></td><td>389.77 ÷ 0.06</td></tr>
+<tr><td>CAC</td><td class="n">1,500</td><td>Assumption</td></tr>
+<tr class="tot"><td>LTV : CAC · Payback</td><td class="n">4.3 : 1 · 3.8 months</td><td>Healthy if real churn is close to 6%</td></tr>
+</tbody></table>
+<table>
+<caption>Contribution per paid training hour <span class="tag i">Illustrative</span></caption>
+<thead><tr><th>Tier</th><th class="n">Price (₹/h)</th><th class="n">GPU cost</th><th class="n">Gateway</th><th class="n">Contribution</th><th class="n">Margin</th></tr></thead>
+<tbody>
+<tr><td>Standard (L40S)</td><td class="n">242.00</td><td class="n">96.80</td><td class="n">4.84</td><td class="n">140.36</td><td class="n">58%</td></tr>
+<tr><td>Large (H100)</td><td class="n">660.00</td><td class="n">228.80</td><td class="n">13.20</td><td class="n">418.00</td><td class="n">63%</td></tr>
+</tbody></table>
+<p class="small">Free Kaggle runs carry no compute cost for Zebrain. Their only variable cost is Gemini usage when Zebrain's server key is used as the fallback. <span class="tag r">Recommendation</span> Require users to bring their own Gemini key for free runs, as the Connect page already allows, so this cost stays near zero.</p>
+
+<h2 id="s3-7"><span class="n">3.7</span>Financial statements: month-12 base case</h2>
+<div class="cols">
+<table>
+<caption>Profit &amp; loss · month 12 <span class="tag i">Illustrative</span></caption>
+<thead><tr><th>Line</th><th class="n">₹</th></tr></thead>
+<tbody>
+<tr><td>Starter (60 × 499)</td><td class="n">29,940</td></tr>
+<tr><td>Pro (20 × 1,499)</td><td class="n">29,980</td></tr>
+<tr><td>Top-ups (15 × 299)</td><td class="n">4,485</td></tr>
+<tr><td>Training L40S (120 h)</td><td class="n">29,040</td></tr>
+<tr><td>Training H100 (20 h)</td><td class="n">13,200</td></tr>
+<tr><td>Business (2 × 40,000)</td><td class="n">80,000</td></tr>
+<tr class="tot"><td>Revenue</td><td class="n">1,86,645</td></tr>
+<tr><td>Hosting compute</td><td class="n">−18,350</td></tr>
+<tr><td>Training GPU</td><td class="n">−16,192</td></tr>
+<tr><td>Business delivery</td><td class="n">−24,000</td></tr>
+<tr><td>Gateway + LLM API</td><td class="n">−6,733</td></tr>
+<tr class="tot"><td>Gross profit (65.0%)</td><td class="n">1,21,370</td></tr>
+<tr><td>People (founder, engineer, designer)</td><td class="n">−2,10,000</td></tr>
+<tr><td>Software &amp; infra</td><td class="n">−12,000</td></tr>
+<tr><td>Marketing</td><td class="n">−40,000</td></tr>
+<tr><td>Legal, accounting, misc</td><td class="n">−23,000</td></tr>
+<tr class="tot"><td>Operating loss</td><td class="n">−1,63,630</td></tr>
+</tbody></table>
+<div>
+<table>
+<caption>Balance sheet · end of month 12 <span class="tag i">Illustrative</span></caption>
+<thead><tr><th>Line</th><th class="n">₹</th></tr></thead>
+<tbody>
+<tr><td>Cash</td><td class="n">14,70,000</td></tr>
+<tr><td>Receivables</td><td class="n">80,000</td></tr>
+<tr><td>GST input credit</td><td class="n">18,000</td></tr>
+<tr class="tot"><td>Total assets</td><td class="n">15,68,000</td></tr>
+<tr><td>Payables</td><td class="n">25,000</td></tr>
+<tr><td>GST/TDS payable</td><td class="n">38,000</td></tr>
+<tr><td>Deferred revenue</td><td class="n">35,000</td></tr>
+<tr><td>Share capital + premium</td><td class="n">35,00,000</td></tr>
+<tr><td>Retained earnings (year-1 loss)</td><td class="n">−20,30,000</td></tr>
+<tr class="tot"><td>Liabilities + equity</td><td class="n">15,68,000</td></tr>
+</tbody></table>
+<p class="small">Assumes ₹10 lakh founder capital plus a ₹25 lakh angel round in month 6 (§3.8), and founder-owned laptops (no fixed assets). The year-1 loss is the total of the quarterly plan in §3.8.</p>
+</div>
+</div>
+<table>
+<caption>Cash flow statement · year 1 <span class="tag i">Illustrative</span></caption>
+<thead><tr><th>Line</th><th class="n">₹</th></tr></thead>
+<tbody>
+<tr><td>Net loss</td><td class="n">−20,30,000</td></tr>
+<tr><td>Increase in receivables and GST input credit</td><td class="n">−98,000</td></tr>
+<tr><td>Increase in payables, GST/TDS payable and deferred revenue</td><td class="n">98,000</td></tr>
+<tr class="tot"><td>Cash from operations</td><td class="n">−20,30,000</td></tr>
+<tr><td>Cash from investing</td><td class="n">0</td></tr>
+<tr><td>Equity raised (founder ₹10L + angels ₹25L)</td><td class="n">35,00,000</td></tr>
+<tr class="tot"><td>Closing cash (= balance sheet cash)</td><td class="n">14,70,000</td></tr>
+</tbody></table>
+<p class="small">The three statements tie: closing cash matches the balance sheet, and retained earnings equal the year's net loss. The month-end checklist (Appendix A4) tests the same ties on the real books.</p>
+
+<h2 id="s3-8"><span class="n">3.8</span>Cash, burn, runway and scenario planning</h2>
+<div class="formula">Net burn = cash out − cash in (per month) &nbsp;·&nbsp; Runway (months) = cash ÷ average net burn of last 3 months<br>Working capital = current assets − current liabilities</div>
+<table>
+<caption>Year-1 plan by quarter · base case <span class="tag i">Illustrative</span></caption>
+<thead><tr><th>Quarter</th><th class="n">Revenue</th><th class="n">Cost of revenue</th><th class="n">Opex</th><th class="n">Net</th><th class="n">Cash at end</th></tr></thead>
+<tbody>
+<tr><td>Q1 (M1–3): setup, pilots</td><td class="n">30,000</td><td class="n">−10,000</td><td class="n">−4,00,000</td><td class="n">−3,80,000</td><td class="n">6,20,000</td></tr>
+<tr><td>Q2 (M4–6): hosting, paid GPU; angels raised</td><td class="n">1,50,000</td><td class="n">−55,000</td><td class="n">−6,00,000</td><td class="n">−5,05,000</td><td class="n">26,15,000</td></tr>
+<tr><td>Q3 (M7–9)</td><td class="n">3,60,000</td><td class="n">−1,30,000</td><td class="n">−8,55,000</td><td class="n">−6,25,000</td><td class="n">19,90,000</td></tr>
+<tr><td>Q4 (M10–12)</td><td class="n">5,20,000</td><td class="n">−1,85,000</td><td class="n">−8,55,000</td><td class="n">−5,20,000</td><td class="n">14,70,000</td></tr>
+<tr class="tot"><td>Year 1</td><td class="n">10,60,000</td><td class="n">−3,80,000</td><td class="n">−27,10,000</td><td class="n">−20,30,000</td><td class="n"></td></tr>
+</tbody></table>
+<p>Without the ₹25 lakh round, cash runs out in month 7. <strong>Decision rule:</strong> if the round hasn't closed by month 5, freeze hiring, cut marketing to ₹10,000 per month and focus on Business clients, which pay upfront setup fees. <span class="tag r">Recommendation</span></p>
+<table>
+<caption>Scenarios at month 12 <span class="tag i">Illustrative</span></caption>
+<thead><tr><th>Driver</th><th>Downside</th><th>Base</th><th>Upside</th></tr></thead>
+<tbody>
+<tr><td>Hosting customers (Starter + Pro)</td><td>30</td><td>80</td><td>180</td></tr>
+<tr><td>Business clients</td><td>1</td><td>2</td><td>5</td></tr>
+<tr><td>Paid training GPU-hours / month</td><td>40</td><td>140</td><td>400</td></tr>
+<tr><td>Monthly revenue (approx.)</td><td>₹80k</td><td>₹1.87 lakh</td><td>₹4.6 lakh</td></tr>
+<tr><td>Kaggle free tier</td><td>Blocked at M6</td><td>Available</td><td>Available</td></tr>
+<tr><td>Response</td><td>Bootstrap mode, Business-only</td><td>Plan as written</td><td>Hire the growth marketer early (M6)</td></tr>
+</tbody></table>
+<p><strong>Budget management:</strong> a 12-month budget by account (Appendix A2) is approved each quarter. Variances over 10% and ₹20,000 are explained in the monthly memo.</p>
+
+<h2 id="s3-9"><span class="n">3.9</span>Fundraising, investor reporting and equity</h2>
+<ul>
+<li><strong>Instruments:</strong> Indian pre-seed rounds commonly use equity or compulsorily convertible preference shares (CCPS). Valuation, FEMA rules for foreign investors and angel-tax provisions all need a CA or lawyer. <span class="tag u">Confirm with counsel</span></li>
+<li><strong>Cap table hygiene:</strong> keep a single source cap table (founders, ESOP pool, investors, fully diluted %). <span class="tag r">Recommendation</span> Create a 10% ESOP pool before the first priced round, with standard vesting of 4 years and a 1-year cliff.</li>
+<li><strong>Investor update</strong> (monthly, 1 page): headline, KPIs (MRR, models in active use, burn, runway), wins, misses, asks.</li>
+<li><strong>Data room:</strong> incorporation documents, cap table, financials, this manual, product demo, security summary, key contracts.</li>
+<li><strong>Non-dilutive options:</strong> Startup India (DPIIT) recognition and state startup schemes, and cloud credit programmes for GPUs <sup class="c">[17]</sup>.</li>
+</ul>
+
+<h2 id="s3-10"><span class="n">3.10</span>Financial controls, approval limits and fraud prevention</h2>
+<table>
+<thead><tr><th>Control</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td>Approval limits</td><td>Under ₹25k: budget owner · ₹25k–₹2L: CEO · over ₹2L: CEO plus a second signatory · new recurring vendor: CEO</td></tr>
+<tr><td>Segregation of duties</td><td>The person who adds a vendor never releases its payment. Bank payments need maker plus checker in net banking.</td></tr>
+<tr><td>Vendor master changes</td><td>Bank-detail changes are confirmed by a phone call to a known number (the most common invoice fraud).</td></tr>
+<tr><td>Cards</td><td>Company cards per person with monthly limits. Receipts within 7 days.</td></tr>
+<tr><td>Cloud spend</td><td>Billing alerts at 50%, 80% and 100% of budget on every GPU and API account. Hard caps where available.</td></tr>
+<tr><td>Refunds and credits</td><td>Over ₹5,000 needs CEO approval. All refunds and credits are logged with a reason code.</td></tr>
+<tr><td>Audit trail</td><td>The accounting system's audit log stays on. Documents are retained for the statutory period (8 years under Indian company law is common; confirm).</td></tr>
+</tbody></table>
+
+<h2 id="s3-11"><span class="n">3.11</span>Tax and regulatory obligations (India)</h2>
+<div class="box u"><span class="tag u">Confirm with a CA</span><p>This section lists the obligations to discuss with a chartered accountant. It is not tax advice, and rates and thresholds change.</p></div>
+<table>
+<thead><tr><th style="width:30mm">Area</th><th>What applies, as generally understood</th></tr></thead>
+<tbody>
+<tr><td>GST</td><td>Software and SaaS services are generally taxed at 18% GST <sup class="c">[5]</sup>. Registration depends on turnover thresholds and supply type. Many SaaS companies register early so they can collect GST and claim input credit.</td></tr>
+<tr><td>Exports</td><td>Services to foreign customers can be zero-rated by filing a Letter of Undertaking (LUT, Form GST RFD-11) each year. Foreign payment must arrive within the prescribed period <sup class="c">[5]</sup>.</td></tr>
+<tr><td>Imports of services</td><td>Paying foreign vendors (GPU clouds, Supabase, Vercel, Gemini) may trigger GST under reverse charge for a registered business. Track these bills separately.</td></tr>
+<tr><td>TDS</td><td>Deduct TDS on contractor, professional and rent payments and on salaries, deposit it monthly and file quarterly returns.</td></tr>
+<tr><td>Income tax</td><td>Domestic companies pay corporate tax under the regime they choose. Startup tax holidays need separate approval.</td></tr>
+<tr><td>Company law</td><td>Statutory auditor appointment, board meetings, annual filings with the Registrar of Companies, director KYC <sup class="c">[17]</sup>.</td></tr>
+<tr><td>Payroll</td><td>Professional tax (state), PF/ESI once headcount thresholds apply, labour-law registrations (Shops &amp; Establishments).</td></tr>
+</tbody></table>
+</section>

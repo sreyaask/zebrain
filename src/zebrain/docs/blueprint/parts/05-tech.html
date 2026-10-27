@@ -1,0 +1,232 @@
+<section class="divider" data-ch="4">
+  <div class="gridlines"></div><div class="beam"></div>
+  <p class="num pixel">04</p>
+  <h1>Technical Architecture &amp; Backend</h1>
+  <p class="lede">The system as it exists in the codebase today, and the architecture proposed for launch: hosting, payments, security hardening and scale.</p>
+  <ul class="in"><li>4.1 Verified vs proposed</li><li>4.2 System architecture</li><li>4.3 Frontend</li><li>4.4 Auth and permissions</li><li>4.5 Training job and core logic</li><li>4.6 Database</li><li>4.7 API design</li><li>4.8 Serving and hosting</li><li>4.9 Infrastructure and delivery</li><li>4.10 Security</li><li>4.11 Performance and cost</li><li>4.12 Privacy and data lifecycle</li><li>4.13 AI/LLM infrastructure</li></ul>
+</section>
+
+<section>
+<h2 id="s4-1"><span class="n">4.1</span>Verified architecture vs proposed architecture</h2>
+<table>
+<thead><tr><th style="width:36mm">Layer</th><th>Exists today <span class="tag v">Verified</span></th><th>Proposed for launch <span class="tag r">Recommendation</span></th></tr></thead>
+<tbody>
+<tr><td>Web app</td><td>Next.js 14.2 App Router, React 18.3, TypeScript 5.6, Tailwind 3.4. Runs locally (dev server).</td><td>Deployed to Vercel (or similar) with preview deployments per PR and a custom domain.</td></tr>
+<tr><td>Auth and data</td><td>Supabase Auth (email/password; Google pending configuration) and Postgres with row-level security, Mumbai region.</td><td>Paid plan, daily backups plus point-in-time recovery, encrypted secrets columns.</td></tr>
+<tr><td>Training compute</td><td>The user's own Kaggle account: a private GPU script on a T4, pushed via the Kaggle API.</td><td>Plus a Zebrain-run GPU queue (L40S/H100) for paid runs and larger models.</td></tr>
+<tr><td>Model storage</td><td>User's Hugging Face: merged model repo (tagged per version) plus private state repo.</td><td>Unchanged. Optional Zebrain-managed storage for Business clients.</td></tr>
+<tr><td>Serving</td><td>Gradio app on the user's Kaggle GPU (share link, up to 11 h), <code>/ask</code> and <code>/predict</code>, streaming with an answer checker, plus a static HF Space page.</td><td>Always-on hosting: serverless GPU inference (vLLM) behind a Zebrain API gateway with keys, quotas and metering.</td></tr>
+<tr><td>LLM services</td><td>Gemini (newest stable flash model, probed for availability) for planning, data review, grading and Testify.</td><td>Provider abstraction (Gemini plus a second provider), token metering per user, prompt registry.</td></tr>
+<tr><td>Payments</td><td>None.</td><td>Razorpay subscriptions, top-ups and GPU-hour credits, with webhooks into Postgres.</td></tr>
+</tbody></table>
+
+<h2 id="s4-2"><span class="n">4.2</span>High-level system architecture</h2>
+<figure>
+<svg viewBox="0 0 720 390" font-family="Inter,Arial" font-size="10.5">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#5a6275"/></marker>
+<style>.bx{fill:#fff;stroke:#10131c;stroke-width:1.2}.zb{fill:#eef3ff;stroke:#3d7bff;stroke-width:1.6}.ex{fill:#f6f8fc;stroke:#8a93a8;stroke-width:1.1}.h{font-weight:650;fill:#000}.m{fill:#5a6275;font-size:9.2px}.ln{stroke:#5a6275;stroke-width:1.2;fill:none;marker-end:url(#ar)}.lb{fill:#3d7bff;font-size:9px;font-family:"Geist Mono",monospace}</style></defs>
+<rect class="bx" x="10" y="20" width="150" height="80" rx="8"/><text class="h" x="22" y="42">User's browser</text><text class="m" x="22" y="58">Wizard · Runs · Chat · Fix</text><text class="m" x="22" y="72">@gradio/client (CDN)</text><text class="m" x="22" y="86">Supabase session cookie</text>
+<rect class="zb" x="230" y="20" width="200" height="140" rx="8"/><text class="h" x="244" y="42">Zebrain web app (Next.js)</text><text class="m" x="244" y="60">Pages: /new /runs /chat /fix /connect</text><text class="m" x="244" y="76">API routes (server-side):</text><text class="m" x="252" y="91">/api/runs · /api/runs/status</text><text class="m" x="252" y="105">/api/models · /api/corrections</text><text class="m" x="252" y="119">/api/chat/stop · /api/connect</text><text class="m" x="252" y="133">/api/plan (≤300 s)</text><text class="m" x="244" y="150">middleware.ts guards pages</text>
+<rect class="ex" x="500" y="20" width="200" height="70" rx="8"/><text class="h" x="514" y="42">Supabase (Mumbai)</text><text class="m" x="514" y="58">Auth · Postgres + RLS</text><text class="m" x="514" y="72">profiles · connections · runs</text>
+<rect class="ex" x="500" y="110" width="200" height="60" rx="8"/><text class="h" x="514" y="132">Gemini API</text><text class="m" x="514" y="148">plan · review · grade · Testify</text>
+<rect class="ex" x="230" y="210" width="200" height="80" rx="8"/><text class="h" x="244" y="232">Kaggle API</text><text class="m" x="244" y="248">SaveKernel · GetKernelSessionStatus</text><text class="m" x="244" y="262">ListKernelSessionOutput</text><text class="m" x="244" y="276">GetAcceleratorQuotaStatistics</text>
+<rect class="zb" x="10" y="210" width="170" height="160" rx="8"/><text class="h" x="22" y="232">Job on user's Kaggle T4</text><text class="m" x="22" y="250">zebrain_train.py</text><text class="m" x="22" y="266">modes: train · fix · serve · improve</text><text class="m" x="22" y="282">QLoRA 4-bit, r=16</text><text class="m" x="22" y="298">tester + Gemini grading</text><text class="m" x="22" y="314">Gradio chat: /ask /predict</text><text class="m" x="22" y="330">share link (≤11 h)</text><text class="m" x="22" y="346">polls control.json (30 s)</text>
+<rect class="ex" x="500" y="210" width="200" height="160" rx="8"/><text class="h" x="514" y="232">User's Hugging Face</text><text class="m" x="514" y="250">&lt;user&gt;/&lt;model&gt; merged model, tags v1…</text><text class="m" x="514" y="266">&lt;user&gt;/&lt;model&gt;-zebrain (private):</text><text class="m" x="522" y="281">progress · checkpoints · adapters</text><text class="m" x="522" y="296">versions · testset · corrections</text><text class="m" x="522" y="311">chat.json · control.json</text><text class="m" x="514" y="330">&lt;user&gt;/&lt;model&gt;-chat (static Space)</text><text class="m" x="522" y="345">endpoint.json → share link</text>
+<path class="ln" d="M160 55 H226"/><text class="lb" x="168" y="50">HTTPS</text>
+<path class="ln" d="M430 55 H496"/><text class="lb" x="440" y="50">keys (server)</text>
+<path class="ln" d="M430 135 H496"/>
+<path class="ln" d="M330 160 V206"/><text class="lb" x="336" y="190">push job / poll</text>
+<path class="ln" d="M230 250 H184"/><text class="lb" x="188" y="244">runs</text>
+<path class="ln" d="M180 300 H496"/><text class="lb" x="300" y="318">writes progress, models, chat.json</text>
+<path class="ln" d="M430 170 Q470 190 500 230"/><text class="lb" x="436" y="196">reads state</text>
+<path class="ln" d="M95 206 V104"/><text class="lb" x="100" y="160">stream via share link</text>
+<path class="ln" d="M180 228 Q340 196 500 150"/><text class="lb" x="222" y="214" style="fill:#7a4fd6">grading calls</text>
+</svg>
+<figcaption><b>FIG 4.1</b>Zebrain as built. Blue boxes are Zebrain code. Grey boxes are external services the user or Zebrain holds accounts with. <span class="tag v">Verified</span></figcaption>
+</figure>
+<p>The key architectural idea is that <strong>Zebrain's servers do no GPU work</strong>. They orchestrate: check accounts, push a self-contained Python job to the user's Kaggle, and read its progress from the user's Hugging Face state repo. The job writes everything it knows (progress, checkpoints, versions, test sets, the open chat's URL and API key) into that private repo, which makes runs resumable and the web app nearly stateless.</p>
+
+<h2 id="s4-3"><span class="n">4.3</span>Frontend</h2>
+<ul>
+<li><strong>Routes:</strong> <code>/</code> (home, FAQ), <code>/pricing</code>, <code>/login</code>, <code>/connect</code> (Kaggle, HF, Gemini keys), <code>/new</code> (wizard), <code>/runs</code> (progress), <code>/chat</code> (dashboard, owner chat, API guide), <code>/fix</code> (corrections, identity, versions, Testify). <span class="tag v">Verified</span></li>
+<li><strong>Live model access:</strong> <code>lib/gradio.ts</code> loads the matching <code>@gradio/client</code> from a CDN at runtime (1.5.2 for Gradio 4/5, 2.7.1 for Gradio 6) and streams replies with <code>client.submit</code>. <span class="tag v">Verified</span></li>
+<li><strong>State:</strong> server data comes from API routes. There is no client-side store library. Runs are polled from <code>/api/runs/status</code>.</li>
+<li><span class="tag r">Recommendation</span> Pin the CDN client with Subresource Integrity, or bundle it, so a CDN compromise cannot run code on Zebrain pages.</li>
+</ul>
+
+<h2 id="s4-4"><span class="n">4.4</span>Registration, authentication, accounts and permissions</h2>
+<table>
+<thead><tr><th style="width:38mm">Concern</th><th>Implementation</th></tr></thead>
+<tbody>
+<tr><td>Sign-up / sign-in</td><td>Supabase Auth email + password, with email confirmation turned off in the dashboard. Google OAuth via <code>/auth/callback</code> once the provider is configured. <span class="tag v">Verified</span></td></tr>
+<tr><td>Session</td><td>Supabase SSR cookies. <code>middleware.ts</code> redirects signed-out visitors on <code>/new /runs /chat /fix /connect</code> to <code>/login?next=…</code>. <span class="tag v">Verified</span></td></tr>
+<tr><td>Authorisation</td><td>Row-level security on <code>profiles</code>, <code>connections</code> and <code>runs</code>: users only read and write their own rows. API routes resolve the user and their keys server-side via <code>userCreds()</code>. <span class="tag v">Verified</span></td></tr>
+<tr><td>Roles</td><td>One role (user) today. <span class="tag r">Recommendation</span> Add <code>org</code> and <code>membership(role: owner|admin|member)</code> for Business clients and agencies, plus a separate staff/admin role behind SSO.</td></tr>
+<tr><td>Account management</td><td><span class="tag r">Recommendation</span> Self-serve delete-account (cascades rows and revokes stored keys), export my data, change email, and forced re-auth for key changes.</td></tr>
+<tr><td>Model API keys</td><td>Each chat session generates a random <code>zb_</code> + 32-hex key, shown only to the owner and checked by <code>/ask</code>. <code>/predict</code> is deliberately keyless, like a plain Gradio app. <span class="tag v">Verified</span></td></tr>
+</tbody></table>
+
+<h2 id="s4-5"><span class="n">4.5</span>Core business logic: the training job</h2>
+<figure>
+<svg viewBox="0 0 720 150" font-family="Inter,Arial" font-size="10">
+<defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#3d7bff"/></marker><style>.st{fill:#fff;stroke:#3d7bff;stroke-width:1.3}.sn{font:500 8.5px "Geist Mono",monospace;fill:#3d7bff}.sh{font-weight:650;fill:#000;font-size:10px}.sm{fill:#5a6275;font-size:8.6px}.ar{stroke:#3d7bff;stroke-width:1.3;marker-end:url(#a2)}</style></defs>
+<g><rect class="st" x="5" y="20" width="98" height="110" rx="7"/><text class="sn" x="13" y="36">01</text><text class="sh" x="13" y="52">Checks</text><text class="sm" x="13" y="68">GPU present</text><text class="sm" x="13" y="81">HF write token</text><text class="sm" x="13" y="94">gated-model access</text><text class="sm" x="13" y="107">pinned packages</text></g>
+<g><rect class="st" x="122" y="20" width="98" height="110" rx="7"/><text class="sn" x="130" y="36">02</text><text class="sh" x="130" y="52">Data</text><text class="sm" x="130" y="68">detect Q/A columns</text><text class="sm" x="130" y="81">dedupe, clean, dialect</text><text class="sm" x="130" y="94">Gemini review (200)</text><text class="sm" x="130" y="107">+ skill rows</text></g>
+<g><rect class="st" x="239" y="20" width="98" height="110" rx="7"/><text class="sn" x="247" y="36">03</text><text class="sh" x="247" y="52">Baseline</text><text class="sm" x="247" y="68">held-out tests</text><text class="sm" x="247" y="81">Gemini exam</text><text class="sm" x="247" y="94">identity, capability</text><text class="sm" x="247" y="107">off-topic</text></g>
+<g><rect class="st" x="356" y="20" width="98" height="110" rx="7"/><text class="sn" x="364" y="36">04</text><text class="sh" x="364" y="52">Train</text><text class="sm" x="364" y="68">QLoRA 4-bit, r=16</text><text class="sm" x="364" y="81">α=32, cosine LR</text><text class="sm" x="364" y="94">checkpoints → HF</text><text class="sm" x="364" y="107">resumable</text></g>
+<g><rect class="st" x="473" y="20" width="98" height="110" rx="7"/><text class="sn" x="481" y="36">05</text><text class="sh" x="481" y="52">Test &amp; retry</text><text class="sm" x="481" y="68">same tests again</text><text class="sm" x="481" y="81">answer checker</text><text class="sm" x="481" y="94">≤2 extra rounds</text><text class="sm" x="481" y="107">keep best round</text></g>
+<g><rect class="st" x="590" y="20" width="125" height="110" rx="7"/><text class="sn" x="598" y="36">06</text><text class="sh" x="598" y="52">Publish &amp; serve</text><text class="sm" x="598" y="68">merge → vN tag</text><text class="sm" x="598" y="81">model card scores</text><text class="sm" x="598" y="94">optional chat + API</text><text class="sm" x="598" y="107">static Space page</text></g>
+<path class="ar" d="M103 75 H120"/><path class="ar" d="M220 75 H237"/><path class="ar" d="M337 75 H354"/><path class="ar" d="M454 75 H471"/><path class="ar" d="M571 75 H588"/>
+</svg>
+<figcaption><b>FIG 4.2</b>Train mode, as implemented in <code>lib/zebrain_train.py</code>. <span class="tag v">Verified</span></figcaption>
+</figure>
+<table>
+<thead><tr><th style="width:22mm">Mode</th><th>What it does</th><th style="width:50mm">Publish rule</th></tr></thead>
+<tbody>
+<tr><td>train</td><td>The full pipeline above. Identity is built into the chat template (replacing Qwen's default system prompt), together with the answer-quality rules.</td><td>Best round by tester score</td></tr>
+<tr><td>fix</td><td>Each correction becomes ~20 examples (reworded by Gemini if available), mixed with replayed old data. Continues from the latest adapter.</td><td>Only if the fix passes and old tests don't get worse</td></tr>
+<tr><td>improve</td><td>"Testify": a Gemini exam → failures → weak topics → practice rows (never copies of test questions) → 2-epoch rounds with full skill replay.</td><td>Only if the best key score beats the starting version by more than 0.02</td></tr>
+<tr><td>serve</td><td>Loads a version and opens the chat and API for 0.25–11 hours. Stops early when <code>control.json</code> names this run.</td><td>n/a</td></tr>
+</tbody></table>
+<p class="small">Pinned packages: transformers 4.46.3, peft 0.13.2, accelerate 1.1.1, datasets 3.1.0, huggingface_hub 0.26.5. Training uses batch 2 × gradient accumulation 8. Examples over 1,536 tokens are skipped rather than truncated. <span class="tag v">Verified</span> Known gap: retrain rounds in train mode don't replay skill rows, which caused identity drift in one internal run (100% → 71%). Improve mode fixes this, and train mode should adopt the same replay. <span class="tag r">Recommendation</span></p>
+
+<h2 id="s4-6"><span class="n">4.6</span>Database schema, relationships and lifecycle</h2>
+<figure>
+<svg viewBox="0 0 720 250" font-family="Inter,Arial" font-size="9.6">
+<style>.t{fill:#fff;stroke:#10131c;stroke-width:1.2}.th{fill:#000}.tt{fill:#fff;font-weight:650;font-size:10px}.c{font-family:"Geist Mono",monospace;font-size:8.8px;fill:#10131c}.pk{fill:#3d7bff}.un{fill:#f6f8fc;stroke:#b26a00;stroke-dasharray:4 3;stroke-width:1.1}.uh{fill:#b26a00;font-weight:650;font-size:10px}.rl{stroke:#5a6275;stroke-width:1.2;fill:none}</style>
+<rect class="t" x="10" y="10" width="170" height="104" rx="5"/><rect class="th" x="10" y="10" width="170" height="20" rx="5"/><text class="tt" x="18" y="24">auth.users (Supabase)</text><text class="c pk" x="18" y="46">id uuid PK</text><text class="c" x="18" y="62">email</text><text class="c" x="18" y="78">encrypted_password</text><text class="c" x="18" y="94">provider (email/google)</text>
+<rect class="t" x="230" y="10" width="190" height="88" rx="5"/><rect class="th" x="230" y="10" width="190" height="20" rx="5"/><text class="tt" x="238" y="24">profiles</text><text class="c pk" x="238" y="46">id uuid PK → users.id</text><text class="c" x="238" y="62">full_name text</text><text class="c" x="238" y="78">avatar_url text · created_at</text>
+<rect class="t" x="230" y="110" width="190" height="130" rx="5"/><rect class="th" x="230" y="110" width="190" height="20" rx="5"/><text class="tt" x="238" y="124">connections (1 per user)</text><text class="c pk" x="238" y="146">user_id uuid PK → users.id</text><text class="c" x="238" y="162">kaggle_user, kaggle_key</text><text class="c" x="238" y="178">hf_user, hf_token</text><text class="c" x="238" y="194">gemini_key</text><text class="c" x="238" y="210">updated_at</text><text class="c" x="238" y="228" style="fill:#c2413b">keys stored as text</text>
+<rect class="t" x="470" y="10" width="240" height="160" rx="5"/><rect class="th" x="470" y="10" width="240" height="20" rx="5"/><text class="tt" x="478" y="24">runs</text><text class="c pk" x="478" y="46">id uuid PK</text><text class="c" x="478" y="62">user_id uuid → users.id</text><text class="c" x="478" y="78">run_id, kernel (unique with user)</text><text class="c" x="478" y="94">kaggle_url, state_repo, model</text><text class="c" x="478" y="110">mode: train|fix|serve|improve</text><text class="c" x="478" y="126">config jsonb (TrainConfig…)</text><text class="c" x="478" y="142">final_stage, started_at</text>
+<rect class="un" x="470" y="185" width="240" height="56" rx="5"/><text class="uh" x="478" y="202">Unused (paused token gateway)</text><text class="c" x="478" y="218">token_budgets · token_ledger</text><text class="c" x="478" y="233">free_trials · run_tokens</text>
+<path class="rl" d="M180 50 H230"/><path class="rl" d="M180 90 Q205 90 205 150 H230"/><path class="rl" d="M180 30 Q440 -6 470 40"/>
+</svg>
+<figcaption><b>FIG 4.3</b>Public schema in Supabase as queried on 26 Oct 2026 <sup class="c">[2]</sup>. One user → one profile, one connection row, many runs. <span class="tag v">Verified</span></figcaption>
+</figure>
+<ul>
+<li><strong>Indexes:</strong> <code>runs</code> has a unique constraint on <code>(user_id, run_id, kernel)</code>, used by the upsert that resumes runs. <span class="tag r">Recommendation</span> Add <code>runs(user_id, started_at desc)</code> for the runs list.</li>
+<li><strong>Unused tables:</strong> four token-gateway tables and three functions (<code>reserve_tokens</code>, <code>settle_tokens</code>, <code>rebalance_tokens</code>) from a paused build. <span class="tag r">Recommendation</span> Either finish the gateway or drop them, so the schema documents only what is real.</li>
+<li><strong>Proposed launch tables:</strong> <code>subscriptions</code> (plan, status, period, gateway ids), <code>invoices</code>, <code>credits</code> (GPU-hours ledger), <code>hosted_models</code> (model, version, endpoint, plan), <code>api_keys</code> (hash, prefix, scopes, last_used), <code>usage_events</code> (model, messages, tokens, day, partitioned by month), <code>orgs</code>, <code>memberships</code>, <code>audit_log</code>.</li>
+<li><strong>Data lifecycle:</strong> run rows are kept for the account's lifetime. Usage events are rolled up to daily after 90 days. Deleted accounts are purged within 30 days and their stored keys are deleted immediately (§4.12).</li>
+</ul>
+
+<h2 id="s4-7"><span class="n">4.7</span>API design, conventions and error handling</h2>
+<table>
+<thead><tr><th style="width:38mm">Endpoint (all POST, JSON)</th><th>Request</th><th>Response</th></tr></thead>
+<tbody>
+<tr><td><code>/api/connect</code></td><td>Kaggle user/key, HF token, Gemini key (blank keeps the saved value)</td><td>Checked accounts or <code>{error}</code></td></tr>
+<tr><td><code>/api/plan</code></td><td><code>{job, mode?: "full"|"eval", datasets?}</code></td><td>Chosen datasets with reasons, <code>eval_set</code>, Gemini model used</td></tr>
+<tr><td><code>/api/runs</code></td><td><code>{config: JobConfig, runId?}</code></td><td><code>{run}</code>: kernel, URLs, state repo</td></tr>
+<tr><td><code>/api/runs/status</code></td><td><code>{kernel, stateRepo}</code></td><td><code>{kaggle, progress, logTail}</code></td></tr>
+<tr><td><code>/api/models</code></td><td><code>{stateRepo}</code></td><td>Config, versions, pending corrections, open chat</td></tr>
+<tr><td><code>/api/corrections</code></td><td><code>{stateRepo, correction}</code></td><td><code>{ok, waiting}</code></td></tr>
+<tr><td><code>/api/chat/stop</code></td><td><code>{stateRepo}</code></td><td><code>{ok}</code> or <code>{ok, alreadyOffline}</code></td></tr>
+</tbody></table>
+<div class="cols">
+<pre><span class="c"># Start a run</span>
+POST /api/runs
+{ <span class="s">"config"</span>: { <span class="s">"mode"</span>: <span class="s">"train"</span>,
+    <span class="s">"model_name"</span>: <span class="s">"sql-assistant-1-5b"</span>,
+    <span class="s">"base_model"</span>: <span class="s">"Qwen/Qwen2.5-Coder-1.5B-Instruct"</span>,
+    <span class="s">"datasets"</span>: [ ... ], <span class="s">"max_len"</span>: 1536,
+    <span class="s">"chat_hours"</span>: 1 } }
+
+<span class="k">200</span> { <span class="s">"run"</span>: { <span class="s">"runId"</span>: <span class="s">"0c58…"</span>, <span class="s">"kernel"</span>: <span class="s">"…"</span>,
+         <span class="s">"stateRepo"</span>: <span class="s">"…-zebrain"</span> } }
+<span class="k">400</span> { <span class="s">"error"</span>: <span class="s">"Pick at least one dataset."</span> }</pre>
+<pre><span class="c"># Model API on an open chat (streaming)</span>
+<span class="k">import</span> { Client } <span class="k">from</span> <span class="s">"@gradio/client"</span>;
+<span class="k">const</span> c = <span class="k">await</span> Client.connect(SHARE_URL);
+<span class="k">for await</span> (<span class="k">const</span> m <span class="k">of</span> c.submit(<span class="s">"/ask"</span>, {
+  message: <span class="s">"Top 5 customers by revenue?"</span>,
+  api_key: <span class="s">"zb_…"</span>, history: <span class="s">"[]"</span> })) {
+  <span class="k">if</span> (m.type === <span class="s">"data"</span>) render(m.data[0]);
+}</pre>
+</div>
+<h3>Conventions <span class="tag v">Verified</span> plus proposed additions</h3>
+<ul>
+<li>Errors return <code>{error: "&lt;plain sentence telling the user what to do&gt;"}</code> with a 4xx/5xx status. Upstream failures (Kaggle, HF) return 502 with the provider's message. Messages are written for non-technical users ("Verify your phone number in Kaggle settings…").</li>
+<li><span class="tag r">Recommendation</span> For the public hosting API: version it (<code>/v1/chat</code>), adopt an OpenAI-compatible request shape so existing SDKs work, use <code>Authorization: Bearer zb_…</code>, idempotency keys on billable calls, rate-limit headers (<code>X-RateLimit-Remaining</code>), and documented error codes (<code>quota_exceeded</code>, <code>model_offline</code>, <code>invalid_key</code>).</li>
+<li>Validate every request body with a schema (e.g. Zod) at the route boundary.</li>
+</ul>
+
+<h2 id="s4-8"><span class="n">4.8</span>Background jobs, serving and the proposed hosting platform</h2>
+<p><strong>Today</strong> the "queue" is Kaggle itself: each run is a Kaggle script session, at most 2 GPU sessions per Kaggle account. The web app polls status. Turning a chat offline works by writing a signal into <code>control.json</code>, which the job checks every 30 s, because Kaggle offers no reliable external cancel. <span class="tag v">Verified</span></p>
+<p><strong>Serving quality safeguards (built):</strong> replies stream token by token. Up to 1,536 new tokens per pass, and a reply that hits the cap continues automatically (up to 3 passes). A light repetition penalty (1.05) prevents loops. Before a reply is final, a checker looks for runaway encoded strings (e.g. data URLs, stopped as they start), unclosed code blocks, unbalanced brackets, Python syntax errors and over-length code when the user set a line limit. A failing answer is rewritten once, and is flagged if it still fails. <span class="tag v">Verified</span></p>
+<figure>
+<svg viewBox="0 0 720 170" font-family="Inter,Arial" font-size="10">
+<defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#5a6275"/></marker><style>.p{fill:#eef3ff;stroke:#3d7bff;stroke-dasharray:5 3;stroke-width:1.3}.q{fill:#fff;stroke:#8a93a8;stroke-width:1.1}.h{font-weight:650;fill:#000}.m{fill:#5a6275;font-size:9px}.l{stroke:#5a6275;stroke-width:1.2;fill:none;marker-end:url(#a3)}</style></defs>
+<rect class="q" x="10" y="50" width="110" height="60" rx="7"/><text class="h" x="20" y="72">Customer app</text><text class="m" x="20" y="88">Bearer zb_… key</text><text class="m" x="20" y="101">OpenAI-style body</text>
+<rect class="p" x="160" y="30" width="170" height="100" rx="7"/><text class="h" x="170" y="52">API gateway (edge)</text><text class="m" x="170" y="70">key hash lookup · plan limits</text><text class="m" x="170" y="84">rate limit (Redis token bucket)</text><text class="m" x="170" y="98">answer checker · streaming</text><text class="m" x="170" y="112">usage_events → Postgres</text>
+<rect class="p" x="370" y="30" width="170" height="100" rx="7"/><text class="h" x="380" y="52">Inference pool</text><text class="m" x="380" y="70">vLLM, serverless GPU</text><text class="m" x="380" y="84">multi-LoRA: one base model,</text><text class="m" x="380" y="98">many customer adapters</text><text class="m" x="380" y="112">scale to zero (cold starts)</text>
+<rect class="q" x="580" y="20" width="130" height="55" rx="7"/><text class="h" x="590" y="42">Hugging Face</text><text class="m" x="590" y="58">adapters, versions</text>
+<rect class="q" x="580" y="90" width="130" height="55" rx="7"/><text class="h" x="590" y="112">Postgres + Razorpay</text><text class="m" x="590" y="128">plans, quotas, invoices</text>
+<path class="l" d="M120 80 H156"/><path class="l" d="M330 80 H366"/><path class="l" d="M540 60 H576"/><path class="l" d="M330 110 Q450 150 576 120"/>
+</svg>
+<figcaption><b>FIG 4.4</b>Proposed always-on hosting. Serving many small adapters on a shared base model (multi-LoRA) is the key cost lever for ≤3B models. <span class="tag r">Recommendation</span></figcaption>
+</figure>
+<p><strong>Proposed scheduled tasks:</strong> nightly usage roll-up and quota reset at period start (cron); a daily check for stuck runs (Kaggle status stale over 2 h → notify the user); weekly key-age reminders; monthly invoice reconciliation against gateway webhooks.</p>
+
+<h2 id="s4-9"><span class="n">4.9</span>Infrastructure, environments, CI/CD and observability</h2>
+<table>
+<thead><tr><th style="width:28mm">Environment</th><th>Purpose</th><th>Data</th></tr></thead>
+<tbody>
+<tr><td>Local</td><td>Development (<code>npm run dev</code>)</td><td>Developer's own Supabase project and test Kaggle/HF accounts</td></tr>
+<tr><td>Preview</td><td>One deployment per pull request</td><td>Staging Supabase project, seeded test users</td></tr>
+<tr><td>Staging</td><td>Release candidate, full end-to-end run on a test Kaggle account</td><td>Staging project</td></tr>
+<tr><td>Production</td><td>Customers</td><td>Production project, backups and PITR</td></tr>
+</tbody></table>
+<ul>
+<li><strong>Version control:</strong> Git with trunk-based development and short-lived branches (§6.3). <span class="tag u">Unknown</span> The current working copy is not a Git repository. <span class="tag r">Recommendation</span> Initialise a repo and push it to a private GitHub organisation this week.</li>
+<li><strong>CI on every PR:</strong> <code>tsc --noEmit</code>, lint, <code>next build</code>, Python job tests (<code>tests/test_testify.py</code>, <code>tests/test_serving.py</code>, which exist today <span class="tag v">Verified</span>), and a dependency audit.</li>
+<li><strong>Weekly scheduled end-to-end:</strong> a canary run trains a tiny model on a Zebrain-owned Kaggle account and checks every stage. This catches Kaggle image or package drift (the job pins package versions for this reason).</li>
+<li><strong>Observability:</strong> error tracking (e.g. Sentry) on web and API, structured logs with request IDs, uptime checks on the site and gateway, and a funnel dashboard (Chapter 10). Run-level telemetry already exists in <code>progress.json</code>. Aggregate its stage failures weekly.</li>
+</ul>
+
+<h2 id="s4-10"><span class="n">4.10</span>Security: secrets, encryption, limits, backups and incidents</h2>
+<div class="box u"><span class="tag u">Gap: fix before launch</span><p>Users' Kaggle keys, Hugging Face tokens and Gemini keys are stored as plain <code>text</code> columns in <code>connections</code> (protected by row-level security, but not encrypted by the application) <sup class="c">[2]</sup>. In addition, the HF token and Gemini key are <strong>embedded in each user's private Kaggle script</strong> so the job can publish and grade <sup class="c">[1]</sup>. A leaked script or database dump would expose working credentials.</p></div>
+<table>
+<thead><tr><th style="width:34mm">Control</th><th>Recommendation</th><th style="width:16mm">Priority</th></tr></thead>
+<tbody>
+<tr><td>Encryption at rest</td><td>Encrypt key columns with a server-held key (Supabase Vault or envelope encryption via a KMS). Decrypt only inside API routes.</td><td>P0</td></tr>
+<tr><td>Short-lived job credentials</td><td>Replace embedded tokens with a per-run token: the job exchanges it at a Zebrain endpoint for the minimum access it needs. It expires when the run ends. (This is what the paused <code>run_tokens</code> table was for.)</td><td>P0</td></tr>
+<tr><td>Least privilege</td><td>Guide users to fine-grained HF tokens limited to their Zebrain repos. Show key age and a "rotate" prompt.</td><td>P1</td></tr>
+<tr><td>Rate limiting</td><td>Per-IP and per-user limits on auth, <code>/api/plan</code> and <code>/api/runs</code>. Per-key limits on the hosting API (10 or 30 requests/min by plan).</td><td>P1</td></tr>
+<tr><td>Headers and CSP</td><td>Content-Security-Policy allowing only the pinned client CDN, HSTS, frame-ancestors none.</td><td>P1</td></tr>
+<tr><td>Backups and DR</td><td>Daily backups plus PITR. Quarterly restore drill. RPO 24 h / RTO 4 h for the web app. User models live on HF, outside Zebrain's blast radius.</td><td>P1</td></tr>
+<tr><td>Secrets in code</td><td>Server secrets only in the hosting provider's environment. Secret scanning in CI. <code>.env.local</code> never committed.</td><td>P0</td></tr>
+<tr><td>Incident response</td><td>Checklist in Appendix A15. Severity levels in §6.5. Breach notification duties under DPDP in §9.3.</td><td>P1</td></tr>
+</tbody></table>
+
+<h2 id="s4-11"><span class="n">4.11</span>Performance, scalability, reliability and cost</h2>
+<ul>
+<li><strong>Web tier</strong> is stateless and scales horizontally. The heaviest route, <code>/api/plan</code>, is dominated by Gemini latency (probe 15 s, real calls up to 150 s). <span class="tag r">Recommendation</span> Move it to a background job with progress events instead of one long request.</li>
+<li><strong>Training</strong> scales with users for free, because each user brings their own Kaggle GPU. Paid training scales with the GPU budget, through a queue with per-user concurrency limits.</li>
+<li><strong>Chat latency:</strong> streaming made the first words appear about 200 ms after submit in local tests (versus waiting for the whole reply before). <span class="tag v">Verified</span> (local Gradio 6 test)</li>
+<li><strong>Cost levers for hosting:</strong> multi-LoRA on shared base models, 4-bit or 8-bit inference for ≤3B, scale-to-zero for Starter and warm pools for Pro, and response caching for repeated FAQ answers.</li>
+</ul>
+
+<h2 id="s4-12"><span class="n">4.12</span>Data privacy, retention, deletion and access</h2>
+<table>
+<thead><tr><th>Data</th><th>Where</th><th>Retention (proposed)</th></tr></thead>
+<tbody>
+<tr><td>Account (email, name)</td><td>Supabase</td><td>Life of account + 30 days</td></tr>
+<tr><td>Third-party keys</td><td>Supabase <code>connections</code></td><td>Deleted immediately on disconnect or account deletion</td></tr>
+<tr><td>Run metadata and config</td><td>Supabase <code>runs</code></td><td>Life of account</td></tr>
+<tr><td>Training data, test sets, corrections, chat state</td><td>User's own HF state repo</td><td>Controlled by the user</td></tr>
+<tr><td>Chat messages</td><td>Not stored by Zebrain (the chat runs on the user's GPU). Corrections are saved only when the user chooses.</td><td>n/a <span class="tag v">Verified</span></td></tr>
+<tr><td>Hosting usage (future)</td><td>Postgres <code>usage_events</code></td><td>Counts kept 24 months. Message content not logged by default.</td></tr>
+</tbody></table>
+<p><strong>Access:</strong> staff access to production data needs SSO, MFA and a ticket reason, and every access is logged. <strong>Third-party processing:</strong> prompts sent to Gemini on its free tier may be used by Google to improve its products, per Google's terms <sup class="c">[9]</sup>. Disclose this in the privacy policy, and use a paid tier for Business clients' data.</p>
+
+<h2 id="s4-13"><span class="n">4.13</span>AI/LLM infrastructure: models, prompts, evaluations, safeguards</h2>
+<table>
+<thead><tr><th style="width:34mm">Component</th><th>Current design <span class="tag v">Verified</span></th><th>Next step <span class="tag r">Recommendation</span></th></tr></thead>
+<tbody>
+<tr><td>Base models</td><td>Small open instruct models (e.g. Qwen2.5-Coder-1.5B). Gated models checked for licence acceptance first. Llama naming rules enforced.</td><td>Curated catalogue with a measured quality/latency score per size.</td></tr>
+<tr><td>Gemini selection</td><td>Ranks <code>gemini-X.Y-flash</code> models and probes each with a 15 s request, because newest models were sometimes overloaded or silent. Falls back to the next. Calls spaced 6.5 s apart in jobs for free-tier limits.</td><td>Provider abstraction, budget caps, response caching.</td></tr>
+<tr><td>Prompts</td><td>Inline in code (planner, reviewer, grader, Testify, paraphrase).</td><td>Prompt registry: versioned prompts in files, with golden tests per prompt.</td></tr>
+<tr><td>Evaluations</td><td>Held-out rows, Gemini-written exam, identity, capability and off-topic checks. Gemini grading with a rules fallback. The answer checker counts broken code as wrong.</td><td>Persist eval results per version in Postgres. Publish a public benchmark per use case.</td></tr>
+<tr><td>Safeguards</td><td>Off-topic refusal training. Quality rules in the system prompt. Testify never trains on test-question copies (exact or token-F1 &gt; 0.8).</td><td>Content-safety filter on hosting outputs. Abuse reporting. Block models trained to impersonate real people or brands without rights.</td></tr>
+</tbody></table>
+</section>

@@ -1,0 +1,197 @@
+<section class="divider" data-ch="5">
+  <div class="gridlines"></div><div class="beam"></div>
+  <p class="num pixel">05</p>
+  <h1>Frontend, UI/UX &amp; Design System</h1>
+  <p class="lede">The visual and interaction system Zebrain already ships (black, one blue, Inter and a pixel wordmark) codified into tokens, components and rules.</p>
+  <ul class="in"><li>5.1 Brand identity and principles</li><li>5.2 Colour and type tokens</li><li>5.3 Layout, spacing and responsiveness</li><li>5.4 Components</li><li>5.5 Information architecture and journeys</li><li>5.6 Key screens</li><li>5.7 States, accessibility and handoff</li></ul>
+</section>
+
+<section>
+<h2 id="s5-1"><span class="n">5.1</span>Brand identity and design principles</h2>
+<p>Zebrain's interface uses a black page, a single brand blue, the Inter typeface, a pixel font (Silkscreen) for the wordmark and accents, a blue "light beam" gradient in the hero, pill-shaped buttons and chat bubbles styled like Gradio's. <span class="tag v">Verified</span> (<code>tailwind.config.ts</code>, <code>globals.css</code>, <code>layout.tsx</code>) No logo file or brand guideline document exists. <span class="tag u">Unknown</span> This chapter codifies what the product already does. Anything new is marked as a recommendation.</p>
+<div class="cols3">
+<div class="box"><h4>One colour</h4><p>Blue <code>#3d7bff</code> is reserved for action and focus: buttons, focused links, the beam. Never decoration.</p></div>
+<div class="box"><h4>Plain words</h4><p>Labels say what happens ("Train on Kaggle", "Turn offline"). No AI jargon in primary UI.</p></div>
+<div class="box"><h4>Show the proof</h4><p>Scores, before/after answers and logs are first-class UI, because trust comes from evidence.</p></div>
+</div>
+<h3>Logo and wordmark usage</h3>
+<p><span class="tag r">Recommendation</span> Until a designed logo exists, the wordmark is the word <span class="pixel">zebrain</span> set in Silkscreen, lower-case, in paper white on black or black on white. Keep clear space of at least the height of the "z" on all sides. Do not stretch it, outline it, add gradients to the letters, or set it in any other font. Commission a proper logo (mark + wordmark) before paid marketing begins, and check trademark availability first (§9.2).</p>
+
+<h2 id="s5-2"><span class="n">5.2</span>Colour and typography tokens</h2>
+<figure>
+<svg viewBox="0 0 720 120" font-family="Inter,Arial" font-size="10">
+<g><rect x="0" y="0" width="92" height="70" rx="6" fill="#000000"/><text x="0" y="86" font-weight="650">ink</text><text x="0" y="100" font-family="Geist Mono" font-size="9" fill="#5a6275">#000000 page</text></g>
+<g><rect x="104" y="0" width="92" height="70" rx="6" fill="#0c0f17"/><text x="104" y="86" font-weight="650">panel</text><text x="104" y="100" font-family="Geist Mono" font-size="9" fill="#5a6275">#0c0f17 surfaces</text></g>
+<g><rect x="208" y="0" width="92" height="70" rx="6" fill="#1e2433"/><text x="208" y="86" font-weight="650">line</text><text x="208" y="100" font-family="Geist Mono" font-size="9" fill="#5a6275">#1e2433 hairlines</text></g>
+<g><rect x="312" y="0" width="92" height="70" rx="6" fill="#8a93a8"/><text x="312" y="86" font-weight="650">mute</text><text x="312" y="100" font-family="Geist Mono" font-size="9" fill="#5a6275">#8a93a8 secondary</text></g>
+<g><rect x="416" y="0" width="92" height="70" rx="6" fill="#f4f6fb" stroke="#dbe2f0"/><text x="416" y="86" font-weight="650">paper</text><text x="416" y="100" font-family="Geist Mono" font-size="9" fill="#5a6275">#f4f6fb text</text></g>
+<g><rect x="520" y="0" width="92" height="70" rx="6" fill="#3d7bff"/><text x="520" y="86" font-weight="650">accent</text><text x="520" y="100" font-family="Geist Mono" font-size="9" fill="#5a6275">#3d7bff action</text></g>
+<g><rect x="624" y="0" width="92" height="70" rx="6" fill="#ff8a80"/><text x="624" y="86" font-weight="650">bad</text><text x="624" y="100" font-family="Geist Mono" font-size="9" fill="#5a6275">#ff8a80 errors</text></g>
+</svg>
+<figcaption><b>FIG 5.1</b>Colour tokens from <code>tailwind.config.ts</code>. <span class="tag v">Verified</span></figcaption>
+</figure>
+<table>
+<thead><tr><th>Token</th><th>Family</th><th>Size / weight</th><th>Use</th></tr></thead>
+<tbody>
+<tr><td><code>display</code></td><td>Inter</td><td>40–64 px / 600, tracking −2%</td><td>Hero headlines</td></tr>
+<tr><td><code>h1–h3</code></td><td>Inter</td><td>28 / 22 / 18 px, 600</td><td>Page and section titles</td></tr>
+<tr><td><code>body</code></td><td>Inter</td><td>15–16 px / 400, line-height 1.55</td><td>Copy, forms</td></tr>
+<tr><td><code>mono</code></td><td>Geist Mono</td><td>13 px / 400–500</td><td>Model replies, code, numbers, logs</td></tr>
+<tr><td><code>pixel</code></td><td>Silkscreen</td><td>Wordmark, eyebrow labels</td><td>Brand moments only. Never body text.</td></tr>
+</tbody></table>
+<p class="small">Contrast: paper on ink is about 19:1 and mute on ink about 6.8:1 (both pass WCAG AA). Accent on ink is about 5.1:1, which passes AA for normal text. White on accent is about 4.1:1: use it for buttons with 15 px or larger semibold labels (AA large), or darken the button shade if smaller text is needed. <span class="tag r">Recommendation</span> Verify with a contrast checker when tokens change.</p>
+
+<h2 id="s5-3"><span class="n">5.3</span>Layout, grids, spacing and responsive behaviour</h2>
+<table>
+<thead><tr><th>Rule</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Spacing scale</td><td>4 px base: 4, 8, 12, 16, 24, 32, 48, 64, 96 (Tailwind 1–24)</td></tr>
+<tr><td>Content width</td><td>Reading pages max 768 px (<code>max-w-3xl</code>). Dashboards max 1152 px.</td></tr>
+<tr><td>Grid</td><td>12 columns, 24 px gutter on desktop · 8 columns on tablet · 4 columns with a 16 px side gutter on phones</td></tr>
+<tr><td>Breakpoints</td><td>sm 640 · md 768 · lg 1024 · xl 1280 (Tailwind defaults)</td></tr>
+<tr><td>Radius</td><td>Pills (buttons, chips) 999 px · cards 12 px · inputs 8 px · chat bubbles 16 px with one 6 px corner</td></tr>
+<tr><td>Responsive rules</td><td>Tables scroll inside their container or hide secondary columns (as the pricing table does). The chat input is sticky at the bottom. No horizontal page scroll at 360 px.</td></tr>
+</tbody></table>
+
+<h2 id="s5-4"><span class="n">5.4</span>Component library</h2>
+<table>
+<thead><tr><th style="width:30mm">Component</th><th>Spec</th><th>Do / Don't</th></tr></thead>
+<tbody>
+<tr><td>Button (primary)</td><td>Pill, accent fill, white semibold label, 40 px tall, 2 px focus ring in paper</td><td>One primary per view. Disabled at 35% opacity with the reason shown nearby.</td></tr>
+<tr><td>Button (link)</td><td>Underlined on hover, mute → paper</td><td>For secondary actions ("Cancel", "Show").</td></tr>
+<tr><td>Input / textarea</td><td>Panel fill, line border, focus border paper, label above</td><td>Never use a placeholder as the label.</td></tr>
+<tr><td>Chip</td><td>Pill outline, <code>aria-pressed</code> for toggles (model size picker)</td><td>Use for choices of 2–7 options.</td></tr>
+<tr><td>Card</td><td>Panel fill, 1 px line, 12 px radius</td><td>No drop shadows on black. Hierarchy comes from spacing.</td></tr>
+<tr><td>Table</td><td>Hairline rows, mute header, right-aligned numbers in mono</td><td>Zebra stripes only on very wide tables.</td></tr>
+<tr><td>Chat bubble</td><td>User: accent fill, right. Model: panel fill with line border, mono text, left.</td><td>"Wrong answer?" link under each finished model reply.</td></tr>
+<tr><td>Stage list</td><td>Ordered stages with state (waiting, running, done, failed) and a one-line message</td><td>Always show what's happening and roughly how long it takes.</td></tr>
+<tr><td>Modal / confirm</td><td>Used only for destructive or costly actions ("Turn offline?")</td><td>Primary button names the action, not "OK".</td></tr>
+<tr><td>Toast / status</td><td><code>role="status"</code> line near the action</td><td>Errors stay until fixed. Successes fade after 4 s.</td></tr>
+<tr><td>Empty state</td><td>One sentence + one primary action ("No models yet. Describe a job to train your first.")</td><td>No illustrations needed.</td></tr>
+</tbody></table>
+
+<h2 id="s5-5"><span class="n">5.5</span>Information architecture and user journeys</h2>
+<figure>
+<svg viewBox="0 0 720 140" font-family="Inter,Arial" font-size="10">
+<defs><marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#3d7bff"/></marker><style>.n{fill:#fff;stroke:#10131c;stroke-width:1.1}.k{fill:#000}.w{fill:#fff;font-weight:650}.h{font-weight:650}.m{fill:#5a6275;font-size:8.8px}.ar{stroke:#3d7bff;stroke-width:1.3;fill:none;marker-end:url(#a4)}</style></defs>
+<rect class="k" x="5" y="45" width="88" height="50" rx="25"/><text class="w" x="49" y="68" text-anchor="middle">Home</text><text x="49" y="82" text-anchor="middle" fill="#b9c1d4" font-size="8.8">describe a job</text>
+<rect class="n" x="115" y="45" width="88" height="50" rx="8"/><text class="h" x="159" y="66" text-anchor="middle">Sign up</text><text class="m" x="159" y="81" text-anchor="middle">email / Google</text>
+<rect class="n" x="225" y="45" width="88" height="50" rx="8"/><text class="h" x="269" y="66" text-anchor="middle">Connect</text><text class="m" x="269" y="81" text-anchor="middle">Kaggle · HF · Gemini</text>
+<rect class="n" x="335" y="45" width="88" height="50" rx="8"/><text class="h" x="379" y="66" text-anchor="middle">Wizard</text><text class="m" x="379" y="81" text-anchor="middle">model · data · tests</text>
+<rect class="n" x="445" y="45" width="88" height="50" rx="8"/><text class="h" x="489" y="66" text-anchor="middle">Runs</text><text class="m" x="489" y="81" text-anchor="middle">live progress</text>
+<rect class="n" x="555" y="10" width="78" height="44" rx="8"/><text class="h" x="594" y="30" text-anchor="middle">Chat + API</text><text class="m" x="594" y="44" text-anchor="middle">use it</text>
+<rect class="n" x="555" y="86" width="78" height="44" rx="8"/><text class="h" x="594" y="106" text-anchor="middle">Fix / Testify</text><text class="m" x="594" y="120" text-anchor="middle">improve it</text>
+<rect class="k" x="650" y="45" width="66" height="50" rx="25"/><text class="w" x="683" y="68" text-anchor="middle">Pay</text><text x="683" y="82" text-anchor="middle" fill="#b9c1d4" font-size="8.8">host it</text>
+<path class="ar" d="M93 70 H111"/><path class="ar" d="M203 70 H221"/><path class="ar" d="M313 70 H331"/><path class="ar" d="M423 70 H441"/><path class="ar" d="M533 62 L551 40"/><path class="ar" d="M533 78 L551 102"/><path class="ar" d="M633 32 Q648 40 660 50"/><path class="ar" d="M594 86 V58"/>
+</svg>
+<figcaption><b>FIG 5.2</b>Core journey. Connect is the biggest drop-off risk (Kaggle phone verification). The "Pay" step is proposed. <span class="tag r">Recommendation</span></figcaption>
+</figure>
+<p><strong>Onboarding fixes to prioritise:</strong> (1) a Connect checklist that validates each key live and explains Kaggle phone verification with screenshots; (2) a "try a ready-made model" chat before connecting anything, so value shows up in under a minute; (3) remember the job description typed on the home page through sign-up. <span class="tag r">Recommendation</span></p>
+
+<h2 id="s5-6"><span class="n">5.6</span>Key screens</h2>
+<table>
+<thead><tr><th style="width:26mm">Screen</th><th>Purpose and content</th><th style="width:20mm">Status</th></tr></thead>
+<tbody>
+<tr><td>Landing</td><td>Beam hero with "describe a job" input, how it works, comparison with ChatGPT/Gemini, FAQ</td><td><span class="tag v">Built</span></td></tr>
+<tr><td>Auth</td><td>Email/password and Google, with a <code>next</code> redirect back to the intended page</td><td><span class="tag v">Built</span></td></tr>
+<tr><td>Connect</td><td>Three key fields with live checks. A blank field keeps the saved key.</td><td><span class="tag v">Built</span></td></tr>
+<tr><td>Wizard</td><td>Job → base model → data ("Let Gemini choose" or search) → test set → identity → chat hours → Train</td><td><span class="tag v">Built</span></td></tr>
+<tr><td>Runs</td><td>Stage list, loss, scores table (test, exam, identity, capability, off-topic), log tail, resume, import of older runs</td><td><span class="tag v">Built</span></td></tr>
+<tr><td>Chat dashboard</td><td>Status, Turn offline, API endpoint, Hugging Face link, owner chat (streaming), API guide with JS/Python snippets</td><td><span class="tag v">Built</span></td></tr>
+<tr><td>Fix</td><td>Corrections queue, identity editor, versions, Testify with Gemini (1–3 rounds)</td><td><span class="tag v">Built</span></td></tr>
+<tr><td>Billing / settings</td><td>Plan, usage meter, invoices, API keys, delete account</td><td><span class="tag r">Proposed</span></td></tr>
+<tr><td>Admin</td><td>Users, runs by failure stage, credits, abuse reports, feature flags (staff only, SSO)</td><td><span class="tag r">Proposed</span></td></tr>
+</tbody></table>
+
+<h2 id="s5-7"><span class="n">5.7</span>States, accessibility and design handoff</h2>
+<ul>
+<li><strong>Loading:</strong> say what is happening ("Gemini is reading sample rows… up to 2 minutes"). Never use a spinner without words for waits over 2 s.</li>
+<li><strong>Errors:</strong> say what went wrong and what to do, in one sentence, next to the cause. API errors already follow this pattern. <span class="tag v">Verified</span></li>
+<li><strong>Success:</strong> state the result and the next step ("Saved. 3 corrections waiting on the Fix page").</li>
+<li><strong>Edge cases:</strong> chat closed mid-reply, Kaggle quota exhausted, gated model not accepted, Gemini overloaded, HF read-only token. Each gets a specific message.</li>
+<li><strong>Accessibility:</strong> keyboard reachable everything, visible focus rings, <code>aria-live</code> on streaming chat and status, labelled inputs, <code>prefers-reduced-motion</code> respected, targets of 40 px or more on touch.</li>
+<li><strong>Handoff:</strong> tokens live in <code>tailwind.config.ts</code>, which is the single source. Design files mirror the token names exactly. Each component has a short doc (purpose, props, states, accessibility notes) next to its code. <span class="tag r">Recommendation</span></li>
+<li><strong>Frontend standards:</strong> server components by default, client components only for interactivity, no new UI library without a decision record, and every page must pass a 360 px width check and keyboard-only use before merge.</li>
+</ul>
+</section>
+
+<section class="divider" data-ch="6">
+  <div class="gridlines"></div><div class="beam"></div>
+  <p class="num pixel">06</p>
+  <h1>Product Development &amp; Engineering Workflow</h1>
+  <p class="lede">How Zebrain decides what to build, specifies it, ships it safely and learns from users.</p>
+  <ul class="in"><li>6.1 Roadmap and prioritisation</li><li>6.2 Requirements and cadence</li><li>6.3 Branching, reviews and releases</li><li>6.4 Testing strategy</li><li>6.5 Bugs, severity and triage</li><li>6.6 Tech debt and documentation</li><li>6.7 Feedback, analytics and experiments</li></ul>
+</section>
+
+<section>
+<h2 id="s6-1"><span class="n">6.1</span>Product roadmap and prioritisation</h2>
+<table>
+<thead><tr><th style="width:18mm">Window</th><th>Theme</th><th>Items (in priority order)</th></tr></thead>
+<tbody>
+<tr><td>Now (0–6 wks)</td><td>Launch safely</td><td>Git repo + CI · production deploy · key encryption and per-run tokens · Kaggle terms opinion · skill replay in train-mode retrain rounds · booking page for Business</td></tr>
+<tr><td>Next (6–12 wks)</td><td>Get paid</td><td>Razorpay (plans, top-ups, credits) · hosting ≤3B (multi-LoRA) · usage metering · billing page · onboarding checklist</td></tr>
+<tr><td>Then (3–6 mo)</td><td>Better models</td><td>Dataset generation (~2,000 examples per job, LLM-written with web search) · document upload → topics → examples · paid L40S training · eval history per version</td></tr>
+<tr><td>Later (6–12 mo)</td><td>Scale</td><td>Orgs and teams · agency programme · website chat widget · Indian-language support · H100 training · OpenAI-compatible API</td></tr>
+</tbody></table>
+<p><strong>Why data generation ranks above more training rounds:</strong> in the internal coding-model run, extra rounds moved the held-out test score only from 38% to 42% and plateaued, while 25-question exams can't cover a domain. Small models are data-limited. Producing about 2,000 high-quality, task-specific examples per job is the biggest quality lever. <span class="tag v">Verified</span> (internal run) + <span class="tag r">Recommendation</span></p>
+
+<h2 id="s6-2"><span class="n">6.2</span>Requirements, user stories and development cadence</h2>
+<ul>
+<li><strong>Methodology:</strong> two-week cycles (lightweight Scrum), plus a continuous-flow lane for bugs. Justification: one to four engineers, fast-changing external APIs, and a need for a weekly demo on real models.</li>
+<li><strong>Every feature starts with a 1–2 page PRD</strong> (Appendix A5): problem, users, success metric, scope / out of scope, user stories, acceptance criteria, risks, rollout.</li>
+<li><strong>User story format:</strong> "As a <em>shop owner</em>, I want <em>to fix one wrong answer from the chat</em>, so that <em>the next version answers correctly</em>."</li>
+<li><strong>Acceptance criteria in Given/When/Then.</strong> Example: Given a saved correction, when I start a fix run, then the published version answers the corrected question correctly <em>and</em> no earlier test score drops by more than 2 points.</li>
+</ul>
+
+<h2 id="s6-3"><span class="n">6.3</span>Environments, branching, reviews and release management</h2>
+<ul>
+<li><strong>Branching:</strong> trunk-based. Short branches <code>feat/…</code>, <code>fix/…</code>, merged by squash after review. <code>main</code> is always deployable.</li>
+<li><strong>Pull requests:</strong> under 400 lines where possible. The description covers what, why, screenshots and test evidence. One approving review, two for auth, keys, billing or the training job's publish logic.</li>
+<li><strong>Releases:</strong> continuous deployment of the web app from <code>main</code> behind feature flags. The training job is versioned (<code>JOB_VERSION</code>), and each run records which version it used, so a regression can be traced to a job release.</li>
+</ul>
+<div class="tpl"><h3>Release checklist</h3>
+<ul class="checklist">
+<li>CI green: typecheck, lint, build, Python job tests</li>
+<li>Staging canary run completed all stages on a test Kaggle account (for job changes)</li>
+<li>Database migrations reviewed, reversible, and applied to staging first</li>
+<li>Feature flag default set. Rollback plan written in the PR.</li>
+<li>Changelog entry and docs/API guide updated</li>
+<li>Error-rate and run-failure dashboards watched for 30 minutes after deploy</li>
+</ul></div>
+
+<h2 id="s6-4"><span class="n">6.4</span>Testing strategy</h2>
+<table>
+<thead><tr><th style="width:26mm">Level</th><th>What</th><th>Today</th></tr></thead>
+<tbody>
+<tr><td>Unit</td><td>Pure functions: pricing scale, model ranking, answer checker, practice-row de-duplication, encoders</td><td><span class="tag v">Exists (Python)</span></td></tr>
+<tr><td>Integration</td><td>Gradio endpoints with a fake model, API routes with mocked Kaggle/HF/Gemini</td><td><span class="tag v">Exists (serving)</span></td></tr>
+<tr><td>End-to-end</td><td>Browser test: sign up → connect (test keys) → wizard → run starts. Weekly real canary run.</td><td><span class="tag r">Proposed</span></td></tr>
+<tr><td>Model quality</td><td>Golden prompts per base model and use case. Scores must not regress between job versions.</td><td><span class="tag r">Proposed</span></td></tr>
+<tr><td>Performance</td><td>Time to first token and tokens/s on T4 for 1.5B and 3B. Hosting load test before launch.</td><td><span class="tag r">Proposed</span></td></tr>
+<tr><td>Security</td><td>Dependency audit in CI, RLS policy tests (user A cannot read user B), secret scanning, annual external pen test</td><td><span class="tag r">Proposed</span></td></tr>
+</tbody></table>
+
+<h2 id="s6-5"><span class="n">6.5</span>Bug reporting, severity and triage</h2>
+<table>
+<thead><tr><th style="width:14mm">Sev</th><th>Definition</th><th>Example</th><th style="width:26mm">Response / fix</th></tr></thead>
+<tbody>
+<tr><td>S1</td><td>Security exposure, data loss, or all runs/hosting down</td><td>Keys exposed. Sign-in broken for everyone.</td><td>15 min / same day</td></tr>
+<tr><td>S2</td><td>Core flow broken for many users, no workaround</td><td>Kaggle image change breaks the job install</td><td>2 h / 2 days</td></tr>
+<tr><td>S3</td><td>Feature broken with a workaround, or one user's flow</td><td>Testify fails without a Gemini key on one path</td><td>1 day / next cycle</td></tr>
+<tr><td>S4</td><td>Cosmetic or minor</td><td>Misaligned table on mobile</td><td>Backlog</td></tr>
+</tbody></table>
+<p>Bug report template: Appendix A5 (bug section). Triage happens daily: the CTO sets severity and owner, and S1/S2 open an incident (Appendix A15).</p>
+
+<h2 id="s6-6"><span class="n">6.6</span>Technical debt and documentation standards</h2>
+<ul>
+<li>Keep a debt register in the tracker, tagged <code>debt</code>, and spend 15–20% of each cycle on it. Current known items: unused token tables, train-mode retrain skill replay, the CDN client without SRI, plaintext key columns, <code>/api/plan</code> as a long request, booking-link placeholder, no Git history.</li>
+<li>Documentation: README for setup, this manual for operations, decision records for one-way doors, and docstrings that explain <em>why</em> (the codebase already does this well). <span class="tag v">Verified</span></li>
+</ul>
+
+<h2 id="s6-7"><span class="n">6.7</span>User feedback, analytics and experimentation</h2>
+<ul>
+<li><strong>In-product feedback:</strong> the "Wrong answer?" and correction flow is also a feedback channel. Add a 1-click "Was this run useful?" after each publish.</li>
+<li><strong>Analytics events</strong> (privacy-friendly, no message content): <code>signup</code>, <code>connect_completed{service}</code>, <code>plan_requested</code>, <code>run_started{mode}</code>, <code>run_finished{stage, scores}</code>, <code>chat_opened</code>, <code>api_called</code>, <code>correction_saved</code>, <code>checkout_started</code>, <code>subscribed{plan}</code>.</li>
+<li><strong>Experiments:</strong> one at a time on the onboarding funnel. Write the hypothesis and the minimum detectable effect first, and run each test for at least 2 weeks or until it reaches its planned sample size.</li>
+</ul>
+</section>

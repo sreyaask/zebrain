@@ -1,0 +1,287 @@
+<section class="divider" data-ch="A">
+  <div class="gridlines"></div><div class="beam"></div>
+  <p class="num pixel">A</p>
+  <h1>Templates &amp; Appendices</h1>
+  <p class="lede">Twenty ready-to-use templates. Copy them into the team's docs space and fill them in.</p>
+  <ul class="in"><li>A1–A4 Strategy and finance</li><li>A5–A9 Product and engineering</li><li>A10–A14 Growth, sales and support</li><li>A15–A20 Operations and risk</li><li>Bibliography</li><li>Implementation checklist</li></ul>
+</section>
+
+<section>
+<h2 id="a1"><span class="n">A1</span>Company strategy one-pager</h2>
+<div class="tpl">
+<div class="field"><b>Mission</b><span>Give every business and maker a language model of their own that does one job well.</span></div>
+<div class="field"><b>Customer</b><span>Indian SMB support teams (first), indie developers, agencies, educators</span></div>
+<div class="field"><b>Problem</b><span>Custom AI needs ML skills, GPUs and evaluation. Generic bots are not on-brand or on-topic.</span></div>
+<div class="field"><b>Solution</b><span>Describe → train free on own GPU → test → publish → chat/API → fix</span></div>
+<div class="field"><b>Why us / now</b><span>Working tested pipeline. Free compute model. Small open models are now good enough.</span></div>
+<div class="field"><b>Business model</b><span>Paid training (GPU-hours), hosting plans, Business done-for-you</span></div>
+<div class="field"><b>North star</b><span>Models in active use</span></div>
+<div class="field"><b>12-month goals</b><span>₹1.9L MRR (base case) · 5 Business clients · 80 hosting customers</span></div>
+<div class="field"><b>Top risks</b><span>Kaggle terms · model quality · cash · key security</span></div>
+<div class="field"><b>This quarter's bets</b><span>Launch safely · 3 pilots · payments · hosting beta · raise ₹25L</span></div>
+</div>
+
+<h2 id="a2"><span class="n">A2</span>Annual and monthly budget</h2>
+<table>
+<thead><tr><th>Account</th><th class="n">M1</th><th class="n">M2</th><th class="n">M3</th><th class="n">…</th><th class="n">M12</th><th class="n">Year</th><th>Owner</th></tr></thead>
+<tbody>
+<tr><td>6010 Salaries</td><td class="n">50,000</td><td class="n">50,000</td><td class="n">50,000</td><td class="n">…</td><td class="n">1,70,000</td><td class="n"></td><td>CEO</td></tr>
+<tr><td>6020 Contractors</td><td class="n">0</td><td class="n">40,000</td><td class="n">40,000</td><td class="n">…</td><td class="n">40,000</td><td class="n"></td><td>Product</td></tr>
+<tr><td>6100 Software &amp; infra</td><td class="n">8,000</td><td class="n">10,000</td><td class="n">12,000</td><td class="n">…</td><td class="n">12,000</td><td class="n"></td><td>CTO</td></tr>
+<tr><td>6200 Marketing</td><td class="n">10,000</td><td class="n">25,000</td><td class="n">40,000</td><td class="n">…</td><td class="n">40,000</td><td class="n"></td><td>Growth</td></tr>
+<tr><td>6300 Legal &amp; professional</td><td class="n">40,000</td><td class="n">20,000</td><td class="n">15,000</td><td class="n">…</td><td class="n">15,000</td><td class="n"></td><td>Finance</td></tr>
+<tr><td>5xxx Cost of revenue</td><td class="n">2,000</td><td class="n">3,000</td><td class="n">5,000</td><td class="n">…</td><td class="n">65,000</td><td class="n"></td><td>CTO</td></tr>
+</tbody></table>
+<p class="small"><span class="tag i">Illustrative</span> Fill in the year column from the full 12 months. Variances over 10% and ₹20,000 are explained monthly.</p>
+
+<h2 id="a3"><span class="n">A3</span>Chart of accounts</h2>
+<p>See §3.2 for the complete chart (codes 1000–6900). Keep it in the accounting software. Add accounts only through the finance owner, never ad hoc.</p>
+
+<h2 id="a4"><span class="n">A4</span>Monthly financial reporting pack</h2>
+<div class="tpl">
+<ul class="checklist">
+<li>Bank, gateway and card reconciliations complete. Clearing account at zero.</li>
+<li>Accruals for GPU/API usage. Deferred revenue moved. Credits liability updated.</li>
+<li>P&amp;L vs budget with variance notes. Balance sheet. Cash flow.</li>
+<li>Tie-outs: closing cash = bank · retained earnings movement = net profit · AR ageing = receivables balance</li>
+<li>KPIs: MRR, gross margin, burn, runway, CAC, churn</li>
+<li>One-page memo: what happened, why, what changes next month</li>
+</ul></div>
+
+<h2 id="a5"><span class="n">A5</span>Product requirements document (PRD) and bug report</h2>
+<div class="tpl">
+<div class="field"><b>Title / owner / date</b><span>e.g. "Document upload → training data" · Product · 2026-11-10</span></div>
+<div class="field"><b>Problem</b><span>Who has it, evidence (interviews, data)</span></div>
+<div class="field"><b>Success metric</b><span>e.g. median quality lift +10 points on runs using uploads</span></div>
+<div class="field"><b>Scope / out of scope</b><span>What ships in v1. What explicitly doesn't.</span></div>
+<div class="field"><b>User stories</b><span>As a… I want… so that…</span></div>
+<div class="field"><b>Acceptance criteria</b><span>Given / When / Then, including failure cases</span></div>
+<div class="field"><b>Design</b><span>Flows, screens, empty, loading and error states</span></div>
+<div class="field"><b>Technical notes</b><span>APIs, schema changes, security review needed?</span></div>
+<div class="field"><b>Rollout</b><span>Flag, beta users, metrics to watch, rollback</span></div>
+</div>
+<div class="tpl"><h3>Bug report</h3>
+<div class="field"><b>Summary</b><span>One line: what is wrong where</span></div>
+<div class="field"><b>Severity</b><span>S1–S4 (§6.5)</span></div>
+<div class="field"><b>Steps to reproduce</b><span>Numbered. Include run id / kernel / model tag.</span></div>
+<div class="field"><b>Expected vs actual</b><span>Plus screenshots or log tail</span></div>
+<div class="field"><b>Environment</b><span>Browser, account type, Gradio/job version</span></div>
+</div>
+
+<h2 id="a6"><span class="n">A6</span>Technical architecture specification</h2>
+<div class="tpl">
+<div class="field"><b>Context</b><span>Problem, constraints (T4 memory, Kaggle limits, cost)</span></div>
+<div class="field"><b>Proposal</b><span>Components, diagram, data flow</span></div>
+<div class="field"><b>Alternatives</b><span>At least two, with reasons rejected</span></div>
+<div class="field"><b>Security and privacy</b><span>Data touched, keys, threats, mitigations</span></div>
+<div class="field"><b>Operability</b><span>Monitoring, alerts, runbook, cost estimate</span></div>
+<div class="field"><b>Migration and rollback</b><span>Steps, reversibility</span></div>
+</div>
+
+<h2 id="a7"><span class="n">A7</span>API documentation template</h2>
+<pre><span class="c">## POST /v1/chat  (proposed hosting API)</span>
+Auth:     Authorization: Bearer zb_…
+Body:     { "model": "you/support-bot@v3",
+            "messages": [{ "role": "user", "content": "…" }],
+            "stream": true, "max_tokens": 1024 }
+200:      text/event-stream of { "delta": "…" } … { "done": true, "usage": {…} }
+Errors:   401 invalid_key · 402 quota_exceeded · 404 model_not_found
+          409 model_offline · 429 rate_limited (Retry-After) · 500 internal
+Limits:   Starter 10 req/min, 1 concurrent · Pro 30 req/min, 3 concurrent</pre>
+
+<h2 id="a8"><span class="n">A8</span>Database schema template</h2>
+<pre><span class="k">create table</span> public.hosted_models (
+  id uuid <span class="k">primary key default</span> gen_random_uuid(),
+  user_id uuid <span class="k">not null references</span> auth.users(id) <span class="k">on delete cascade</span>,
+  model text <span class="k">not null</span>, tag text <span class="k">not null</span>, plan text <span class="k">not null</span>,
+  status text <span class="k">not null default</span> <span class="s">'provisioning'</span>,
+  created_at timestamptz <span class="k">default</span> now(), <span class="k">unique</span> (user_id, model, tag));
+<span class="k">alter table</span> public.hosted_models <span class="k">enable row level security</span>;
+<span class="k">create policy</span> own <span class="k">on</span> public.hosted_models <span class="k">for all using</span> (auth.uid() = user_id);</pre>
+<p class="small">Every new table: primary key, owner column, RLS on, an owner-only policy, indexes for its main query, and a retention note.</p>
+
+<h2 id="a9"><span class="n">A9</span>Design system specification</h2>
+<div class="tpl">
+<div class="field"><b>Component</b><span>Name, purpose, when not to use</span></div>
+<div class="field"><b>Anatomy</b><span>Parts and tokens used (colour, type, spacing, radius)</span></div>
+<div class="field"><b>Variants and states</b><span>Default, hover, focus, active, disabled, loading, error</span></div>
+<div class="field"><b>Accessibility</b><span>Role, keyboard, labels, contrast, motion</span></div>
+<div class="field"><b>Responsive</b><span>Behaviour at 360 / 768 / 1280</span></div>
+<div class="field"><b>Code</b><span>Path, props, example</span></div>
+</div>
+
+<h2 id="a10"><span class="n">A10</span>Marketing campaign brief</h2>
+<div class="tpl">
+<div class="field"><b>Campaign</b><span>Name, dates, owner</span></div>
+<div class="field"><b>Objective + KPI</b><span>e.g. 150 sign-ups, 40 trained models</span></div>
+<div class="field"><b>Audience</b><span>Segment (§7.2) and where they are</span></div>
+<div class="field"><b>Message + proof</b><span>One line and three proof points</span></div>
+<div class="field"><b>Channels + assets</b><span>List with due dates</span></div>
+<div class="field"><b>Budget</b><span>By line</span></div>
+<div class="field"><b>CTA + tracking</b><span>URL with UTM, event names</span></div>
+<div class="field"><b>Review</b><span>Date and decision rule (continue / change / stop)</span></div>
+</div>
+
+<h2 id="a11"><span class="n">A11</span>Content calendar</h2>
+<table>
+<thead><tr><th>Week</th><th>Mon</th><th>Wed</th><th>Fri</th><th>Owner</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>LinkedIn: proof post (scores)</td><td>Blog: how-to guide</td><td>Short video: before/after</td><td>Growth</td></tr>
+<tr><td>2</td><td>Build-in-public update</td><td>HF showcase model + card</td><td>Newsletter</td><td>CEO</td></tr>
+<tr><td>3</td><td>Customer question of the week</td><td>Use-case landing page</td><td>Workshop promo</td><td>Growth</td></tr>
+<tr><td>4</td><td>Monthly "models people made"</td><td>Case study</td><td>Retro: what worked</td><td>Growth</td></tr>
+</tbody></table>
+
+<h2 id="a12"><span class="n">A12</span>Sales outreach sequence</h2>
+<p>Day 1 personalised email · day 4 video with their questions · day 9 case study · day 16 break-up email (full text in §8.4). Log every touch in the CRM, and stop on any reply or opt-out.</p>
+
+<h2 id="a13"><span class="n">A13</span>CRM pipeline</h2>
+<table>
+<thead><tr><th>Deal</th><th>Segment</th><th>Stage</th><th class="n">Value / mo</th><th class="n">Prob.</th><th>Next step</th><th>Date</th><th>Owner</th></tr></thead>
+<tbody>
+<tr><td>Example Store <span class="tag i">Illustrative</span></td><td>D2C</td><td>4 Pilot proposed</td><td class="n">₹25,000</td><td class="n">50%</td><td>Review SOW call</td><td>—</td><td>CEO</td></tr>
+<tr><td></td><td></td><td></td><td class="n"></td><td class="n"></td><td></td><td></td><td></td></tr>
+</tbody></table>
+
+<h2 id="a14"><span class="n">A14</span>Customer support SOP</h2>
+<div class="tpl">
+<ol>
+<li><strong>Intake:</strong> support email or in-app form → ticket with plan, run id, model.</li>
+<li><strong>Categorise:</strong> account/keys · run failure · model quality · billing · other.</li>
+<li><strong>Respond within SLA</strong> (Business 4 business hours, Starter/Pro 1 business day, Free best effort).</li>
+<li><strong>Resolve:</strong> known fixes in the help centre. Run failures follow the triage SOP (§2.4). Quality issues are routed to Fix/Testify.</li>
+<li><strong>Escalate:</strong> to the CTO if it's a platform bug (S1/S2 opens an incident), to the CEO if it's a commercial dispute.</li>
+<li><strong>Close:</strong> confirm with the customer, send CSAT, tag the root cause. Review tags weekly.</li>
+</ol></div>
+
+<h2 id="a15"><span class="n">A15</span>Incident response checklist</h2>
+<div class="tpl"><ul class="checklist">
+<li>Declare: severity (§6.5), incident lead, channel, start time</li>
+<li>Contain: revoke or rotate affected keys, disable the feature by flag, block abusive accounts</li>
+<li>Assess: what data or users are affected and since when (audit logs)</li>
+<li>Communicate: status page, affected users. For personal-data breaches, counsel advises on DPDP notification.</li>
+<li>Recover: fix, verify, monitor for 24 h</li>
+<li>Review within 5 days: blameless post-mortem, actions with owners and dates</li>
+</ul></div>
+
+<h2 id="a16"><span class="n">A16</span>Hiring scorecard</h2>
+<table>
+<thead><tr><th>Competency</th><th>Evidence sought</th><th class="n">Score 1–4</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>Role skill (e.g. PyTorch/PEFT, TypeScript)</td><td>Work sample: improve a failing Zebrain test or a run</td><td class="n"></td><td></td></tr>
+<tr><td>Ownership</td><td>Story of shipping something end to end</td><td class="n"></td><td></td></tr>
+<tr><td>Clear writing</td><td>Short written exercise</td><td class="n"></td><td></td></tr>
+<tr><td>Customer empathy</td><td>Explain a technical failure to a shop owner</td><td class="n"></td><td></td></tr>
+<tr><td>Values fit (§1.1)</td><td>Examples of honesty about limits, frugality</td><td class="n"></td><td></td></tr>
+</tbody></table>
+
+<h2 id="a17"><span class="n">A17</span>Weekly executive report</h2>
+<div class="tpl">
+<div class="field"><b>Headline</b><span>One sentence: the week in one line</span></div>
+<div class="field"><b>North star</b><span>Models in active use: value, Δ vs last week</span></div>
+<div class="field"><b>Funnel</b><span>Visitors · sign-ups · activated · paying</span></div>
+<div class="field"><b>Runs</b><span>Started · published · failure causes (top 3)</span></div>
+<div class="field"><b>Revenue</b><span>MRR · new · churned · pipeline coverage</span></div>
+<div class="field"><b>Cash</b><span>Balance · runway months</span></div>
+<div class="field"><b>Wins / misses</b><span>3 each</span></div>
+<div class="field"><b>Next week's top 3</b><span>Outcome, owner</span></div>
+</div>
+
+<h2 id="a18"><span class="n">A18</span>KPI dashboard specification</h2>
+<table>
+<thead><tr><th>Tile</th><th>Metric (§10.1)</th><th>Chart</th><th>Filter</th><th>Refresh</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Models in active use</td><td>Line, 12 weeks</td><td>Plan, base model</td><td>Daily</td></tr>
+<tr><td>2</td><td>Funnel conversion</td><td>Bar by step</td><td>Week, source</td><td>Daily</td></tr>
+<tr><td>3</td><td>Run success by failure stage</td><td>Stacked bar</td><td>Mode</td><td>Hourly</td></tr>
+<tr><td>4</td><td>MRR and net new MRR</td><td>Line + bars</td><td>Plan</td><td>Daily</td></tr>
+<tr><td>5</td><td>Gross margin, burn, runway</td><td>Numbers with sparkline</td><td>Month</td><td>Monthly</td></tr>
+<tr><td>6</td><td>Quality lift per version</td><td>Box plot</td><td>Use case</td><td>Daily</td></tr>
+</tbody></table>
+
+<h2 id="a19"><span class="n">A19</span>Risk register</h2>
+<table>
+<thead><tr><th>ID</th><th>Risk</th><th>Category</th><th class="n">L</th><th class="n">I</th><th class="n">Score</th><th>Mitigation</th><th>Owner</th><th>Review date</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>R1</td><td>Kaggle blocks free tier</td><td>Platform</td><td class="n">3</td><td class="n">5</td><td class="n">15</td><td>§9.4</td><td>CEO</td><td>Monthly</td><td>Open</td></tr>
+<tr><td>R2</td><td>Credential leak</td><td>Security</td><td class="n">2</td><td class="n">5</td><td class="n">10</td><td>§4.10</td><td>CTO</td><td>Monthly</td><td>Open</td></tr>
+<tr><td>R3…</td><td></td><td></td><td class="n"></td><td class="n"></td><td class="n"></td><td></td><td></td><td></td><td></td></tr>
+</tbody></table>
+
+<h2 id="a20"><span class="n">A20</span>Product launch checklist</h2>
+<div class="cols">
+<ul class="checklist">
+<li>Legal: ToS, Privacy Policy, refund policy published</li>
+<li>Kaggle-use legal opinion received</li>
+<li>Keys encrypted, per-run tokens live</li>
+<li>Backups + restore drill done</li>
+<li>Payments tested end to end, GST invoices correct</li>
+<li>Monitoring, alerts, status page</li>
+<li>Support inbox + SLAs + help centre (top 15 questions)</li>
+</ul>
+<ul class="checklist">
+<li>Analytics events firing. Dashboard tiles populated.</li>
+<li>Onboarding emails scheduled</li>
+<li>3 showcase models with model cards</li>
+<li>Launch posts, video, Product Hunt page ready</li>
+<li>Booking page live (placeholder link replaced)</li>
+<li>Rollback plan and on-call for launch week</li>
+<li>Post-launch review date set (launch + 14 days)</li>
+</ul>
+</div>
+</section>
+
+<section class="page">
+<h2 id="bib"><span class="n">B</span>Bibliography and sources</h2>
+<p class="small">Accessed 25–26 October 2026. Where a source is a third-party aggregator rather than the vendor's own page, re-check it before relying on prices or rules.</p>
+<ol class="bib">
+<li>Zebrain source code and README (<code>lib/pricing.ts</code>, <code>lib/zebrain_train.py</code>, <code>app/</code>, <code>tailwind.config.ts</code>), internal, as of 26 Oct 2026.</li>
+<li>Zebrain Supabase project, public schema, queried 26 Oct 2026, internal.</li>
+<li>Thunder Compute, "Colab alternatives for cheap deep learning in 2025", thundercompute.com/blog/colab-alternatives-for-cheap-deep-learning-in-2025; kgz package page, pypi.org/p/kgz (Kaggle ~30 GPU-hours/week; third-party, confirm with Kaggle).</li>
+<li>AZB &amp; Partners, "India's Digital Personal Data Protection Act: phased rollout and key compliance milestones", Nov 2025, azbpartners.com; Deccan Herald, "Centre notifies DPDP Rules; implementation planned in phases spread over 12–18 months".</li>
+<li>Xflow, "GST on software services" and "OIDAR services", xflowpay.com/blog (18% GST on SaaS, LUT for exports; secondary sources, confirm with a CA).</li>
+<li>Costbench, "OpenAI fine-tuning plans and pricing", costbench.com/software/fine-tuning-apis/openai-fine-tuning (third-party listing).</li>
+<li>Together AI documentation, "Fine-tuning pricing", docs.together.ai/docs/fine-tuning-pricing.</li>
+<li>Hugging Face, "AutoTrain: how much does it cost?", huggingface.co/docs/autotrain/cost; Metronome pricing index, metronome.com/pricing-index/hugging-face.</li>
+<li>Google, "Gemini API Additional Terms of Service", ai.google.dev/gemini-api/terms (use of content on unpaid services).</li>
+<li>Meta, Llama 3.x Community License Agreement, llama.com (attribution and naming requirements).</li>
+<li>Qwen, model card for Qwen/Qwen2.5-Coder-1.5B-Instruct, huggingface.co (Apache-2.0 licence).</li>
+<li>Consumer AI app prices (ChatGPT Go/Plus, Google AI Plus/Pro, India), as recorded in <code>lib/pricing.ts</code>, checked October 2026.</li>
+<li>Dettmers et al., "QLoRA: Efficient Finetuning of Quantized LLMs", arXiv:2305.14314, 2023.</li>
+<li>Hugging Face, PEFT and Transformers documentation, huggingface.co/docs.</li>
+<li>Kaggle, Terms of Use, kaggle.com/terms (to be reviewed by counsel, §9.4).</li>
+<li>Gradio, JavaScript and Python client documentation, gradio.app/docs.</li>
+<li>Ministry of Corporate Affairs, SPICe+ incorporation, mca.gov.in; Startup India (DPIIT recognition), startupindia.gov.in.</li>
+</ol>
+
+<h2 id="final"><span class="n">C</span>Final implementation checklist</h2>
+<div class="box"><p><strong>Reminder:</strong> every <span class="tag i">Illustrative</span> number in this manual is hypothetical, and every <span class="tag u">Unknown</span> item in §0.2 must be confirmed before acting on the sections that depend on it.</p></div>
+<div class="cols">
+<div><h3>Must-have before public launch</h3>
+<ul class="checklist">
+<li>Kaggle-use legal opinion (§9.4)</li>
+<li>Entity, bank, books, GST position (§3, §9.1)</li>
+<li>Git, CI, production deploy, backups (§4.9)</li>
+<li>Encrypted keys + per-run tokens (§4.10)</li>
+<li>ToS, Privacy Policy, refund policy (§9.5)</li>
+<li>Payments with GST invoices (§11.3)</li>
+<li>Train-mode skill replay fix (§4.5)</li>
+<li>Support SOP + SLAs (A14)</li>
+<li>Analytics + weekly report (§10, A17)</li>
+</ul></div>
+<div><h3>Optional / next</h3>
+<ul class="checklist">
+<li>Google sign-in</li>
+<li>Onboarding checklist UI</li>
+<li>Hosting beta (≤3B)</li>
+<li>Dataset generation + document upload</li>
+<li>Paid L40S training</li>
+<li>Agency programme</li>
+<li>Indian-language models</li>
+<li>Logo and brand guideline</li>
+<li>Drop or finish the unused token tables</li>
+</ul></div>
+</div>
+</section>
+</body>
+</html>

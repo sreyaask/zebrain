@@ -1,0 +1,191 @@
+<section class="divider" data-ch="9">
+  <div class="gridlines"></div><div class="beam"></div>
+  <p class="num pixel">09</p>
+  <h1>Legal, Security, Risk &amp; Compliance</h1>
+  <p class="lede">The legal and operational obligations Zebrain must meet, and the places where a qualified professional must decide.</p>
+  <ul class="in"><li>9.1 Formation and governance</li><li>9.2 IP, trademarks and licences</li><li>9.3 Data protection</li><li>9.4 Platform terms</li><li>9.5 Customer and people agreements</li><li>9.6 Risk register and continuity</li></ul>
+</section>
+
+<section>
+<div class="box u"><span class="tag u">Not legal advice</span><p>This chapter identifies issues and proposes an approach. Every item marked "counsel" needs a qualified Indian lawyer, CA or company secretary before action.</p></div>
+<h2 id="s9-1"><span class="n">9.1</span>Company formation and governance</h2>
+<ul>
+<li><strong>Entity:</strong> a private limited company incorporated through the MCA's SPICe+ process is the usual vehicle for a venture-funded Indian startup <sup class="c">[17]</sup>. <span class="tag a">Assumption</span> Then apply for DPIIT startup recognition.</li>
+<li><strong>Founders' agreement:</strong> roles, vesting (4 years with a 1-year cliff), IP assignment, decision rights, and what happens if a founder leaves.</li>
+<li><strong>Governance:</strong> board meetings as required by law, minutes, a statutory register, and a decision log for one-way doors (§2.3).</li>
+</ul>
+
+<h2 id="s9-2"><span class="n">9.2</span>Intellectual property, trademarks and software licences</h2>
+<table>
+<thead><tr><th style="width:34mm">Asset</th><th>Position and action</th></tr></thead>
+<tbody>
+<tr><td>Zebrain code</td><td>Owned by the company through IP assignments (§2.7). Keep it private. Consider open-sourcing the job script later as a marketing asset.</td></tr>
+<tr><td>Name "Zebrain"</td><td>Run a trademark search in classes 9 and 42 (software and SaaS) in India, plus the main export markets, before brand spend. Other AI businesses use similar names. <span class="tag u">Counsel</span></td></tr>
+<tr><td>Users' models</td><td>Belong to users: they live in users' accounts and are derived from their data and open base models. Say so in the terms.</td></tr>
+<tr><td>Base models</td><td>Each base model carries its own licence. Apache-2.0 models (e.g. Qwen2.5-Coder-1.5B-Instruct <sup class="c">[11]</sup>) are permissive. Llama derivatives must follow Meta's licence, including "Built with Llama" naming, which is implemented <sup class="c">[10]</sup>. Gemma has its own terms.</td></tr>
+<tr><td>Datasets</td><td>The planner prefers open-licensed datasets. <span class="tag v">Verified</span> Record each dataset's licence on the model card. Block datasets whose licence forbids commercial use when the user's plan is commercial.</td></tr>
+<tr><td>Open-source dependencies</td><td>Keep a licence inventory (Next.js, Supabase clients, transformers, PEFT, Gradio). All are permissive today.</td></tr>
+</tbody></table>
+
+<h2 id="s9-3"><span class="n">9.3</span>Data protection and cybersecurity responsibilities</h2>
+<p>India's Digital Personal Data Protection (DPDP) Rules were notified on 13 November 2025. They phase in over 18 months, with most substantive obligations (notice, consent, data-principal rights) due from May 2027 <sup class="c">[4]</sup>. Zebrain is a <em>data fiduciary</em> for account data and should prepare now:</p>
+<ul class="checklist">
+<li>Privacy notice in plain language: what is collected (account, keys, run metadata), why, retention (§4.12), processors (Supabase, Gemini, Kaggle, Hugging Face, payments).</li>
+<li>Consent and withdrawal: sign-up consent, and delete-account that really deletes.</li>
+<li>Data-principal rights process: access, correction and erasure requests answered within the statutory period.</li>
+<li>Breach response: notify the Data Protection Board and affected users as the Rules require (Appendix A15). <span class="tag u">Counsel</span> on timelines.</li>
+<li>Processor contracts (DPAs) with every vendor that touches user data.</li>
+<li>Business clients: Zebrain is usually a <em>processor</em> for their end-customers' chats. The MSA must allocate responsibilities.</li>
+<li>Security baseline: Chapter 4.10 controls, MFA for staff, least privilege, annual penetration test.</li>
+</ul>
+
+<h2 id="s9-4"><span class="n">9.4</span>Platform terms: Kaggle, Hugging Face, Google</h2>
+<div class="box u"><span class="tag u">Highest-priority legal question</span><p>Zebrain's free tier runs a commercial service's job on users' own Kaggle accounts. Kaggle's terms of use govern how its free compute may be used <sup class="c">[15]</sup>. Before launch, counsel should review whether this pattern is permitted, what restrictions apply (e.g. to long-running chat sessions), and how Zebrain should describe it to users. Ask Kaggle directly if the opinion is unclear.</p></div>
+<ul>
+<li><strong>Hugging Face:</strong> users publish to their own accounts with their own tokens. Zebrain uses free static Spaces, because Gradio/Docker Spaces need PRO. Review HF's terms for automated repo creation at scale.</li>
+<li><strong>Gemini API:</strong> follow the additional terms. On unpaid tiers, submitted content may be used to improve Google products <sup class="c">[9]</sup>, so Business data should go through a paid tier.</li>
+</ul>
+
+<h2 id="s9-5"><span class="n">9.5</span>Customer, vendor, employee and contractor agreements</h2>
+<table>
+<thead><tr><th>Document</th><th>Must cover</th></tr></thead>
+<tbody>
+<tr><td>Terms of Service</td><td>Acceptable use (no illegal, deceptive or impersonating models), ownership of models, third-party accounts are the user's responsibility, no warranty of model accuracy, liability cap, plan limits, termination</td></tr>
+<tr><td>Privacy Policy</td><td>DPDP-aligned notice (§9.3)</td></tr>
+<tr><td>Business MSA + SOW</td><td>Scope, acceptance test, fees, payment terms, data processing, confidentiality, IP, service levels, termination and data return</td></tr>
+<tr><td>Refund / credit policy</td><td>GPU-hour credits for failed paid runs (as promised on the pricing page), subscription cancellation</td></tr>
+<tr><td>Employment / contractor</td><td>IP assignment, confidentiality, notice periods, statutory benefits</td></tr>
+<tr><td>NDA</td><td>Mutual, for Business discovery where clients share documents</td></tr>
+</tbody></table>
+
+<h2 id="s9-6"><span class="n">9.6</span>Risk register, incident management and business continuity</h2>
+<p>The full register template is Appendix A19. The top risks are scored below (likelihood × impact, each from 1 to 5).</p>
+<table>
+<thead><tr><th>Risk</th><th class="n">L</th><th class="n">I</th><th class="n">Score</th><th>Mitigation</th><th>Owner</th></tr></thead>
+<tbody>
+<tr><td>Kaggle terms or quota block the free tier</td><td class="n">3</td><td class="n">5</td><td class="n">15</td><td>Legal opinion, paid GPU path, exportable job</td><td>CEO</td></tr>
+<tr><td>Stored credentials leak</td><td class="n">2</td><td class="n">5</td><td class="n">10</td><td>Encryption, per-run tokens, incident plan</td><td>CTO</td></tr>
+<tr><td>Model quality disappoints paying clients</td><td class="n">4</td><td class="n">4</td><td class="n">16</td><td>Acceptance tests in SOW, larger models, data generation</td><td>CTO</td></tr>
+<tr><td>Gemini outage or terms change</td><td class="n">3</td><td class="n">3</td><td class="n">9</td><td>Rules fallback (exists), second provider</td><td>CTO</td></tr>
+<tr><td>Cash runs out before funding</td><td class="n">3</td><td class="n">5</td><td class="n">15</td><td>Month-5 decision rule (§3.8)</td><td>CEO</td></tr>
+<tr><td>A user's model produces harmful output</td><td class="n">2</td><td class="n">4</td><td class="n">8</td><td>Acceptable-use policy, safety filter on hosting, takedown process</td><td>CEO</td></tr>
+<tr><td>Key-person dependency (single founder)</td><td class="n">4</td><td class="n">4</td><td class="n">16</td><td>Documentation (this manual), first engineering hire, shared credentials vault</td><td>CEO</td></tr>
+</tbody></table>
+<p><strong>Business continuity:</strong> because models, adapters and run state live in users' Hugging Face accounts, a Zebrain outage stops new runs but loses no user models. Keep infrastructure as code, keep a restore runbook, and keep a second admin with vault access.</p>
+</section>
+
+<section class="divider" data-ch="10">
+  <div class="gridlines"></div><div class="beam"></div>
+  <p class="num pixel">10</p>
+  <h1>Analytics &amp; Performance Management</h1>
+  <p class="lede">One measurement framework for product, growth, sales, customers, engineering and money, with an owner and a decision for every number.</p>
+  <ul class="in"><li>10.1 KPI catalogue</li><li>10.2 Dashboards and cadence</li></ul>
+</section>
+
+<section>
+<h2 id="s10-1"><span class="n">10.1</span>KPI catalogue</h2>
+<table>
+<thead><tr><th style="width:26mm">KPI</th><th>Definition and calculation</th><th style="width:24mm">Source</th><th style="width:14mm">Owner</th><th style="width:12mm">Review</th><th style="width:36mm">Decision it drives</th></tr></thead>
+<tbody>
+<tr><td><strong>Models in active use</strong> (north star)</td><td>Models with 50 or more messages in the last 30 days (Kaggle chat + hosting)</td><td>usage_events, chat telemetry</td><td>CEO</td><td>Weekly</td><td>Overall product health. Where to focus.</td></tr>
+<tr><td>Activation rate</td><td>Sign-ups who complete a training run within 7 days ÷ sign-ups</td><td>Analytics events</td><td>Product</td><td>Weekly</td><td>Onboarding fixes</td></tr>
+<tr><td>Connect drop-off</td><td>Sign-ups that never save all required keys ÷ sign-ups, by service</td><td>connections table</td><td>Product</td><td>Weekly</td><td>Kaggle/HF guidance work</td></tr>
+<tr><td>Run success rate</td><td>Runs reaching "published" ÷ runs started, split by failure stage and cause</td><td>runs + progress.json</td><td>CTO</td><td>Weekly</td><td>Reliability backlog</td></tr>
+<tr><td>Model quality lift</td><td>Median (after − before) test score per published version. Exam pass rate.</td><td>Run reports</td><td>CTO</td><td>Monthly</td><td>Data and training investments</td></tr>
+<tr><td>Visitor → sign-up</td><td>Sign-ups ÷ unique visitors</td><td>Web analytics</td><td>Growth</td><td>Weekly</td><td>Landing pages, messaging</td></tr>
+<tr><td>CAC</td><td>Sales + marketing spend ÷ new paying customers</td><td>Books + billing</td><td>Growth</td><td>Monthly</td><td>Channel budgets</td></tr>
+<tr><td>Attributed sign-ups</td><td>Sign-ups by first-touch UTM source</td><td>Analytics</td><td>Growth</td><td>Weekly</td><td>Channel mix</td></tr>
+<tr><td>MRR / net new MRR</td><td>Sum of active monthly plan values. New + expansion − contraction − churn.</td><td>Billing</td><td>CEO</td><td>Weekly</td><td>Forecast, hiring</td></tr>
+<tr><td>Logo churn</td><td>Paying customers lost in month ÷ paying customers at start of month</td><td>Billing</td><td>Success</td><td>Monthly</td><td>Retention programmes</td></tr>
+<tr><td>Pipeline coverage</td><td>Weighted pipeline ÷ quarter quota</td><td>CRM</td><td>CEO</td><td>Weekly</td><td>Outbound effort</td></tr>
+<tr><td>CSAT / NPS</td><td>Post-support rating (1–5). Quarterly NPS survey.</td><td>Support tool, survey</td><td>Success</td><td>Monthly</td><td>Support process, roadmap</td></tr>
+<tr><td>Uptime and p95 latency</td><td>Successful requests ÷ total. p95 time to first token on hosting.</td><td>Monitoring</td><td>CTO</td><td>Weekly</td><td>Infra spend, capacity</td></tr>
+<tr><td>Deploy frequency, change failure rate</td><td>Deploys per week. Share of deploys causing an incident or rollback.</td><td>CI/CD</td><td>CTO</td><td>Monthly</td><td>Engineering process</td></tr>
+<tr><td>Gross margin</td><td>(Revenue − cost of revenue) ÷ revenue</td><td>Books</td><td>Finance</td><td>Monthly</td><td>Pricing, GPU provider choice</td></tr>
+<tr><td>Net burn and runway</td><td>Cash out − cash in. Cash ÷ 3-month average burn.</td><td>Bank + books</td><td>Finance</td><td>Monthly</td><td>Spend freeze, fundraising timing</td></tr>
+</tbody></table>
+
+<h2 id="s10-2"><span class="n">10.2</span>Executive dashboards and reporting cadence</h2>
+<table>
+<thead><tr><th>Report</th><th>Audience</th><th>Cadence</th><th>Contents</th></tr></thead>
+<tbody>
+<tr><td>Weekly executive report (A17)</td><td>Team</td><td>Monday</td><td>North star, funnel, runs, MRR, top 3 risks, top 3 priorities</td></tr>
+<tr><td>Monthly business review</td><td>Team + advisors</td><td>Monthly</td><td>P&amp;L vs budget, runway, cohort retention, quality lift, hiring</td></tr>
+<tr><td>Investor update</td><td>Investors</td><td>Monthly</td><td>Highlights, KPIs, burn, asks</td></tr>
+<tr><td>Board pack</td><td>Board</td><td>Quarterly</td><td>Strategy, financial statements, risk register, OKR results</td></tr>
+</tbody></table>
+<p>Dashboard specification: Appendix A18. Rule: no metric goes on a dashboard without a written definition, an owner and the decision it informs.</p>
+</section>
+
+<section class="divider" data-ch="11">
+  <div class="gridlines"></div><div class="beam"></div>
+  <p class="num pixel">11</p>
+  <h1>Implementation Roadmap</h1>
+  <p class="lede">From the first 7 days to year 3: what to do, who owns it, what it costs, and how to know it worked.</p>
+  <ul class="in"><li>11.1 First 7 days</li><li>11.2 Days 8–30</li><li>11.3 Days 31–60</li><li>11.4 Days 61–90</li><li>11.5 Months 4–12</li><li>11.6 Long-term initiatives</li></ul>
+</section>
+
+<section>
+<p>Each initiative lists its objective, actions, owner, dependencies, cost or effort, deadline, success metric, and risk with fallback. Rows marked <strong>M</strong> are must-have and rows marked <strong>O</strong> are optional. Costs are <span class="tag i">Illustrative</span>.</p>
+<h2 id="s11-1"><span class="n">11.1</span>First 7 days: essential setup</h2>
+<table>
+<thead><tr><th style="width:5mm"></th><th>Objective · actions</th><th style="width:14mm">Owner</th><th style="width:20mm">Depends on</th><th style="width:16mm">Cost</th><th style="width:12mm">By</th><th>Success · risk → fallback</th></tr></thead>
+<tbody>
+<tr><td>M</td><td><strong>Code safety:</strong> git init, private GitHub org, CI (typecheck, build, tests), secret scanning</td><td>CTO</td><td>–</td><td>1 day</td><td>D2</td><td>CI green on main · risk: none</td></tr>
+<tr><td>M</td><td><strong>Legal questions out:</strong> brief counsel on Kaggle terms, entity, trademark</td><td>CEO</td><td>–</td><td>₹15–30k</td><td>D3</td><td>Written opinion requested · slow → ask Kaggle directly</td></tr>
+<tr><td>M</td><td><strong>Key security P0:</strong> encrypt key columns. Design per-run tokens.</td><td>CTO</td><td>CI</td><td>3 days</td><td>D7</td><td>No plaintext keys in DB · complexity → encrypt now, tokens in sprint 2</td></tr>
+<tr><td>M</td><td><strong>Booking page:</strong> replace placeholder link with real scheduler</td><td>CEO</td><td>–</td><td>₹0</td><td>D2</td><td>First call booked</td></tr>
+<tr><td>O</td><td>Google OAuth configured in Supabase</td><td>CTO</td><td>Google Cloud project</td><td>2 h</td><td>D5</td><td>Google sign-in works</td></tr>
+</tbody></table>
+
+<h2 id="s11-2"><span class="n">11.2</span>Days 8–30: core foundations</h2>
+<table>
+<thead><tr><th style="width:5mm"></th><th>Objective · actions</th><th style="width:14mm">Owner</th><th style="width:20mm">Depends on</th><th style="width:16mm">Cost</th><th style="width:12mm">By</th><th>Success · risk → fallback</th></tr></thead>
+<tbody>
+<tr><td>M</td><td><strong>Production launch:</strong> deploy, domain, Supabase paid plan with backups, error tracking</td><td>CTO</td><td>Week 1</td><td>₹5k/mo</td><td>D21</td><td>Site live, uptime above 99.5% · <code>/api/plan</code> timeout → background job</td></tr>
+<tr><td>M</td><td><strong>Incorporate + accounts:</strong> entity, bank, accounting software, GST decision</td><td>CEO</td><td>Counsel</td><td>₹20–40k</td><td>D30</td><td>Books open · delays → operate as founder until done, no paid plans</td></tr>
+<tr><td>M</td><td><strong>Discovery:</strong> 10 interviews (Business ICP)</td><td>CEO</td><td>Booking page</td><td>Time</td><td>D25</td><td>Pain validated 6 of 10 · weak → change segment</td></tr>
+<tr><td>M</td><td><strong>Quality fix:</strong> skill replay in train-mode retrain rounds. Canary run.</td><td>CTO</td><td>CI</td><td>3 days</td><td>D20</td><td>Identity ≥ 95% across rounds</td></tr>
+<tr><td>O</td><td>Onboarding checklist UI for Connect</td><td>Product</td><td>Design contractor</td><td>₹40k</td><td>D30</td><td>Connect drop-off −25%</td></tr>
+</tbody></table>
+
+<h2 id="s11-3"><span class="n">11.3</span>Days 31–60: implementation and validation</h2>
+<table>
+<thead><tr><th style="width:5mm"></th><th>Objective · actions</th><th style="width:14mm">Owner</th><th style="width:20mm">Depends on</th><th style="width:16mm">Cost</th><th style="width:12mm">By</th><th>Success · risk → fallback</th></tr></thead>
+<tbody>
+<tr><td>M</td><td><strong>Payments:</strong> Razorpay plans, top-ups, credits, webhooks, GST invoices</td><td>CTO</td><td>Entity, GST</td><td>2 weeks</td><td>D50</td><td>Test payment end-to-end · KYC delay → manual invoices for Business</td></tr>
+<tr><td>M</td><td><strong>3 Business pilots</strong> delivered with acceptance tests</td><td>CEO</td><td>Discovery</td><td>Time + compute</td><td>D60</td><td>2 of 3 pass and convert · fail → learn, refine offer</td></tr>
+<tr><td>M</td><td><strong>Launch campaign</strong> (Chapter 7 weeks 5–8)</td><td>CEO/Growth</td><td>Production</td><td>₹45k</td><td>D56</td><td>150 sign-ups, 40 trained models</td></tr>
+<tr><td>O</td><td>Hire #1 engineer (offer out)</td><td>CEO</td><td>Funding view</td><td>₹1.2L/mo</td><td>D60</td><td>Offer accepted</td></tr>
+</tbody></table>
+
+<h2 id="s11-4"><span class="n">11.4</span>Days 61–90: optimisation and measurable growth</h2>
+<table>
+<thead><tr><th style="width:5mm"></th><th>Objective · actions</th><th style="width:14mm">Owner</th><th style="width:20mm">Depends on</th><th style="width:16mm">Cost</th><th style="width:12mm">By</th><th>Success · risk → fallback</th></tr></thead>
+<tbody>
+<tr><td>M</td><td><strong>Hosting beta (≤3B):</strong> gateway, keys, metering, multi-LoRA serving</td><td>CTO</td><td>Payments, GPU provider</td><td>3 weeks + GPU</td><td>D85</td><td>10 hosted models, p95 first token under 1.5 s · cost too high → Kaggle-only plus Business</td></tr>
+<tr><td>M</td><td><strong>Fundraise:</strong> deck, data room, 20 angel conversations</td><td>CEO</td><td>Pilots, metrics</td><td>Time</td><td>D90 term sheet</td><td>₹25L committed · no → month-5 rule (§3.8)</td></tr>
+<tr><td>O</td><td>Paid search experiment</td><td>Growth</td><td>Activation over 30%</td><td>₹50k</td><td>D90</td><td>CAC per activated user under ₹400</td></tr>
+</tbody></table>
+
+<h2 id="s11-5"><span class="n">11.5</span>Months 4–12: scaling and maturity</h2>
+<table>
+<thead><tr><th>Initiative</th><th>Owner</th><th>Target month</th><th>Success metric</th></tr></thead>
+<tbody>
+<tr><td>M · Dataset generation + document upload</td><td>CTO</td><td>M5</td><td>Median quality lift +10 points vs. dataset-only runs</td></tr>
+<tr><td>M · Paid L40S training</td><td>CTO</td><td>M6</td><td>Margin ≥ 55% per GPU-hour</td></tr>
+<tr><td>M · Success hire + Business playbook</td><td>CEO</td><td>M6</td><td>5 live clients, CSAT ≥ 4.5</td></tr>
+<tr><td>M · DPDP readiness</td><td>CEO + counsel</td><td>M9</td><td>Notice, rights process, DPAs done before May 2027</td></tr>
+<tr><td>O · Agency programme</td><td>Growth</td><td>M8</td><td>3 active agencies</td></tr>
+<tr><td>O · Indian-language models</td><td>CTO</td><td>M10</td><td>Hindi support bot passes acceptance tests</td></tr>
+<tr><td>O · Website chat widget</td><td>CTO</td><td>M9</td><td>50% of Business clients embed it</td></tr>
+</tbody></table>
+
+<h2 id="s11-6"><span class="n">11.6</span>Long-term strategic initiatives (years 2–3)</h2>
+<ul>
+<li><strong>Private deployments</strong> for enterprises (models served inside the customer's cloud).</li>
+<li><strong>Model marketplace:</strong> users can share or sell their tested specialist models.</li>
+<li><strong>Continuous learning:</strong> corrections from live chats flow automatically into nightly fix runs, with human approval.</li>
+<li><strong>International expansion</strong> to price-sensitive markets with the same "own your model" positioning.</li>
+</ul>
+</section>

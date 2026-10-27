@@ -1,0 +1,79 @@
+<section class="cover">
+  <div class="gridlines"></div><div class="beam"></div>
+  <p class="kicker">Company blueprint · Operating manual · Edition 1</p>
+  <p class="wordmark pixel">zebrain</p>
+  <h1>The Complete Company Blueprint &amp; Operating Manual</h1>
+  <p class="sub">Strategy, finance, operations, architecture, design, growth, sales, risk and execution for Zebrain: the service that lets anyone make, test, fix and publish their own small language model on their own free GPU.</p>
+  <div class="legend">
+    <span class="tag v">Verified</span><span class="tag a">Assumption</span><span class="tag r">Recommendation</span><span class="tag i">Illustrative</span><span class="tag u">Unknown · confirm</span>
+  </div>
+  <div class="meta"><span>Prepared 26 October 2026</span><span>Pre-launch · Confidential draft</span></div>
+</section>
+
+<!--TOC-->
+
+<section class="page" id="howto">
+<h2 id="read"><span class="n">0.1</span>How to read this manual</h2>
+<p class="lead">This is a working manual for running Zebrain, not a pitch deck. Every chapter says what to do, why it matters, how to do it and who owns it. Because Zebrain is a pre-launch product, the most important skill in reading it is telling what is <em>true today</em> from what is <em>proposed</em>.</p>
+<table>
+<caption>Evidence labels used throughout</caption>
+<thead><tr><th style="width:30mm">Label</th><th>Meaning</th><th style="width:58mm">Source of truth</th></tr></thead>
+<tbody>
+<tr><td><span class="tag v">Verified</span></td><td>Exists today. Checked directly against Zebrain's source code, its Supabase database, its pricing file, or a test run.</td><td>Codebase and database as of 26 Oct 2026 <sup class="c">[1][2]</sup></td></tr>
+<tr><td><span class="tag a">Assumption</span></td><td>A working premise needed to plan (jurisdiction, costs, exchange rate). Replace with real numbers as soon as they exist.</td><td>Stated next to each assumption</td></tr>
+<tr><td><span class="tag r">Recommendation</span></td><td>What this manual proposes the company should do. Not yet in place.</td><td>Reasoning given in place</td></tr>
+<tr><td><span class="tag i">Illustrative</span></td><td>Hypothetical numbers or examples that show a method. <strong>Never actual company data.</strong></td><td>Worked examples only</td></tr>
+<tr><td><span class="tag u">Unknown</span></td><td>Information this manual could not verify and must be confirmed before acting.</td><td>Listed in the confirmation register (§0.2)</td></tr>
+</tbody></table>
+<p>External facts carry a numbered citation such as <sup class="c">[4]</sup>, resolved in the Bibliography. Where the only available source is a third-party aggregator rather than the vendor's own page, the text says so: re-check those before relying on them, especially prices.</p>
+
+<h2 id="confirm"><span class="n">0.2</span>What must be confirmed before implementation</h2>
+<p>The following could not be verified from the code, the database or public sources. Each one changes decisions later in this manual.</p>
+<table>
+<thead><tr><th style="width:6mm">#</th><th>Item</th><th>Why it matters</th><th style="width:30mm">Owner</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><span class="tag u">Unknown</span> Legal entity, country of incorporation, founders and cap table</td><td>Tax, GST, contracts, payment gateway onboarding, and who can sign. This manual assumes an Indian private limited company (§9.1).</td><td>Founder</td></tr>
+<tr><td>2</td><td><span class="tag u">Unknown</span> Whether Kaggle's terms permit a commercial product that runs jobs on users' free Kaggle accounts</td><td>The free tier, which is Zebrain's main acquisition hook, depends on it. Highest-priority legal question (§9.4).</td><td>Founder + counsel</td></tr>
+<tr><td>3</td><td><span class="tag u">Unknown</span> Team size, roles and salaries</td><td>Budget, runway, org chart. Chapter 2 proposes a structure from a founder-only start.</td><td>Founder</td></tr>
+<tr><td>4</td><td><span class="tag u">Unknown</span> Cash in the bank and any funding</td><td>Runway. Chapter 3 uses an illustrative ₹10 lakh.</td><td>Founder / CFO</td></tr>
+<tr><td>5</td><td><span class="tag u">Unknown</span> GPU supplier and real cost per hour for paid L40S/H100 training and for hosting</td><td>Gross margin on every paid product (§3.6).</td><td>CTO</td></tr>
+<tr><td>6</td><td><span class="tag u">Unknown</span> Trademark availability of "Zebrain" in target classes and markets</td><td>Brand investment. Similar names exist in AI (§9.2).</td><td>Counsel</td></tr>
+<tr><td>7</td><td><span class="tag u">Unknown</span> Production domain, hosting account and deployment</td><td>The site runs locally today. README targets Vercel <sup class="c">[1]</sup>.</td><td>CTO</td></tr>
+<tr><td>8</td><td><span class="tag u">Unknown</span> Official logo file</td><td>No logo asset exists in the code. The cover uses the live site's pixel wordmark treatment (Silkscreen type), which is what the product shows today.</td><td>Design</td></tr>
+</tbody></table>
+</section>
+
+<section class="page" id="exec">
+<h2 id="summary"><span class="n">0.3</span>Executive summary</h2>
+<p class="lead"><strong>Zebrain lets a person describe a job in plain words and get back a small language model of their own</strong>: trained on their own free Kaggle GPU, tested automatically, published to their own Hugging Face account, chat-ready with an API, and fixable when it answers wrong, without writing code. <span class="tag v">Verified</span></p>
+
+<div class="kpi">
+  <div><b>₹0</b><span>Cost to the user to train a 1–3B model on Kaggle's free T4 <span class="tag v">Verified</span></span></div>
+  <div><b>4</b><span>Run modes built: train, fix, serve, improve (Testify) <span class="tag v">Verified</span></span></div>
+  <div><b>7</b><span>API routes, all server-side with row-level security <span class="tag v">Verified</span></span></div>
+  <div><b>0</b><span>Paying customers today: product is pre-launch <span class="tag v">Verified</span></span></div>
+</div>
+
+<h3>Where the company stands</h3>
+<ul>
+<li><strong>Product:</strong> a working end-to-end pipeline (plan → data checks → baseline test → QLoRA training → retest → publish → chat/API → fix → Gemini-led "Testify" improvement) built with Next.js, Supabase, the Kaggle API, Hugging Face and Gemini <sup class="c">[1]</sup>. <span class="tag v">Verified</span></li>
+<li><strong>Evidence it works:</strong> internal test models (an SQL assistant and a coding assistant, both 1.5B) were trained, published, served and called over the API. The coding model's exam score moved 73% → 78% across rounds while its held-out test score moved 38% → 42%: real but modest gains that show small models need better data, not just more rounds. <span class="tag v">Verified</span></li>
+<li><strong>Not built yet:</strong> payments, paid GPU training, always-on hosting, the Business service workflow, production deployment, a booking page (the link is a placeholder). <span class="tag v">Verified</span></li>
+</ul>
+
+<h3>The bet</h3>
+<p>Fine-tuning is now cheap, but it is still a developer's activity: datasets, chat templates, LoRA settings, evaluation and hosting each take expertise. Zebrain's wager is that <strong>owning a small, specialised model</strong> (named, on-brand, on-topic, portable) is valuable to small businesses and makers who will never touch a notebook, and that a free first model on the user's own GPU is the cheapest possible way to reach them.</p>
+
+<div class="box i"><span class="tag i">Illustrative</span><p>In the base-case model in Chapter 3, Zebrain reaches about ₹1.9 lakh monthly revenue by month 12 at a 65% gross margin, while still burning about ₹1.6 lakh per month. Break-even needs about ₹4.4 lakh monthly revenue at that cost base, so the plan needs about ₹25 lakh of outside funding or faster revenue by month 6. <strong>These are hypothetical figures</strong> that show the method. They are not forecasts of actual results.</p></div>
+<h3>The five decisions that matter most in the next 90 days</h3>
+<table>
+<thead><tr><th style="width:6mm">#</th><th>Decision</th><th>Recommendation</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Is the Kaggle-hosted free tier legally safe as a commercial funnel?</td><td><span class="tag r">Recommendation</span> Get a written legal opinion before public launch. Build the paid GPU path in parallel so the business survives a "no" (§9.4).</td></tr>
+<tr><td>2</td><td>Who is the first paying customer?</td><td><span class="tag r">Recommendation</span> Small Indian businesses needing an on-brand support or FAQ bot, sold through the done-for-you Business plan first. It needs no self-serve billing and teaches what customers actually ask (§1.3, §8).</td></tr>
+<tr><td>3</td><td>How to make the models good enough?</td><td><span class="tag r">Recommendation</span> Invest in data generation (Gemini/Qwen-written datasets of ~2,000 examples, document upload), not more training rounds (§6.1).</td></tr>
+<tr><td>4</td><td>Security of stored keys</td><td><span class="tag r">Recommendation</span> Encrypt Kaggle, Hugging Face and Gemini keys at rest and stop embedding long-lived tokens in Kaggle scripts before launch (§4.10).</td></tr>
+<tr><td>5</td><td>Payments and hosting</td><td><span class="tag r">Recommendation</span> Launch with Razorpay (INR, GST invoices) and hosting on a single serverless GPU provider for ≤3B models (§4.8).</td></tr>
+</tbody></table>
+
+</section>

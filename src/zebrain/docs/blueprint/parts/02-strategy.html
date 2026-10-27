@@ -1,0 +1,180 @@
+<section class="divider" data-ch="1">
+  <div class="gridlines"></div><div class="beam"></div>
+  <p class="num pixel">01</p>
+  <h1>Executive Strategy &amp; Business Model</h1>
+  <p class="lede">What Zebrain is, who it serves, how it makes money, who it competes with, and what it must achieve at 3, 6, 12 and 36 months.</p>
+  <ul class="in"><li>1.1 Company overview</li><li>1.2 Problem and value proposition</li><li>1.3 Customers and personas</li><li>1.4 Products and offerings</li><li>1.5 Business model and pricing</li><li>1.6 Market and competition</li><li>1.7 Goals and milestones</li><li>1.8 KPIs, risks and contingencies</li></ul>
+</section>
+
+<section>
+<h2 id="s1-1"><span class="n">1.1</span>Company overview</h2>
+<p><strong>What it is.</strong> Zebrain is a web service that turns a plain-language description ("an assistant that writes PostgreSQL for our sales database") into a fine-tuned small language model owned by the user. <span class="tag v">Verified</span> The training runs on the user's own Kaggle account as a private GPU script, and the model is published to the user's own Hugging Face account as versions <code>v1</code>, <code>v2</code>… with a model card that shows before-and-after scores <sup class="c">[1]</sup>.</p>
+
+<div class="cols">
+<div class="box"><span class="tag r">Recommendation</span>
+<h4>Mission</h4><p>Give every business and maker a language model of their own that does one job well, answers in their name, and stays theirs.</p>
+<h4>Vision (2030)</h4><p>Owning a specialised model is as ordinary as owning a website, and Zebrain is where people make, test, fix and run them.</p></div>
+<div class="box"><span class="tag r">Recommendation</span>
+<h4>Values</h4>
+<ul><li><strong>Yours, not ours.</strong> Models, data and keys belong to the user. Portability by default.</li>
+<li><strong>Tested, not hoped.</strong> Nothing ships without before/after scores.</li>
+<li><strong>Plain words.</strong> No jargon a shop owner wouldn't use.</li>
+<li><strong>Honest about limits.</strong> Say when a small model can't do something.</li>
+<li><strong>Frugal by design.</strong> Free GPUs first, paid compute when it earns its cost.</li></ul></div>
+</div>
+
+<h3>Positioning statement</h3>
+<div class="box"><span class="tag r">Recommendation</span><p>For <strong>small businesses and independent builders</strong> who want an AI assistant that knows their job and speaks as them, <strong>Zebrain</strong> is the <strong>no-code model maker</strong> that trains, tests and publishes a model you own, starting free on your own GPU. Unlike general chat apps such as ChatGPT or Gemini, a Zebrain model is trained on your examples, stays on topic, carries your name, and lives in your account, so you can take it anywhere.</p></div>
+
+<h2 id="s1-2"><span class="n">1.2</span>Problem and value proposition</h2>
+<table>
+<thead><tr><th style="width:42mm">Problem today</th><th>What Zebrain does</th><th style="width:22mm">Status</th></tr></thead>
+<tbody>
+<tr><td>Fine-tuning needs a GPU, Python, and knowledge of LoRA, chat templates and evaluation.</td><td>A wizard plans the run. A pre-tested Python job does everything on the user's Kaggle T4.</td><td><span class="tag v">Verified</span></td></tr>
+<tr><td>Picking good training data is hard.</td><td>"Let Gemini choose" searches Hugging Face, reads real sample rows, picks 1–3 open-licensed datasets and writes ~25 test questions.</td><td><span class="tag v">Verified</span></td></tr>
+<tr><td>Fine-tuned models forget who they are ("I am Qwen, created by Alibaba Cloud").</td><td>Identity is written into the chat template and trained with identity, capability, greeting, off-topic and generic-system-prompt rows.</td><td><span class="tag v">Verified</span></td></tr>
+<tr><td>Nobody knows if training helped.</td><td>Automatic tests before and after, graded by Gemini when a key is present. The best round is published.</td><td><span class="tag v">Verified</span></td></tr>
+<tr><td>Fixing a wrong answer means starting over.</td><td>Fix runs turn corrections into ~20 examples each and continue from the latest adapter. Testify finds weak topics and trains on fresh practice.</td><td><span class="tag v">Verified</span></td></tr>
+<tr><td>Using the model in an app needs hosting.</td><td>One-click chat plus <code>/ask</code> and <code>/predict</code> APIs on the user's Kaggle GPU for up to 11 hours, and a free static public page.</td><td><span class="tag v">Verified</span></td></tr>
+<tr><td>Always-on hosting with an API key.</td><td>Planned Starter and Pro hosting plans.</td><td><span class="tag r">Planned</span></td></tr>
+</tbody></table>
+
+<h2 id="s1-3"><span class="n">1.3</span>Target customers and personas</h2>
+<p>None of these personas has been validated by customer interviews yet. <span class="tag a">Assumption</span> §8.2 sets out the discovery interviews that must confirm or kill each one.</p>
+<table>
+<thead><tr><th style="width:30mm">Persona</th><th>Who</th><th>Job to be done</th><th>Pain</th><th style="width:22mm">Likely plan</th></tr></thead>
+<tbody>
+<tr><td><strong>Priya, shop owner</strong></td><td>Runs a D2C brand with 2–10 staff. Answers the same WhatsApp and email questions daily.</td><td>"Answer return, size and delivery questions in our tone."</td><td>Generic bots give generic answers. Can't code.</td><td>Business, later Starter</td></tr>
+<tr><td><strong>Arjun, indie developer</strong></td><td>Student or freelancer building apps and side projects.</td><td>"A small SQL/code model I own for my app, cheap to run."</td><td>API costs and lock-in. Fine-tuning is fiddly.</td><td>Free → Starter/Pro</td></tr>
+<tr><td><strong>Meera, ops lead</strong></td><td>Ops at a 50–500 person company with internal docs and policies.</td><td>"An internal helpdesk model trained on our policies."</td><td>Data privacy worries with public chat apps.</td><td>Business</td></tr>
+<tr><td><strong>Dr. Rao, educator</strong></td><td>Teacher or trainer making subject tutors.</td><td>"A tutor that stays on syllabus and refuses off-topic."</td><td>General bots wander off-topic.</td><td>Free → Starter</td></tr>
+</tbody></table>
+<h3>Priority use cases</h3>
+<ol><li>Customer-support / FAQ bots with the company's name and policies (highest willingness to pay).</li><li>Text-to-SQL and code helpers for a specific stack (strongest technical results so far).</li><li>Internal knowledge helpers (needs document upload, not yet built).</li><li>Tutors and on-syllabus assistants.</li></ol>
+
+<h2 id="s1-4"><span class="n">1.4</span>Products, services and future offerings</h2>
+<table>
+<thead><tr><th style="width:34mm">Offering</th><th>Description</th><th style="width:24mm">Status</th></tr></thead>
+<tbody>
+<tr><td>Wizard + training</td><td>Describe job → base model (e.g. Qwen2.5-Coder-1.5B) → data → tests → train on Kaggle</td><td><span class="tag v">Live (local)</span></td></tr>
+<tr><td>Runs dashboard</td><td>Live stages, loss, tester scores, logs, resume from checkpoint</td><td><span class="tag v">Live (local)</span></td></tr>
+<tr><td>Chat + API</td><td>Gradio chat, <code>/ask</code> (key) and <code>/predict</code>, streaming, answer self-check and rewrite</td><td><span class="tag v">Live (local)</span></td></tr>
+<tr><td>Fix answers</td><td>Corrections from chat → targeted retraining, publish only if no regression</td><td><span class="tag v">Live (local)</span></td></tr>
+<tr><td>Testify with Gemini</td><td>Gemini exams the model, finds weak topics, writes practice, retrains, keeps the best</td><td><span class="tag v">Live (local)</span></td></tr>
+<tr><td>Paid training</td><td>L40S (≤14B) and H100 (15–30B) per GPU-hour</td><td><span class="tag r">Priced, not built</span></td></tr>
+<tr><td>Hosting</td><td>Free browser chat (≤3B), Starter, Pro, top-ups</td><td><span class="tag r">Priced, not built</span></td></tr>
+<tr><td>Business plan</td><td>Done-for-you model and website chatbot, priced in a meeting</td><td><span class="tag r">Designed, not built</span></td></tr>
+<tr><td>Dataset generation</td><td>LLM-written datasets with web search; document upload → topics → examples</td><td><span class="tag u">Discussed, paused</span></td></tr>
+<tr><td>Token gateway</td><td>Metered LLM tokens for data generation (e.g. 2M free trial, Pro bundle)</td><td><span class="tag u">Discussed, paused</span></td></tr>
+</tbody></table>
+<p class="small">"Live (local)" means it works end to end on the development server against real Kaggle and Hugging Face accounts, but is not yet deployed to a public domain.</p>
+
+<h2 id="s1-5"><span class="n">1.5</span>Business model, revenue streams and pricing</h2>
+<p>Zebrain has three revenue streams, all already priced in <code>lib/pricing.ts</code> <sup class="c">[1]</sup>. <span class="tag v">Verified</span> None is switched on yet.</p>
+<table>
+<caption>Training (one-time per run)</caption>
+<thead><tr><th>Tier</th><th>GPU</th><th>Model sizes</th><th class="n">Price</th><th>Identity</th></tr></thead>
+<tbody>
+<tr><td>Your own GPU</td><td>Kaggle free T4</td><td>1B–3B</td><td class="n">Free</td><td>Small "Made with Zebrain" credit</td></tr>
+<tr><td>Standard</td><td>L40S</td><td>Up to 14B</td><td class="n">$2.75 / GPU-hour</td><td>Customer's own name</td></tr>
+<tr><td>Large</td><td>H100</td><td>15B–30B</td><td class="n">$7.50 / GPU-hour</td><td>Customer's own name</td></tr>
+</tbody></table>
+<table>
+<caption>Hosting (monthly, priced at the 1.5B benchmark and scaled by model size ÷ 1.5)</caption>
+<thead><tr><th>Plan</th><th class="n">1.5B</th><th class="n">3B</th><th class="n">7B</th><th>Includes</th></tr></thead>
+<tbody>
+<tr><td>Free</td><td class="n">₹0</td><td class="n">₹0</td><td class="n">–</td><td>Browser chat only, no API key, up to ~3B</td></tr>
+<tr><td>Starter</td><td class="n">₹499</td><td class="n">₹999</td><td class="n">₹2,329</td><td>1,000 messages, 1 API key, 10 req/min, 500-token replies</td></tr>
+<tr><td>Pro</td><td class="n">₹1,499</td><td class="n">₹2,999</td><td class="n">₹6,999</td><td>5,000 messages, 3 API keys, 30 req/min, 1,000-token replies</td></tr>
+<tr><td>Top-up +1,000</td><td class="n">₹299</td><td class="n">₹599</td><td class="n">₹1,399</td><td>One-off pack on Starter or Pro</td></tr>
+</tbody></table>
+<p class="small">Scaled prices follow the code's rule: price × size ÷ 1.5, rounded to the nearest amount ending in 9. Prices exclude GST. Hosting reply limits (500 / 1,000 tokens) predate the chat's new 1,536-token cap with automatic continuation. <span class="tag r">Recommendation</span> Align the two before launch.</p>
+<p><strong>Business plan:</strong> book a meeting → Zebrain builds, tests and hosts the model plus a website chat box → price agreed per client. <span class="tag v">Verified</span> (copy on the pricing page). The booking URL is still a placeholder.</p>
+
+<h3>Every plan at a glance: live, priced and planned</h3>
+<table>
+<thead><tr><th style="width:30mm">Plan</th><th>What the customer gets</th><th style="width:30mm">Price</th><th style="width:24mm">Status</th></tr></thead>
+<tbody>
+<tr><td>Free training</td><td>Train 1–3B models on own Kaggle T4. Chat + API on own GPU up to 11 h. Fix and Testify. "Made with Zebrain" identity.</td><td>₹0</td><td><span class="tag v">Live (local)</span></td></tr>
+<tr><td>Standard training</td><td>L40S, models up to 14B, own name on the model, credits for failed runs</td><td>$2.75 / GPU-hour</td><td><span class="tag r">Priced, not built</span></td></tr>
+<tr><td>Large training</td><td>H100, models 15–30B (a typical 30B run is $18–36)</td><td>$7.50 / GPU-hour</td><td><span class="tag r">Priced, not built</span></td></tr>
+<tr><td>Free hosting</td><td>Browser chat, no API key, models up to ~3B</td><td>₹0</td><td><span class="tag r">Priced, not built</span></td></tr>
+<tr><td>Starter hosting</td><td>1,000 messages/month, 1 API key, 10 req/min</td><td>₹499/mo at 1.5B (scales with size)</td><td><span class="tag r">Priced, not built</span></td></tr>
+<tr><td>Pro hosting</td><td>5,000 messages/month, 3 API keys, 30 req/min, 3 models</td><td>₹1,499/mo at 1.5B (scales with size)</td><td><span class="tag r">Priced, not built</span></td></tr>
+<tr><td>Message top-ups</td><td>+1,000 or +5,000 messages on Starter/Pro</td><td>₹299 per 1,000 at 1.5B</td><td><span class="tag r">Priced, not built</span></td></tr>
+<tr><td>Business</td><td>Zebrain builds, tests and hosts the model plus a website chat box, in the client's own name</td><td>Agreed in a meeting</td><td><span class="tag r">Designed, not built</span></td></tr>
+<tr><td>Data-generation Pro (token plan)</td><td>A Qwen-powered dataset builder with web search and document upload, metered in Qwen tokens: 20M tokens per model</td><td>$7 per model</td><td><span class="tag u">Discussed, paused</span></td></tr>
+<tr><td>Data-generation free trial</td><td>2M Qwen tokens to try dataset generation once</td><td>₹0</td><td><span class="tag u">Discussed, paused</span></td></tr>
+<tr><td>Annual plans</td><td>Starter/Pro paid yearly, 2 months free</td><td>10 × monthly</td><td><span class="tag r">Recommendation</span></td></tr>
+<tr><td>Agency / reseller</td><td>Margin on Business builds for agencies that resell them</td><td>Rev-share, to set</td><td><span class="tag r">Recommendation</span></td></tr>
+</tbody></table>
+<p class="small">The token plan was discussed and paused: its database tables exist but are unused (§4.6). Estimated cost to Zebrain from earlier analysis: about $0.60–0.80 of model tokens per Pro model and about $0.20 per free trial, at roughly $0.03 / $0.13 per million input/output tokens for a Qwen Flash model. <span class="tag a">Assumption</span> Re-check provider prices before launch.</p>
+
+<h3>Pricing strategy</h3>
+<ul>
+<li><strong>Free as acquisition:</strong> the free tier costs Zebrain almost nothing in compute, because the user's Kaggle quota pays. Kaggle reports around 30 free GPU hours per week per account <sup class="c">[3]</sup> (third-party sources; confirm on Kaggle).</li>
+<li><strong>Value metric = messages:</strong> customers understand messages, not tokens. Keep tokens internal.</li>
+<li><strong>Anchor against consumer chat apps:</strong> the pricing page compares with ChatGPT Go (₹399), ChatGPT Plus (₹1,999), Google AI Plus (₹399) and Google AI Pro (₹1,950), as checked in October 2026 <sup class="c">[12]</sup>. Zebrain is not cheaper per message than API models. It wins on ownership, on-brand behaviour and staying on topic, and the page says so honestly.</li>
+<li><span class="tag r">Recommendation</span> Add an annual plan (2 months free) once monthly churn data exists. Do not discount before then.</li>
+</ul>
+
+<h2 id="s1-6"><span class="n">1.6</span>Market, competitors and SWOT</h2>
+<p><strong>Market size.</strong> No credible, Zebrain-specific market sizing is available, and this manual will not invent one. <span class="tag u">Unknown</span> <span class="tag r">Recommendation</span> Size the market bottom-up once discovery is done: (number of Indian SMBs with an online storefront or support inbox) × (share willing to pay for a custom bot) × (annual revenue per customer). Build each input from a sourced number, and show the sources in the investor deck.</p>
+<h3>Competitive landscape</h3>
+<table>
+<thead><tr><th style="width:30mm">Alternative</th><th>What it is</th><th>Price signal</th><th>Zebrain's difference</th></tr></thead>
+<tbody>
+<tr><td>OpenAI fine-tuning</td><td>Fine-tune OpenAI models via API</td><td>~$0.80 per 1M training tokens for GPT-4.1 mini (third-party listing) <sup class="c">[6]</sup></td><td>Model stays on OpenAI. Developer workflow. Zebrain gives portable open weights.</td></tr>
+<tr><td>Together AI</td><td>Per-token LoRA/full fine-tuning plus dedicated endpoints</td><td>Billed per token by size bracket <sup class="c">[7]</sup></td><td>Developer-first. Zebrain is no-code with a built-in tester and fixer.</td></tr>
+<tr><td>Hugging Face AutoTrain</td><td>No-code training on HF compute</td><td>Per-minute hardware billing, small jobs free <sup class="c">[8]</sup></td><td>Generic trainer. No identity, off-topic, tester or fix loop.</td></tr>
+<tr><td>ChatGPT / Gemini apps</td><td>General assistants with custom instructions</td><td>₹399–₹1,999 / month <sup class="c">[12]</sup></td><td>Not owned, not trained on your answers, not on-brand.</td></tr>
+<tr><td>DIY (Colab + Unsloth/PEFT)</td><td>Notebooks and tutorials</td><td>Free compute, high skill</td><td>Same free GPU, none of the skill.</td></tr>
+</tbody></table>
+<div class="cols keep">
+<table><thead><tr><th>Strengths</th></tr></thead><tbody>
+<tr><td>Working end-to-end pipeline with automatic testing and fixing</td></tr>
+<tr><td>Near-zero compute cost for the free tier</td></tr>
+<tr><td>Identity and on-topic training solves a real annoyance</td></tr>
+<tr><td>User owns everything (lock-in fear removed)</td></tr></tbody></table>
+<table><thead><tr><th>Weaknesses</th></tr></thead><tbody>
+<tr><td>1–3B models have a low ceiling on hard tasks (test score 42%)</td></tr>
+<tr><td>Dependent on Kaggle, Hugging Face and Gemini policies</td></tr>
+<tr><td>Onboarding needs three accounts (Kaggle with phone verification, HF, Gemini)</td></tr>
+<tr><td>No payments, hosting or production deployment yet</td></tr></tbody></table>
+<table><thead><tr><th>Opportunities</th></tr></thead><tbody>
+<tr><td>SMB support bots in Indian languages and tone</td></tr>
+<tr><td>Privacy-sensitive buyers who want their own weights</td></tr>
+<tr><td>Agencies reselling done-for-you bots</td></tr>
+<tr><td>Better small open models arriving every few months</td></tr></tbody></table>
+<table><thead><tr><th>Threats</th></tr></thead><tbody>
+<tr><td>Kaggle terms or quota changes (existential for free tier)</td></tr>
+<tr><td>Big platforms adding one-click custom models</td></tr>
+<tr><td>Falling API prices make "good enough" generic bots cheaper</td></tr>
+<tr><td>Data-protection obligations under India's DPDP Rules <sup class="c">[4]</sup></td></tr></tbody></table>
+</div>
+
+<h2 id="s1-7"><span class="n">1.7</span>Business goals and milestones</h2>
+<table>
+<thead><tr><th style="width:18mm">Horizon</th><th>Goals</th><th>Exit criteria (measurable)</th></tr></thead>
+<tbody>
+<tr><td><strong>3 months</strong></td><td>Legal clarity on Kaggle use. Production deploy. Keys encrypted. Payments (Razorpay). 10 discovery interviews. First 3 Business pilots.</td><td>Site live on own domain. 3 signed pilots. 100 sign-ups. 30 models trained by users.</td></tr>
+<tr><td><strong>6 months</strong></td><td>Hosting (≤3B) launched. Paid L40S training. Dataset generation from documents.</td><td>₹50k MRR. 40% of trained models pass tests on first run. Under 5% failed runs caused by Zebrain.</td></tr>
+<tr><td><strong>12 months</strong></td><td>Self-serve Starter/Pro at scale. Agency/reseller programme. 2 hires.</td><td>₹1.9 lakh MRR (illustrative base case). Logo churn under 6% a month. NPS 40+.</td></tr>
+<tr><td><strong>36 months</strong></td><td>Category leader for owned small models in India and other price-sensitive markets. Enterprise private deployments.</td><td>Break-even or funded growth. 2,000+ hosted models. Gross margin 70% or more.</td></tr>
+</tbody></table>
+
+<h2 id="s1-8"><span class="n">1.8</span>KPIs, risks and contingency plans</h2>
+<p>North-star metric: <strong>models in active use</strong>, meaning hosted or Kaggle-served models that answered at least 50 messages in the last 30 days. It captures value delivered (a model good enough to use), not just sign-ups. Full KPI definitions are in Chapter 10.</p>
+<table>
+<thead><tr><th>Top risk</th><th style="width:16mm">Likelihood</th><th style="width:14mm">Impact</th><th>Contingency</th></tr></thead>
+<tbody>
+<tr><td>Kaggle disallows or blocks this use</td><td>Medium</td><td>Severe</td><td>Paid GPU training ready. Offer Colab/own-GPU export of the job script. Free trial credits on Zebrain GPUs.</td></tr>
+<tr><td>Model quality too low for paying customers</td><td>High</td><td>High</td><td>Lead with Business plan (humans curate data). Default to 3B where quality matters. Invest in data generation.</td></tr>
+<tr><td>Leak of stored user keys</td><td>Low–Med</td><td>Severe</td><td>Encryption at rest, scoped tokens, rotation prompts, incident plan (§4.10, §9.6).</td></tr>
+<tr><td>Gemini free-tier limits or terms</td><td>Medium</td><td>Medium</td><td>Rule-based fallback already exists. Paid Gemini tier for Zebrain-run jobs. Alternative LLM provider.</td></tr>
+<tr><td>Founder bandwidth</td><td>High</td><td>High</td><td>Strict 90-day scope (Chapter 11). First hire is a full-stack/ML engineer.</td></tr>
+</tbody></table>
+<h3>Decision framework for new features</h3>
+<div class="formula">Priority score = (Reach × Impact × Confidence) ÷ Effort &nbsp;·&nbsp; Reach = users per quarter · Impact 0.25–3 · Confidence 50–100% · Effort = person-weeks</div>
+<p>Any feature that touches user keys, user data or model publishing also needs a security review sign-off (§6.4), whatever its score.</p>
+</section>

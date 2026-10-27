@@ -1,0 +1,21 @@
+// USD first; Indian buyers pay INR with 18% GST on top. Run: node tests/test_charge.mjs
+import fs from "node:fs";
+import path from "node:path";
+import ts from "typescript";
+import { pathToFileURL } from "node:url";
+const dir = fs.mkdtempSync(path.join(process.env.TMPDIR || "/tmp", "zbchg-"));
+const src = fs.readFileSync("lib/server/razorpay.ts", "utf8").replace(/^import "server-only".*$/m, "").replace(/^import .*\.\/admin.*$/m, "const requireKeys = () => {};");
+fs.writeFileSync(path.join(dir, "r.mjs"), ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText);
+const r = await import(pathToFileURL(path.join(dir, "r.mjs")));
+let fails = 0;
+const check = (name, ok, detail = "") => { console.log((ok ? "PASS " : "FAIL ") + name + (ok ? "" : `  -> ${detail}`)); if (!ok) fails++; };
+delete process.env.USD_INR;
+const intl = r.chargeAmount(10, "US");
+check("outside India: USD, no GST", intl.currency === "USD" && intl.amount === 1000 && intl.tax === 0, JSON.stringify(intl));
+check("no country given: USD (USD-first)", r.chargeAmount(10, undefined).currency === "USD");
+const india = r.chargeAmount(10, "in");
+check("India: rupees at the set rate plus 18% GST", india.currency === "INR" && india.base === 88000 && india.tax === 15840 && india.amount === 103840, JSON.stringify(india));
+process.env.USD_INR = "84.5";
+check("the rupee rate comes from USD_INR", r.chargeAmount(10, "IN").base === 84500);
+console.log(`\n${fails} failed`);
+process.exit(fails ? 1 : 0);
