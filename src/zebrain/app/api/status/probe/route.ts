@@ -5,7 +5,7 @@ import { markUp, probeQwen, serviceStatus } from "@/lib/server/status";
 
 export const runtime = "nodejs";
 
-// Checks whether a down service is back. Called every 10 minutes by Vercel Cron (Authorization: Bearer CRON_SECRET)
+// Checks whether a down service is back. Called every 10 minutes by GitHub Actions (daily by Vercel Cron as a backup) (Authorization: Bearer CRON_SECRET)
 // or by an admin's button. Down for the daily cap: back once today's spend is under the cap again (new day or the cap
 // was raised). Down for an Alibaba error: back once a tiny real request succeeds.
 export async function GET(req: Request) {

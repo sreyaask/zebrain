@@ -6,7 +6,7 @@ import { removePod } from "@/lib/server/runpod";
 export const runtime = "nodejs";
 
 // Stops every Zebrain GPU pod whose run is past its deadline, even if nobody opens the run page. Called by Vercel
-// Cron (Authorization: Bearer CRON_SECRET) every 10 minutes, or by an admin.
+// Cron (Authorization: Bearer CRON_SECRET) every 10 minutes (GitHub Actions; Vercel Cron daily as a backup), or by an admin.
 export async function GET(req: Request) {
   const cron = process.env.CRON_SECRET && req.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}`;
   if (!cron && !(await adminUser())) return NextResponse.json({ error: "Not allowed." }, { status: 403 });

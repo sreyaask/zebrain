@@ -1,6 +1,6 @@
 {
   "crons": [
-    { "path": "/api/status/probe", "schedule": "*/10 * * * *" },
-    { "path": "/api/runs/sweep", "schedule": "*/10 * * * *" }
+    { "path": "/api/status/probe", "schedule": "0 4 * * *" },
+    { "path": "/api/runs/sweep", "schedule": "0 5 * * *" }
   ]
 }

@@ -1,0 +1,20 @@
+# Vercel Hobby only allows daily crons, so this calls the probe and sweep endpoints every 10 minutes instead.
+# Needs repo secrets ZEBRAIN_URL (e.g. https://zebrain.vercel.app) and CRON_SECRET (same value as on Vercel).
+name: cron
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    env:
+      ZEBRAIN_URL: ${{ secrets.ZEBRAIN_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    steps:
+      - name: Probe and sweep
+        if: env.ZEBRAIN_URL != '' && env.CRON_SECRET != ''
+        run: |
+          for path in /api/status/probe /api/runs/sweep; do
+            curl -fsS -H "Authorization: Bearer $CRON_SECRET" "$ZEBRAIN_URL$path"; echo
+          done
