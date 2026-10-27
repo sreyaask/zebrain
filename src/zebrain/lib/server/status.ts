@@ -1,6 +1,5 @@
 import "server-only"; // build fails if a browser page ever imports this (keeps keys off the client)
 import { supabaseAdmin } from "./admin";
-import { aiConfigured, callAI, providerKeyName } from "@/lib/ai/provider";
 
 // Out-of-service handling. When Qwen stops (Alibaba's monthly budget stop, unpaid bill, Zebrain's daily cap) the
 // service is marked down, new trial and Pro runs are refused with a clear message, and people can leave an email.
@@ -67,15 +66,20 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
   }
 }
 
-// One tiny real request to the AI provider (5 output tokens, a fraction of a cent) that bypasses budgets: is the
-// provider serving us?
+// One tiny real Qwen request (5 output tokens, a fraction of a cent) that bypasses budgets: is Alibaba serving us?
 export async function probeQwen(): Promise<{ ok: boolean; detail: string }> {
-  if (!aiConfigured()) return { ok: false, detail: `${providerKeyName()} isn't set.` };
+  if (!process.env.QWEN_API_KEY) return { ok: false, detail: "QWEN_API_KEY isn't set." };
+  const base = process.env.QWEN_BASE_URL || "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
   try {
-    await callAI([{ role: "user", content: "Reply ok." }], { maxTokens: 5 }, { prompt: 0, completion: 0 });
+    const res = await fetch(`${base}/chat/completions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${process.env.QWEN_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: process.env.QWEN_MODEL || "qwen3.7-flash", messages: [{ role: "user", content: "Reply ok." }], max_tokens: 5, enable_thinking: false }),
+    });
+    const data = await res.json().catch(() => ({}));
     await supabaseAdmin().from("service_status").update({ checked_at: new Date().toISOString() }).eq("service", "qwen");
-    return { ok: true, detail: "Zebrain AI answered." };
-  } catch (e) {
-    return { ok: false, detail: `Zebrain AI didn't answer: ${e instanceof Error ? e.message.slice(0, 160) : "unknown error"}` };
+    return res.ok ? { ok: true, detail: "Qwen answered." } : { ok: false, detail: `Qwen answered ${res.status}: ${String(data?.error?.message || data?.error?.code || "").slice(0, 160)}` };
+  } catch {
+    return { ok: false, detail: "Couldn't reach Qwen." };
   }
 }
