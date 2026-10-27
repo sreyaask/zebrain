@@ -14,7 +14,7 @@ export function services() {
   const has = (k: string) => !!process.env[k];
   return {
     payments: has("RAZORPAY_KEY_ID") && has("RAZORPAY_KEY_SECRET") && has("SUPABASE_SERVICE_ROLE_KEY"),
-    qwen: has("QWEN_API_KEY") && has("SUPABASE_SERVICE_ROLE_KEY"),
+    qwen: has(process.env.AI_PROVIDER === "gemini" ? "GEMINI_API_KEY" : "QWEN_API_KEY") && has("SUPABASE_SERVICE_ROLE_KEY"),
     runpod: has("RUNPOD_API_KEY"),
     trials: has("SUPABASE_SERVICE_ROLE_KEY"),
   };

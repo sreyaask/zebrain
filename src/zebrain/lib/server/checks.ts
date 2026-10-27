@@ -24,7 +24,7 @@ export async function runChecks(live: boolean, adminEmail?: string): Promise<Che
     if (error) throw new Error(error.message);
     return `${count} credit packs readable`;
   });
-  await check("Qwen (Alibaba Model Studio)", ["QWEN_API_KEY"], async () => {
+  await check(`Zebrain AI (${process.env.AI_PROVIDER === "gemini" ? "Gemini, test mode" : "Qwen"})`, [process.env.AI_PROVIDER === "gemini" ? "GEMINI_API_KEY" : "QWEN_API_KEY"], async () => {
     const p = await probeQwen();
     if (!p.ok) throw new Error(p.detail);
     return p.detail;
