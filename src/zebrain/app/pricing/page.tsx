@@ -145,7 +145,7 @@ export default function Pricing() {
               </div>
             </fieldset>
             <label className="flex items-center gap-2.5 text-sm">
-              <input type="checkbox" checked={sensitive} onChange={(e) => setSensitive(e.target.checked)} className="h-4 w-4 accent-[#3d7bff]" />
+              <input type="checkbox" checked={sensitive} onChange={(e) => setSensitive(e.target.checked)} className="h-4 w-4 accent-accent" />
               Gives legal, medical or financial information (adds the strict quality check)
             </label>
           </div>

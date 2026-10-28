@@ -130,7 +130,7 @@ function Chat() {
           <input id="m" className="input font-mono" value={repo} onChange={(e) => setRepo(e.target.value.trim())} placeholder="username/model-name-zebrain" />
         )}
       </div>
-      {err && <p role="alert" className="mb-6 max-w-[64ch] text-sm text-[#ff8a80]">{err}</p>}
+      {err && <p role="alert" className="mb-6 max-w-[64ch] text-sm text-bad">{err}</p>}
 
       {info && (
         <div className="mb-8 flex flex-wrap items-center gap-3 border-y border-line py-4">

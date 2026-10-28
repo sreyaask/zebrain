@@ -1,17 +1,22 @@
 import type { Config } from "tailwindcss";
 
+// Colours are CSS variables (RGB channels) so the light and dark themes in globals.css swap them, and opacity
+// modifiers like bg-paper/60 still work.
+const v = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
+
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        ink: "#000000", // page
-        panel: "#0c0f17", // raised surfaces, inputs
-        line: "#1e2433", // hairlines
-        mute: "#8a93a8", // secondary text
-        paper: "#f4f6fb", // primary text
-        accent: "#3d7bff", // the one brand colour: buttons, links in focus, the light beam
-        bad: "#ff8a80",
+        ink: v("ink"), // page
+        panel: v("panel"), // raised surfaces, inputs
+        line: v("line"), // hairlines
+        mute: v("mute"), // secondary text
+        paper: v("paper"), // primary text
+        accent: v("accent"), // the one brand colour: buttons, links in focus, the light beam
+        bad: v("bad"),
+        good: v("good"),
       },
       fontFamily: {
         display: ["var(--font-body)", "Helvetica Neue", "Arial", "sans-serif"],

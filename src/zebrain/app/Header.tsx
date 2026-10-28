@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
+import { SoundToggle, ThemeToggle } from "./ui";
 
 export default function Header() {
   const router = useRouter();
@@ -36,7 +37,8 @@ export default function Header() {
   );
 
   return (
-    <header className="relative z-10">
+    // The home and sign-in pages sit on the dark beam, so the header stays dark there in both themes.
+    <header className={`relative z-10 ${path === "/" || path === "/login" ? "dark-scope" : ""}`}>
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
         <Link href="/" className="text-[15px] font-medium tracking-tight">Zebrain.</Link>
         <nav className="flex items-center gap-3.5 whitespace-nowrap text-[13px] text-mute sm:gap-6 sm:text-sm">
@@ -60,6 +62,7 @@ export default function Header() {
                   <Link href="/connect" className="block rounded-lg px-3 py-2 hover:bg-line">Kaggle and Hugging Face</Link>
                   <Link href="/fix" className="block rounded-lg px-3 py-2 hover:bg-line">Fix wrong answers</Link>
                   <Link href="/pricing" className="block rounded-lg px-3 py-2 hover:bg-line">Pricing</Link>
+                  <div className="flex items-center justify-between px-3 py-1 text-mute sm:hidden">Sounds and theme <span className="flex"><SoundToggle /><ThemeToggle /></span></div>
                   <button onClick={signOut} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-line">Sign out</button>
                 </div>
               </details>
@@ -71,6 +74,11 @@ export default function Header() {
               <Link href="/login?mode=signup" className="btn px-4 py-1.5 text-[13px]">Sign up</Link>
             </>
           ) : null}
+          {/* Signed in on a phone, these live in the account menu to keep the bar on one line. */}
+          <span className={`-mx-1.5 items-center sm:-mx-3 ${user ? "hidden sm:flex" : "flex"}`}>
+            <SoundToggle />
+            <ThemeToggle />
+          </span>
         </nav>
       </div>
     </header>

@@ -84,7 +84,7 @@ function Login() {
         </p>
 
         <div className="rounded-2xl border border-white/10 bg-black/60 p-5 backdrop-blur-md">
-          <button type="button" onClick={google} disabled={settings !== null && !googleOn} className="btn-ghost w-full bg-white text-ink hover:bg-white/90">
+          <button type="button" onClick={google} disabled={settings !== null && !googleOn} className="btn-ghost w-full bg-white text-black hover:bg-white/90">
             <GoogleMark /> Continue with Google
           </button>
           {settings !== null && !googleOn && (

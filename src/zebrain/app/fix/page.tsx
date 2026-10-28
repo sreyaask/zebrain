@@ -146,7 +146,7 @@ function Fix() {
         ) : (
           <input id="repo" className="input font-mono" value={repo} onChange={(e) => setRepo(e.target.value.trim())} placeholder="username/model-name-zebrain" />
         )}
-        {loadErr && <p role="alert" className="mt-2 text-sm text-[#ff8a80]">{loadErr}</p>}
+        {loadErr && <p role="alert" className="mt-2 text-sm text-bad">{loadErr}</p>}
       </div>
 
       {info && (
@@ -189,7 +189,7 @@ function Fix() {
                   <div>
                     <Area id={`q${i}`} label={`${i + 1}. What the person asked`} value={r.question} onChange={setRow(i, "question")} placeholder="who are you?" />
                     {looksLikeReply(r.question) && (
-                      <p className="mt-1.5 text-xs text-[#ff8a80]">This looks like the model&apos;s reply. Put the reply in the middle box, and here what the person asked.</p>
+                      <p className="mt-1.5 text-xs text-bad">This looks like the model&apos;s reply. Put the reply in the middle box, and here what the person asked.</p>
                     )}
                   </div>
                   <Area id={`g${i}`} label="What the model replied (optional)" value={r.got ?? ""} onChange={setRow(i, "got")} placeholder="I'm an AI assistant made by OpenAI." />
@@ -225,7 +225,7 @@ function Fix() {
                 {info.versions.map((v) => <option key={v.version} value={v.version}>{v.tag}</option>)}
               </select>
             </div>
-            {err && <p role="alert" className="mb-4 max-w-[64ch] text-sm text-[#ff8a80]">{err}</p>}
+            {err && <p role="alert" className="mb-4 max-w-[64ch] text-sm text-bad">{err}</p>}
             <button className="btn" onClick={start} disabled={busy || (!n && !identityChanged) || !info.versions.length}>
               {busy ? "Starting…" : n ? `Fix ${n} answer${n === 1 ? "" : "s"} on Kaggle` : "Update the name on Kaggle"}
             </button>
