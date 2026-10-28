@@ -1,10 +1,12 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { loadRuns, Run, runHref, startRun, updateRun } from "@/lib/local";
 import { supabase } from "@/lib/supabase/client";
+import { play } from "@/lib/sound";
+import { Celebrate, EmptyState, ErrorNote, Fabs, Icon, Skeleton, type IconName } from "../ui";
 
 type Round = { round: string; scores: Record<string, number | null>; passed: boolean; reasons: string[]; examples?: number };
 type Progress = {
@@ -88,9 +90,27 @@ const KAGGLE_LABEL: Record<string, string> = {
   CANCEL_REQUESTED: "Cancelling", CANCEL_ACKNOWLEDGED: "Cancelled", NEW_SCRIPT: "Saved on Kaggle",
 };
 
+// A training run in four phases the user can follow at a glance; each maps onto the job's own stages above.
+const PHASES: { label: string; icon: IconName; stages: number[] }[] = [
+  { label: "Building dataset", icon: "database", stages: [0, 1] },
+  { label: "Checking quality", icon: "shield", stages: [2] },
+  { label: "Training", icon: "cpu", stages: [3, 4] },
+  { label: "Publishing", icon: "rocket", stages: [5] },
+];
+
+const HELP = {
+  title: "Runs",
+  body: (
+    <>
+      <p>Each run trains, fixes or serves one model. This page checks on it every 20 seconds; you can close the tab and come back.</p>
+      <p>If a run stops, open it and press “Start again”: it picks up from the last checkpoint.</p>
+    </>
+  ),
+};
+
 export default function RunsPage() {
   return (
-    <Suspense>
+    <Suspense fallback={<ListSkeleton />}>
       <Runs />
     </Suspense>
   );
@@ -101,9 +121,12 @@ function Runs() {
   const kernel = params.get("k");
   const runId = params.get("r");
   const [runs, setRuns] = useState<Run[] | null>(null);
-  useEffect(() => {
-    loadRuns().then(setRuns);
-  }, [kernel, runId]);
+  const [loadErr, setLoadErr] = useState("");
+  const load = useCallback(() => {
+    setLoadErr("");
+    loadRuns().then(setRuns).catch(() => setLoadErr("Couldn't load your runs. Check your connection."));
+  }, []);
+  useEffect(load, [load, kernel, runId]);
   const run = runs?.find((r) => r.kernel === kernel && r.runId === runId);
   const [oldRuns, setOldRuns] = useState<Run[]>([]);
   useEffect(() => {
@@ -128,9 +151,17 @@ function Runs() {
     }
   }
 
-  if (runs === null) return <Shell title="Runs">{null}</Shell>;
+  if (runs === null) {
+    return loadErr ? <Shell title="Runs"><ErrorNote message={loadErr} onRetry={load} /></Shell> : <ListSkeleton />;
+  }
   if (kernel && runId) {
-    return run ? <RunDetail run={run} /> : <Shell title="Run not found"><p className="text-mute">This run isn&apos;t in your account.</p></Shell>;
+    return run ? <RunDetail run={run} /> : (
+      <Shell title="Run not found">
+        <EmptyState icon="search" title="This run isn't in your account" action={<Link className="btn" href="/runs">See all runs</Link>}>
+          It may belong to another account, or the link is incomplete.
+        </EmptyState>
+      </Shell>
+    );
   }
   return (
     <Shell title="Runs" lede="Your training, fix and chat runs. Each one runs on your Kaggle GPU.">
@@ -141,16 +172,19 @@ function Runs() {
         </div>
       )}
       {runs.length === 0 ? (
-        <p className="text-mute">No runs yet. <Link className="link text-paper" href="/new">Make a model</Link> to start one.</p>
+        <EmptyState icon="sparkle" title="No runs yet" action={<Link className="btn" href="/new"><Icon name="plus" className="h-4 w-4" /> Make your first model</Link>}>
+          Describe what your model should do and Zebrain plans it, writes its data and trains it. Your runs show up here.
+        </EmptyState>
       ) : (
-        <ul>
-          {runs.map((r) => (
-            <li key={r.runId + r.kernel} className="grid gap-1 border-t border-line py-4 sm:grid-cols-[1fr_auto] sm:items-baseline">
+        <ul className="grid gap-3">
+          {runs.map((r, i) => (
+            <li key={r.runId + r.kernel} className="zb-bubble grid gap-1 rounded-2xl border border-line bg-panel p-4 transition-colors hover:border-paper/30 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-4" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+              <span className={`hidden h-2.5 w-2.5 rounded-full sm:block ${r.finalStage === "done" ? "bg-good" : r.finalStage === "failed" ? "bg-bad" : "animate-pulse bg-accent"}`} aria-hidden="true" />
               <Link href={runHref(r)} className="link font-semibold">
                 {r.config.model_name} <span className="font-normal text-mute">· {r.mode === "fix" ? "fix" : r.mode === "serve" ? "chat" : r.mode === "improve" ? "testify" : "training"}</span>
               </Link>
               <span className="text-sm text-mute">
-                {new Date(r.startedAt).toLocaleString()}{r.finalStage ? ` · ${r.finalStage === "done" ? "finished" : "stopped"}` : ""}
+                {new Date(r.startedAt).toLocaleString()} · {r.finalStage ? (r.finalStage === "done" ? "finished" : "stopped") : "in progress"}
                 {r.mode === "train" && (
                   <>
                     {" "}· <Link className="link text-paper" href={`/fix?m=${encodeURIComponent(r.stateRepo)}`}>Fix answers</Link>
@@ -215,13 +249,57 @@ function SavedCheckpoints({ run, canStart, starting, onPublish }: {
 
 function Shell({ title, lede, children }: { title: string; lede?: string; children: React.ReactNode }) {
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-20">
+    <main className="mx-auto max-w-6xl px-4 pb-32">
       <header className="pb-8 pt-14 md:pt-20">
-        <h1 className="mb-3 text-4xl font-medium tracking-tight md:text-5xl">{title}</h1>
+        <h1 className="mb-3 break-words text-4xl font-medium tracking-tight md:text-5xl">{title}</h1>
         {lede && <p className="max-w-[60ch] text-lg text-mute">{lede}</p>}
       </header>
       {children}
+      <Fabs help={HELP} />
     </main>
+  );
+}
+
+function ListSkeleton() {
+  return (
+    <main className="mx-auto max-w-6xl px-4 pb-20" aria-busy="true" aria-label="Loading runs">
+      <div className="pb-8 pt-14 md:pt-20"><Skeleton className="mb-3 h-12 w-48" /><Skeleton className="h-5 w-80 max-w-full" /></div>
+      <div className="grid gap-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
+    </main>
+  );
+}
+
+// The run at a glance: four animated phases and one progress bar, both from the job's real state.
+function Pipeline({ phases, at, fraction, failed, done }: {
+  phases: { label: string; icon: IconName }[]; at: number; fraction: number; failed: boolean; done: boolean;
+}) {
+  const pct = done ? 100 : Math.max(0, Math.min(99, Math.round(((Math.max(at, 0) + fraction) / phases.length) * 100)));
+  return (
+    <div className="mb-10 rounded-3xl border border-line bg-panel p-5 sm:p-6">
+      <ol className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {phases.map((ph, i) => {
+          const state = done || i < at ? "done" : i === at ? (failed ? "failed" : "now") : "todo";
+          return (
+            <li key={ph.label} className="flex items-center gap-3 sm:flex-col sm:items-start" aria-current={state === "now" ? "step" : undefined}>
+              <span data-state={state} className={`zb-node grid h-11 w-11 shrink-0 place-items-center rounded-2xl border ${
+                state === "done" ? "border-good bg-good text-black" : state === "now" ? "border-accent bg-accent text-white" : state === "failed" ? "border-bad bg-bad/15 text-bad" : "border-line text-mute"}`}>
+                <Icon name={state === "done" ? "check" : state === "failed" ? "x" : ph.icon} />
+              </span>
+              <span>
+                <span className={`block text-sm font-medium ${state === "todo" ? "text-mute" : ""}`}>{ph.label}</span>
+                <span className="block text-xs text-mute">{state === "done" ? "Done" : state === "now" ? "In progress" : state === "failed" ? "Stopped here" : "Up next"}</span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="mt-6">
+        <div className="mb-1.5 flex justify-between text-xs text-mute"><span>{done ? "Finished" : failed ? "Stopped" : at < 0 ? "Waiting for a GPU" : "Working"}</span><span className="tabular-nums">{pct}%</span></div>
+        <div className="h-2.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-label="Overall progress" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+          <div className={`zb-fill h-full rounded-full ${failed ? "bg-bad" : done ? "bg-good" : "zb-stripes bg-accent"}`} style={{ width: `${Math.max(pct, 3)}%` }} />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -287,6 +365,43 @@ function RunDetail({ run }: { run: Run }) {
   const failed = p?.stage === "failed" || (["ERROR", "CANCEL_ACKNOWLEDGED"].includes(st?.kaggle.status ?? "") && p?.stage !== "done");
   const result = p?.result;
   const modelName = run.config.model_name;
+  const done = p?.stage === "done" || p?.stage === "serving";
+
+  // Train runs show four phases; other runs show their own steps as phases.
+  const phases = run.mode === "train"
+    ? PHASES
+    : stages.map(([key, label]) => ({ label, icon: (key === "training" ? "cpu" : key === "publishing" ? "rocket" : key === "testing" || key === "baseline" ? "shield" : key === "data" ? "database" : key === "serving" ? "chat" : "bolt") as IconName }));
+  const phaseAt = at < 0 ? -1 : at >= doneAt ? phases.length : run.mode === "train" ? PHASES.findIndex((ph) => ph.stages.includes(at)) : at;
+  // Within the current phase: training's real step count, otherwise halfway.
+  const fraction = p?.stage === "training" && p.total_steps ? ((p.step ?? 0) / p.total_steps) * (run.mode === "train" ? 0.8 : 1) : p?.stage === "testing" && run.mode === "train" ? 0.9 : 0.5;
+
+  // Sounds and confetti follow what happens while the page is open, not what had already happened.
+  const seen = useRef<{ phase: number; failed: boolean } | null>(null);
+  const [party, setParty] = useState(false);
+  const finishedWell = done && result?.published !== false && run.mode !== "serve";
+  useEffect(() => {
+    if (!st) return;
+    const prev = seen.current;
+    seen.current = { phase: phaseAt, failed };
+    if (!prev) {
+      // Opened right as it finished (from a notification, say): celebrate once per run.
+      if (finishedWell && Date.now() - run.startedAt < 7 * 24 * 3600_000) {
+        const key = `zebrain.celebrated.${run.runId}`;
+        try {
+          if (!localStorage.getItem(key)) { localStorage.setItem(key, "1"); setParty(true); play("success"); }
+        } catch {}
+      }
+      return;
+    }
+    if (failed && !prev.failed) return play("error");
+    if (phaseAt > prev.phase) {
+      if (finishedWell) {
+        try { localStorage.setItem(`zebrain.celebrated.${run.runId}`, "1"); } catch {}
+        setParty(true);
+        play("success");
+      } else play("step");
+    }
+  }, [st, phaseAt, failed, finishedWell, run.runId, run.startedAt]);
   const onOurGpu = run.kernel.startsWith("runpod:");
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -319,7 +434,33 @@ function RunDetail({ run }: { run: Run }) {
           </div>
         </div>
       )}
-      {err && <p role="alert" className="mb-6 text-sm text-[#ff8a80]">{err}{err.startsWith("Connect") && <> <Link className="link" href={`/connect?next=${encodeURIComponent(runHref(run))}`}>Connect</Link></>}</p>}
+      {err && (
+        <div className="mb-6">
+          {err.startsWith("Connect") ? (
+            <ErrorNote message={err}><Link className="btn mt-3" href={`/connect?next=${encodeURIComponent(runHref(run))}`}>Connect accounts</Link></ErrorNote>
+          ) : <ErrorNote message={err} onRetry={poll} />}
+        </div>
+      )}
+
+      <Celebrate show={party} />
+      {st === null && !err ? (
+        <div className="mb-10 rounded-3xl border border-line bg-panel p-6" aria-busy="true" aria-label="Loading progress">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">{phases.map((ph) => <div key={ph.label}><Skeleton className="mb-2 h-11 w-11 rounded-2xl" /><Skeleton className="h-4 w-24" /></div>)}</div>
+          <Skeleton className="mt-6 h-2.5 w-full" />
+        </div>
+      ) : (
+        <Pipeline phases={phases} at={phaseAt} fraction={fraction} failed={failed} done={done} />
+      )}
+      {party && result?.repo && (
+        <div className="zb-bubble mb-10 flex flex-wrap items-center gap-4 rounded-3xl border border-good/50 bg-good/[0.08] p-5">
+          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-good text-black"><Icon name="sparkle" className="h-6 w-6" /></span>
+          <div className="min-w-0 flex-1">
+            <p className="text-lg font-medium">Your model is live!</p>
+            <p className="break-words text-sm text-mute">{result.repo} {result.tag} is on your Hugging Face account. Say hi to it.</p>
+          </div>
+          <Link className="btn" href={`/chat?m=${encodeURIComponent(run.stateRepo)}`}>Chat with it</Link>
+        </div>
+      )}
 
       <div className="grid gap-12 md:grid-cols-[1fr_20rem]">
         <section aria-label="Progress">
@@ -328,7 +469,7 @@ function RunDetail({ run }: { run: Run }) {
               const state = failed && i === Math.max(at, 0) ? "failed" : i < at || at >= doneAt ? "done" : i === at ? "now" : "todo";
               return (
                 <li key={key} className={`grid grid-cols-[1.5rem_1fr] gap-x-3 border-t border-line py-3 ${state === "todo" ? "text-mute" : ""}`}>
-                  <span className="font-mono text-sm">{state === "done" ? "✓" : state === "failed" ? "✕" : i + 1}</span>
+                  <span className={`font-mono text-sm ${state === "done" ? "text-good" : state === "failed" ? "text-bad" : state === "now" ? "text-accent" : ""}`}>{state === "done" ? "✓" : state === "failed" ? "✕" : i + 1}</span>
                   <div>
                     <span className={state === "now" ? "font-semibold" : ""}>{label}</span>
                     {state === "now" && key === "training" && p?.total_steps ? <TrainingBar p={p} /> : null}
@@ -340,8 +481,8 @@ function RunDetail({ run }: { run: Run }) {
           </ol>
 
           {failed && (
-            <div className="mb-10 border-t border-[#ff8a80] pt-4">
-              <h2 className="mb-2 font-semibold">The run stopped</h2>
+            <div className="mb-10 rounded-2xl border border-bad/50 bg-bad/[0.06] p-5">
+              <h2 className="mb-2 font-semibold">The run stopped. Nothing&apos;s lost: it saved its progress.</h2>
               <p className="mb-3 max-w-[64ch] text-sm">{p?.error || st?.kaggle.failureMessage || "Kaggle stopped the job."}</p>
               {st?.logTail && <pre className="mb-4 max-h-64 overflow-auto rounded-md border border-line bg-panel p-3 font-mono text-xs text-mute">{st.logTail}</pre>}
               <div className="flex flex-wrap gap-3">
@@ -436,7 +577,7 @@ function TrainingBar({ p }: { p: Progress }) {
   return (
     <div className="mt-2">
       <div className="h-1.5 w-full max-w-md rounded-full bg-line" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-        <div className="h-full rounded-full bg-paper" style={{ width: `${pct}%` }} />
+        <div className="zb-fill h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
       </div>
       <p className="mt-1.5 font-mono text-xs text-mute">
         {p.round_name} · step {p.step} of {p.total_steps}{p.loss != null ? ` · loss ${p.loss}` : ""}

@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PLANS, type Plan, type Quote } from "@/lib/quote";
 import { supabase } from "@/lib/supabase/client";
+import { play } from "@/lib/sound";
+import { CardGroup, ErrorNote, Icon, Skeleton, type Choice } from "../ui";
 
 export type PlanStatus = {
   trialAvailable: boolean;
@@ -13,68 +15,53 @@ export type PlanStatus = {
 
 export function usePlanStatus() {
   const [status, setStatus] = useState<PlanStatus | null>(null);
-  useEffect(() => {
-    fetch("/api/plans").then((r) => r.json()).then((d) => !d.error && setStatus(d)).catch(() => {});
+  const [error, setError] = useState("");
+  const load = useCallback(() => {
+    setError("");
+    fetch("/api/plans")
+      .then((r) => r.json())
+      .then((d) => (d.error ? setError(d.error) : setStatus(d)))
+      .catch(() => setError("Couldn't load the plans. Check your connection."));
   }, []);
-  return status;
+  useEffect(load, [load]);
+  return { status, error, retry: load };
 }
 
 // The first choice when making a model. The three options differ in who pays for the GPU and who writes the data,
-// so each row says exactly that, with the price on the right.
+// so each card says exactly that, with the price at the top.
 export function PlanStep({ plan, setPlan, status }: { plan: Plan; setPlan: (p: Plan) => void; status: PlanStatus | null }) {
   const trialOpen = status?.trialAvailable && status.services.trials && status.services.qwen;
   const proOpen = status?.services.qwen && status.services.runpod;
-  const rows: { id: Plan; title: string; price: string; points: string[]; off?: string }[] = [
+  const rows: (Choice<Plan> & { points: string[] })[] = [
     {
-      id: "trial", title: "Free trial", price: "Free, once",
-      points: ["Zebrain AI writes your dataset from your documents or the web", "Tested before it's published", "Trains on your Kaggle GPU, models up to 9B", "No card needed"],
+      value: "trial", title: "Free trial", aside: "Free, once", icon: "gift",
+      points: ["Zebrain AI writes your dataset from your documents or the web", "Tested before it's published", "Your Kaggle GPU, models up to 9B", "No card needed"],
       off: !status ? undefined : !status.trialAvailable ? "You've used your free trial." : !trialOpen ? "Opens soon." : !status.qwenUp ? "Paused: we're out of service right now." : undefined,
     },
     {
-      id: "basic", title: "Basic", price: "Free",
+      value: "basic", title: "Basic", aside: "Free", icon: "cpu",
       points: ["AI picks existing datasets for your job", "Trains once and publishes, no testing round", "Your Kaggle GPU (about 30 free hours a week), models up to 9B"],
     },
     {
-      id: "standard", title: "Pro", price: "Priced per model",
+      value: "standard", title: "Pro", aside: "Priced per model", icon: "rocket",
       points: ["Zebrain AI writes a dataset just for your job from your documents", "Trains on Zebrain's GPUs at full precision, tested and retrained", "Pick Standard or Extreme (up to 14B); paid from your credits"],
       off: status && !proOpen ? "Opens soon. Basic and the free trial work now." : status && !status.qwenUp ? "Paused: we're out of service right now. Basic still works." : undefined,
     },
   ];
-  return (
-    <div role="radiogroup" aria-label="Plan" className="border-t border-line">
-      {rows.map((r) => {
-        const on = plan === r.id || (r.id === "standard" && plan === "extreme");
-        return (
-          <button
-            key={r.id}
-            role="radio"
-            aria-checked={on}
-            disabled={!!r.off}
-            onClick={() => setPlan(r.id)}
-            className={`grid w-full gap-x-6 gap-y-2 border-b border-line py-5 text-left transition-colors sm:grid-cols-[1fr_auto] ${on ? "" : "hover:bg-panel/60"} disabled:cursor-not-allowed disabled:opacity-50`}
-          >
-            <div className="flex gap-4">
-              <span aria-hidden className={`mt-1.5 h-4 w-4 shrink-0 rounded-full border-2 ${on ? "border-accent bg-accent shadow-[inset_0_0_0_3px_#000]" : "border-line"}`} />
-              <div>
-                <span className={`text-2xl font-medium tracking-tight ${on ? "text-paper" : ""}`}>{r.title}</span>
-                <ul className="mt-2 space-y-1 text-sm text-mute">
-                  {r.points.map((p) => <li key={p}>{p}</li>)}
-                </ul>
-                {r.off && <p className="mt-2 text-sm text-paper">{r.off}</p>}
-              </div>
-            </div>
-            <span className="pl-8 text-lg tabular-nums sm:pl-0 sm:text-right">{r.price}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
+  const options = rows.map((r) => ({
+    ...r,
+    flag: r.value === "trial" && !r.off ? "Best for a first model" : undefined,
+    desc: <ul className="space-y-1">{r.points.map((p) => <li key={p} className="flex gap-2"><Icon name="check" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />{p}</li>)}</ul>,
+  }));
+  return <CardGroup label="Plan" options={options} value={plan === "extreme" ? "standard" : plan} onChange={setPlan} cols="md:grid-cols-3" />;
 }
 
 // Uploads go straight from the browser to the user's private folder; Zebrain AI reads them during the run.
+// Drop files anywhere on the box, or pick them.
 export function DocsUpload({ docs, setDocs }: { docs: { path: string; name: string; bytes: number }[]; setDocs: (d: { path: string; name: string; bytes: number }[]) => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [over, setOver] = useState(false);
   async function add(files: FileList | null) {
     if (!files?.length) return;
     setBusy(true);
@@ -97,27 +84,38 @@ export function DocsUpload({ docs, setDocs }: { docs: { path: string; name: stri
       if (error) setErr(`Couldn't upload ${f.name}: ${error.message}`);
       else added.push({ path, name: f.name, bytes: f.size });
     }
+    if (added.length) play("step");
     setDocs([...docs, ...added]);
     setBusy(false);
   }
   return (
     <div className="mb-8">
-      <label htmlFor="docs" className="label">Your documents (PDF, Word, text, Markdown, CSV, JSON, HTML)</label>
-      <div className="rounded-lg border border-dashed border-line p-5">
+      <label
+        htmlFor="docs"
+        onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => { e.preventDefault(); setOver(false); add(e.dataTransfer.files); }}
+        className={`card cursor-pointer items-center border-dashed py-9 text-center focus-within:border-accent ${over ? "border-accent bg-accent/[0.08]" : ""}`}
+      >
+        <span className={`card-icon h-14 w-14 ${busy ? "animate-pulse" : ""}`}><Icon name="upload" className="h-6 w-6" /></span>
+        <span className="text-[17px] font-medium">{busy ? "Uploading…" : over ? "Drop to upload" : "Drop your documents here, or click to choose"}</span>
+        <span className="max-w-[52ch] text-sm text-mute">
+          PDF, Word, text, Markdown, CSV, JSON or HTML, up to 25 MB each. Zebrain AI reads them, finds the topics, and writes
+          questions and answers from them. No documents? It researches your job on the web instead.
+        </span>
         <input id="docs" type="file" multiple accept=".pdf,.docx,.txt,.md,.csv,.json,.html,.htm" disabled={busy}
-          onChange={(e) => { add(e.target.files); e.target.value = ""; }}
-          className="block w-full text-sm text-mute file:mr-4 file:rounded-full file:border-0 file:bg-paper file:px-4 file:py-2 file:text-sm file:font-medium file:text-ink" />
-        <p className="mt-3 text-sm text-mute">
-          {busy ? "Uploading…" : "Zebrain AI reads them, finds the topics, and writes questions and answers from them. No documents? It researches your job on the web instead."}
-        </p>
-      </div>
-      {err && <p role="alert" className="mt-2 text-sm text-bad">{err}</p>}
+          onChange={(e) => { add(e.target.files); e.target.value = ""; }} className="sr-only" />
+      </label>
+      {err && <div className="mt-3"><ErrorNote message={err} /></div>}
       {docs.length > 0 && (
-        <ul className="mt-3 divide-y divide-line border-y border-line text-sm">
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2">
           {docs.map((d) => (
-            <li key={d.path} className="flex items-center justify-between gap-3 py-2">
-              <span className="min-w-0 break-all">{d.name} <span className="text-mute">· {(d.bytes / 1024).toFixed(0)} KB</span></span>
-              <button className="link text-mute" onClick={() => setDocs(docs.filter((x) => x.path !== d.path))}>Remove</button>
+            <li key={d.path} className="zb-bubble flex items-center gap-3 rounded-xl border border-line bg-panel px-3 py-2.5 text-sm">
+              <Icon name="file" className="h-5 w-5 shrink-0 text-accent" />
+              <span className="min-w-0 flex-1 break-all">{d.name} <span className="text-mute">· {(d.bytes / 1024).toFixed(0)} KB</span></span>
+              <button type="button" className="rounded-full p-1 text-mute hover:text-paper" aria-label={`Remove ${d.name}`} onClick={() => { play("click"); setDocs(docs.filter((x) => x.path !== d.path)); }}>
+                <Icon name="x" className="h-4 w-4" />
+              </button>
             </li>
           ))}
         </ul>
@@ -131,7 +129,11 @@ export function ProOptions({ quotes, plan, setPlan }: {
   quotes: { standard: Quote | { error: string }; extreme: Quote | { error: string } } | null;
   plan: Plan; setPlan: (p: Plan) => void;
 }) {
-  if (!quotes) return <p className="text-sm text-mute">Working out the price…</p>;
+  if (!quotes) return (
+    <div className="grid gap-3 sm:grid-cols-2" aria-busy="true" aria-label="Working out the price">
+      {[0, 1].map((i) => <div key={i} className="card"><Skeleton className="h-6 w-1/2" /><Skeleton className="h-4 w-3/4" /><Skeleton className="h-16 w-full" /></div>)}
+    </div>
+  );
   const notes = [...new Set([quotes.standard, quotes.extreme].flatMap((q) => ("warnings" in q ? q.warnings : [])))];
   const opts = [
     { id: "standard" as const, title: "Standard", line: "Good results at a lower price. Smaller, token-capped dataset." },
@@ -144,8 +146,7 @@ export function ProOptions({ quotes, plan, setPlan }: {
         const bad = "error" in q;
         const on = plan === o.id;
         return (
-          <button key={o.id} role="radio" aria-checked={on} disabled={bad} onClick={() => setPlan(o.id)}
-            className={`rounded-xl border p-5 text-left transition-colors disabled:opacity-50 ${on ? "border-accent bg-accent/[0.06]" : "border-line hover:border-paper/50"}`}>
+          <button key={o.id} type="button" role="radio" aria-checked={on} disabled={bad} onClick={() => { if (!on) play("click"); setPlan(o.id); }} className="card">
             <span className="flex items-baseline justify-between gap-3">
               <span className="text-lg font-medium">{o.title}</span>
               <span className="text-2xl font-medium tabular-nums">{bad ? "–" : `$${q.price.toFixed(2)}`}</span>
