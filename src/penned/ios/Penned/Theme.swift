@@ -2,9 +2,11 @@ import SwiftUI
 
 enum Theme {
     static let accent = Color("AccentColor")
-    static let paper = Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 0.08, alpha: 1) : UIColor(red: 0.98, green: 0.976, blue: 0.965, alpha: 1) })
-    static let inkBlue = Color(red: 0.133, green: 0.251, blue: 0.604)
-    static let inkBlack = Color(red: 0.1, green: 0.1, blue: 0.1)
+    /// Pen colours. In dark mode they lighten so handwriting stays readable on a dark background.
+    static let inkBlue = Color(uiColor: UIColor { $0.userInterfaceStyle == .dark
+        ? UIColor(red: 0.553, green: 0.663, blue: 0.957, alpha: 1)
+        : UIColor(red: 0.133, green: 0.251, blue: 0.604, alpha: 1) })
+    static let inkBlack = Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 0.92, alpha: 1) : UIColor(white: 0.1, alpha: 1) })
     static func ink(_ ink: Ink) -> Color { ink == .blue ? inkBlue : inkBlack }
 }
 

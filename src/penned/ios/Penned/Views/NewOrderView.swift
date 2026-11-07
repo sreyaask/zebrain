@@ -73,6 +73,8 @@ struct NewOrderView: View {
                 }
             }
             .onAppear { styleID = styleID ?? readyStyles.first?.id }
+            .sensoryFeedback(.success, trigger: placed?.id)
+            .sensoryFeedback(.error, trigger: error)
         }
     }
 
@@ -82,7 +84,7 @@ struct NewOrderView: View {
         Form {
             Section {
                 ProgressView(value: Double(step.rawValue + 1), total: Double(Step.allCases.count)) {
-                    Text("Step \(step.rawValue + 1) of \(Step.allCases.count)").font(.caption)
+                    Text("Step \(step.rawValue + 1) of \(Step.allCases.count)").font(.footnote)
                 }
             }
             switch step {
@@ -92,24 +94,51 @@ struct NewOrderView: View {
             case .delivery: deliveryStep
             case .review: reviewStep
             }
-            if let error { Section { Text(error).foregroundStyle(.red) } }
-            Section {
-                HStack {
-                    if step != .content { Button("Back") { go(-1) } }
-                    Spacer()
-                    if step == .review {
-                        Button { Task { await place() } } label: {
-                            HStack { if placing { ProgressView() }; Text("Place order · \(rupees(quote.total))").bold() }
-                        }
-                        .disabled(placing)
-                    } else {
-                        Button("Continue") { go(1) }.bold()
-                    }
+        }
+        .safeAreaInset(edge: .bottom) { actionBar }
+    }
+
+    /// Fixed bottom bar: running total, any error, and the step's one primary action.
+    private var actionBar: some View {
+        VStack(spacing: 10) {
+            if let error {
+                Label(error, systemImage: "exclamationmark.circle")
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(quote.total > 0 ? rupees(quote.total) : "—").font(.headline.monospacedDigit())
+                    Text(quote.total > 0 ? "\(quote.billableUnits) \(paper.isCard ? "cards" : "pages")\(quote.delivery == 0 ? " · free delivery" : "")" : "Add content to see the price")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-            } footer: {
-                if step != .review, quote.total > 0 { Text("\(rupees(quote.total)) · \(quote.billableUnits) \(paper.isCard ? "cards" : "pages")") }
+                Spacer()
+                if step != .content {
+                    Button("Back") { go(-1) }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
+                }
+                if step == .review {
+                    Button {
+                        Task { await place() }
+                    } label: {
+                        if placing { ProgressView() } else { Text("Place order") }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(placing)
+                } else {
+                    Button("Continue") { go(1) }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                }
             }
         }
+        .padding(.horizontal)
+        .padding(.vertical, 12)
+        .background(.bar)
     }
 
     @ViewBuilder private var contentStep: some View {
@@ -178,15 +207,17 @@ struct NewOrderView: View {
                     paper = p
                     pageSize = p.pageSize
                 } label: {
-                    HStack(alignment: .top) {
-                        Image(systemName: paper == p ? "largecircle.fill.circle" : "circle").foregroundStyle(Theme.accent)
+                    HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(p.name).foregroundStyle(.primary)
-                            Text(p.detail).font(.subheadline).foregroundStyle(.secondary)
+                            Text("\(p.isCard ? "₹15 a card" : "₹9 a page") · \(p.detail)").font(.subheadline).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Text(p.isCard ? "₹15/card" : "₹9/page").foregroundStyle(.secondary)
+                        if paper == p {
+                            Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(Theme.accent)
+                        }
                     }
+                    .contentShape(Rectangle())
                 }
                 .accessibilityAddTraits(paper == p ? .isSelected : [])
             }

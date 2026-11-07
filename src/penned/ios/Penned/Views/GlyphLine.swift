@@ -5,7 +5,7 @@ struct GlyphLine: View {
     let text: String
     let glyphs: GlyphSet
     var ink: Color = Theme.inkBlue
-    var xHeight: CGFloat = 14
+    @ScaledMetric(relativeTo: .body) private var xHeight: CGFloat = 14
 
     var body: some View {
         Canvas { ctx, size in
