@@ -30,21 +30,27 @@ export function onAuthChange(cb: (signedIn: boolean) => void): () => void {
 export function authMessage(err: { message?: string; code?: string; status?: number } | null | undefined): string {
   const code = err?.code ?? "";
   const msg = (err?.message ?? "").toLowerCase();
-  if (code === "over_email_send_rate_limit" || err?.status === 429 || msg.includes("rate limit"))
-    return "Too many codes have been requested. Please wait a while and try again.";
-  if (code === "otp_expired" || msg.includes("expired")) return "That code doesn't match or has expired.";
-  if (code === "email_address_invalid" || msg.includes("email address")) return "We can't send email to this address. Check it, or try another email.";
-  if (code === "email_address_not_authorized" || msg.includes("not authorized")) return "Email sign-in isn't open to this address yet.";
+  if (code === "invalid_credentials" || msg.includes("invalid login credentials")) return "Email or password is wrong.";
+  if (code === "user_already_exists" || msg.includes("already registered")) return "An account with this email already exists. Log in instead.";
+  if (code === "weak_password" || msg.includes("password should")) return "Use a password of at least 8 characters.";
+  if (code === "email_not_confirmed" || msg.includes("not confirmed"))
+    return "This account isn't confirmed yet. In Supabase, turn off \"Confirm email\" (Authentication → Sign In / Providers → Email).";
+  if (code === "email_address_invalid" || msg.includes("email address")) return "That email address doesn't look right.";
+  if (code === "signup_disabled" || msg.includes("signups not allowed")) return "New sign-ups are turned off right now.";
+  if (err?.status === 429 || msg.includes("rate limit")) return "Too many attempts. Please wait a minute and try again.";
   return "Something went wrong. Please try again.";
 }
 
-export async function sendEmailCode(email: string) {
-  const { error } = await supabase().auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+/** Email + password, handled entirely by Supabase (no emails are sent when "Confirm email" is off). */
+export async function signUpWithPassword(email: string, password: string) {
+  const { data, error } = await supabase().auth.signUp({ email, password });
   if (error) throw new Error(authMessage(error));
+  // With "Confirm email" on, Supabase returns no session and would try to send an email.
+  if (!data.session) throw new Error(authMessage({ code: "email_not_confirmed" }));
 }
 
-export async function verifyEmailCode(email: string, token: string) {
-  const { error } = await supabase().auth.verifyOtp({ email, token, type: "email" });
+export async function signInWithPassword(email: string, password: string) {
+  const { error } = await supabase().auth.signInWithPassword({ email, password });
   if (error) throw new Error(authMessage(error));
 }
 

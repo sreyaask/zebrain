@@ -29,35 +29,29 @@ final class AppModel {
         }
     }
 
-    // MARK: Auth (email one-time code; enable {{ .Token }} in the Supabase email template)
+    // MARK: Auth (email + password, handled by Supabase; turn off "Confirm email" in Supabase so no emails are sent)
 
-    func sendCode(email: String) async throws {
-        try await client.auth.signInWithOTP(email: email, shouldCreateUser: true)
+    func signIn(email: String, password: String) async throws {
+        try await client.auth.signIn(email: email, password: password)
+    }
+
+    func signUp(email: String, password: String) async throws {
+        let response = try await client.auth.signUp(email: email, password: password)
+        if response.session == nil { throw AppError.confirmEmailOn }
     }
 
     /// Turns Supabase auth errors into something a customer can act on.
     nonisolated static func authMessage(_ error: Error) -> String {
+        if let appError = error as? AppError, case .confirmEmailOn = appError { return appError.errorDescription ?? "" }
         let text = String(describing: error).lowercased() + " " + error.localizedDescription.lowercased()
-        if text.contains("rate_limit") || text.contains("rate limit") || text.contains("429") {
-            return "Too many codes have been requested. Please wait a while and try again."
-        }
-        if text.contains("otp_expired") || text.contains("expired") {
-            return "That code doesn't match or has expired."
-        }
-        if text.contains("email_address_invalid") || text.contains("email address") {
-            return "We can't send email to this address. Check it, or try another email."
-        }
-        if text.contains("not_authorized") || text.contains("not authorized") {
-            return "Email sign-in isn't open to this address yet."
-        }
-        if text.contains("offline") || text.contains("network") || text.contains("internet") {
-            return "You're offline. Check your connection and try again."
-        }
+        if text.contains("invalid_credentials") || text.contains("invalid login credentials") { return "Email or password is wrong." }
+        if text.contains("user_already_exists") || text.contains("already registered") { return "An account with this email already exists. Log in instead." }
+        if text.contains("weak_password") || text.contains("password should") { return "Use a password of at least 8 characters." }
+        if text.contains("email_not_confirmed") || text.contains("not confirmed") { return AppError.confirmEmailOn.errorDescription ?? "" }
+        if text.contains("email_address_invalid") || text.contains("email address") { return "That email address doesn't look right." }
+        if text.contains("rate limit") || text.contains("429") { return "Too many attempts. Please wait a minute and try again." }
+        if text.contains("offline") || text.contains("network") || text.contains("internet") { return "You're offline. Check your connection and try again." }
         return "Something went wrong. Please try again."
-    }
-
-    func verify(email: String, code: String) async throws {
-        try await client.auth.verifyOTP(email: email, token: code, type: .email)
     }
 
     func signOut() async {
@@ -118,7 +112,13 @@ final class AppModel {
 
 enum AppError: LocalizedError {
     case signedOut
-    var errorDescription: String? { "Please sign in again." }
+    case confirmEmailOn
+    var errorDescription: String? {
+        switch self {
+        case .signedOut: "Please sign in again."
+        case .confirmEmailOn: "This account isn't confirmed yet. In Supabase, turn off \"Confirm email\" (Authentication → Sign In / Providers → Email)."
+        }
+    }
 }
 
 /// A page the customer added to an order.

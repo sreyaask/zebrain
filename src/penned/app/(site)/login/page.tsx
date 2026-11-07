@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Container } from "@/components/ui/Section";
 import { demoUser } from "@/lib/mock";
 import { setSignedIn } from "@/lib/store";
-import { live, sendEmailCode, verifyEmailCode } from "@/lib/api";
+import { live, signInWithPassword, signUpWithPassword } from "@/lib/api";
 
 const DEMO_OTP = "123456";
 
@@ -152,45 +152,27 @@ function DemoLogin() {
   );
 }
 
-/** Real sign-in: a 6-digit code by email (Supabase). Phone codes need an SMS provider such as Twilio. */
-function EmailLogin() {
+/** Real sign-in: email and password, handled by Supabase. */
+function PasswordLogin() {
   const router = useRouter();
-  const [step, setStep] = useState<"email" | "code">("email");
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
-  const codeRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (step === "code") codeRef.current?.focus();
-  }, [step]);
-
-  const send = async (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setError("Enter a valid email address.");
+    if (password.length < 8) return setError("Use a password of at least 8 characters.");
     setError(undefined);
     setLoading(true);
     try {
-      await sendEmailCode(email.trim().toLowerCase());
-      setStep("code");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't send the code.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const verify = async (e: FormEvent) => {
-    e.preventDefault();
-    if (code.length !== 6) return setError("Enter the 6-digit code.");
-    setError(undefined);
-    setLoading(true);
-    try {
-      await verifyEmailCode(email.trim().toLowerCase(), code);
+      const fn = mode === "login" ? signInWithPassword : signUpWithPassword;
+      await fn(email.trim().toLowerCase(), password);
       router.push("/orders/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't verify the code.");
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -199,37 +181,43 @@ function EmailLogin() {
   return (
     <Container className="flex min-h-[70vh] max-w-sm flex-col justify-center py-16">
       <div className="animate-slide-up">
-        <h1 className="text-2xl font-semibold tracking-tight">{step === "email" ? "Log in to Penned" : "Enter the code"}</h1>
-        <p className="mt-2 text-[15px] text-muted">{step === "email" ? "We'll email you a 6-digit code. No password needed." : `Sent to ${email.trim()}.`}</p>
-        {step === "email" ? (
-          <form onSubmit={send} noValidate className="mt-8 space-y-4">
-            <Input label="Email" type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} error={error} />
-            <Button type="submit" fullWidth size="lg" loading={loading}>{loading ? "Sending code" : "Send code"}</Button>
-          </form>
-        ) : (
-          <form onSubmit={verify} noValidate className="mt-8 space-y-4">
-            <Input
-              ref={codeRef}
-              label="6-digit code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              error={error}
-              className="[&_input]:text-center [&_input]:font-mono [&_input]:text-lg [&_input]:tracking-[0.5em]"
-            />
-            <Button type="submit" fullWidth size="lg" loading={loading}>{loading ? "Checking" : "Verify and log in"}</Button>
-            <button type="button" onClick={() => { setStep("email"); setCode(""); setError(undefined); }} className="text-sm text-muted hover:text-ink">
-              Use a different email
-            </button>
-          </form>
-        )}
+        <h1 className="text-2xl font-semibold tracking-tight">{mode === "login" ? "Log in to Penned" : "Create your account"}</h1>
+        <p className="mt-2 text-[15px] text-muted">
+          {mode === "login" ? "Use the email and password you signed up with." : "Takes ten seconds. You'll use this to order and track."}
+        </p>
+        <form onSubmit={submit} noValidate className="mt-8 space-y-4">
+          <Input label="Email" type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input
+            label="Password"
+            type="password"
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            hint={mode === "signup" ? "At least 8 characters." : undefined}
+            error={error}
+          />
+          <Button type="submit" fullWidth size="lg" loading={loading}>
+            {mode === "login" ? "Log in" : "Create account"}
+          </Button>
+        </form>
+        <p className="mt-6 text-sm text-muted">
+          {mode === "login" ? "New to Penned? " : "Already have an account? "}
+          <button
+            type="button"
+            onClick={() => {
+              setMode(mode === "login" ? "signup" : "login");
+              setError(undefined);
+            }}
+            className="rounded font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            {mode === "login" ? "Create an account" : "Log in"}
+          </button>
+        </p>
       </div>
     </Container>
   );
 }
 
 export default function LoginPage() {
-  return live ? <EmailLogin /> : <DemoLogin />;
+  return live ? <PasswordLogin /> : <DemoLogin />;
 }

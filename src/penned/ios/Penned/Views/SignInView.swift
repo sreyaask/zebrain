@@ -1,13 +1,18 @@
 import SwiftUI
 
+/// Email and password sign-in, handled entirely by Supabase.
 struct SignInView: View {
     @Environment(AppModel.self) private var model
+    @State private var creating = false
     @State private var email = ""
-    @State private var code = ""
-    @State private var codeSent = false
+    @State private var password = ""
     @State private var busy = false
     @State private var error: String?
-    @FocusState private var focused: Bool
+    @FocusState private var field: Field?
+
+    enum Field { case email, password }
+
+    private var canSubmit: Bool { email.contains("@") && password.count >= 8 && !busy }
 
     var body: some View {
         NavigationStack {
@@ -18,66 +23,54 @@ struct SignInView: View {
                         .listRowBackground(Color.clear)
                         .padding(.vertical, 8)
                 }
-                if !codeSent {
-                    Section {
-                        TextField("Email", text: $email)
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .focused($focused)
-                    } footer: {
-                        Text("We'll email you a 6-digit code. No password needed.")
-                    }
+                Section {
+                    TextField("Email", text: $email)
+                        .textContentType(.username)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .focused($field, equals: .email)
+                        .submitLabel(.next)
+                        .onSubmit { field = .password }
+                    SecureField("Password", text: $password)
+                        .textContentType(creating ? .newPassword : .password)
+                        .focused($field, equals: .password)
+                        .submitLabel(.go)
+                        .onSubmit { if canSubmit { Task { await submit() } } }
+                } footer: {
+                    Text(creating ? "At least 8 characters." : "Use the email and password you signed up with.")
+                }
+                Section {
                     Button {
-                        Task { await send() }
+                        Task { await submit() }
                     } label: {
-                        HStack { Text("Send code"); if busy { Spacer(); ProgressView() } }
+                        HStack {
+                            Text(creating ? "Create account" : "Log in").bold()
+                            if busy { Spacer(); ProgressView() }
+                        }
                     }
-                    .disabled(busy || !email.contains("@"))
-                } else {
-                    Section {
-                        TextField("6-digit code", text: $code)
-                            .textContentType(.oneTimeCode)
-                            .keyboardType(.numberPad)
-                            .font(.title3.monospacedDigit())
-                            .focused($focused)
-                            .onChange(of: code) { _, v in code = String(v.filter(\.isNumber).prefix(6)) }
-                    } footer: {
-                        Text("Sent to \(email).")
+                    .disabled(!canSubmit)
+                    Button(creating ? "I already have an account" : "Create an account") {
+                        creating.toggle()
+                        error = nil
                     }
-                    Button {
-                        Task { await verify() }
-                    } label: {
-                        HStack { Text("Verify and sign in"); if busy { Spacer(); ProgressView() } }
-                    }
-                    .disabled(busy || code.count != 6)
-                    Button("Use a different email") { codeSent = false; code = ""; error = nil }
-                        .foregroundStyle(.secondary)
+                    .foregroundStyle(.secondary)
                 }
                 if let error {
                     Section { Text(error).foregroundStyle(.red) }
                 }
             }
-            .onAppear { focused = true }
+            .onAppear { field = .email }
         }
     }
 
-    private func send() async {
+    private func submit() async {
         busy = true; defer { busy = false }
+        let e = email.trimmingCharacters(in: .whitespaces).lowercased()
         do {
-            try await model.sendCode(email: email.trimmingCharacters(in: .whitespaces).lowercased())
+            if creating { try await model.signUp(email: e, password: password) }
+            else { try await model.signIn(email: e, password: password) }
             error = nil
-            codeSent = true
-        } catch {
-            self.error = AppModel.authMessage(error)
-        }
-    }
-
-    private func verify() async {
-        busy = true; defer { busy = false }
-        do {
-            try await model.verify(email: email.trimmingCharacters(in: .whitespaces).lowercased(), code: code)
         } catch {
             self.error = AppModel.authMessage(error)
         }

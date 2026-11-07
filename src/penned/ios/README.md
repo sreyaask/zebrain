@@ -1,6 +1,6 @@
 # Penned for iPhone (SwiftUI)
 
-Customer app: sign in with an email code, scan your handwriting sheet, scan or import the pages to copy
+Customer app: sign in with email and password, scan your handwriting sheet, scan or import the pages to copy
 (text is read on the phone with Apple's Vision), choose layout and paper, place the order, and track it.
 
 ## Open and run
@@ -15,8 +15,8 @@ Requires iOS 17.
 
 ## Supabase settings the app relies on
 
-- **Email codes:** Supabase → Authentication → Emails → "Magic Link" template must include `{{ .Token }}`
-  so the email contains the 6-digit code the app asks for.
+- **No emails needed:** in Supabase → Authentication → Sign In / Providers → Email, turn **off** "Confirm email".
+  Accounts are then created instantly with email + password, and Supabase never has to send an email.
 - Database, storage buckets and security rules come from `../supabase/migrations`.
 
 ## Not compiled in CI

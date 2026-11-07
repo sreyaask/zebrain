@@ -84,8 +84,8 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   friendly (query params, not dynamic routes). Needs NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY.
   The PDF.js worker is copied to public/ by `scripts/copy-static-assets.mjs` (bundling it breaks minification).
 - iOS: `ios/Penned.xcodeproj` (Xcode 16 synced folders, supabase-swift ≥ 2.20, iOS 17). It was never compiled because no Mac
-  was available. Uses email OTP (the Supabase email template needs `{{ .Token }}`). Fill in `ios/Penned/Config.swift`.
-- Customer website: `lib/api.ts` switches on `live` (= Supabase env vars set). Live: email-code login, real orders
+  was available. Uses email + password (no emails; "Confirm email" off). Fill in `ios/Penned/Config.swift`.
+- Customer website: `lib/api.ts` switches on `live` (= Supabase env vars set). Live: email + password login (Supabase only; "Confirm email" must be OFF in Supabase so no email is sent — the user declined Resend/custom SMTP), real orders
   (`/orders/track/?code=PEN-…` for tracking, with realtime updates), order placement uploads files to `uploads/<uid>/<order_id>/`,
   handwriting upload for admin review, early list insert. Without env vars it is the original demo on lib/mock.ts.
 - Writing method: a pen plotter (user's choice). The iPhone app is for customers; the admin portal is web.
