@@ -87,7 +87,7 @@ export interface Order {
   paper: PaperId;
   ink: InkColour;
   total: number;
-  status: OrderStatus;
+  status: OrderStatus | "cancelled";
   statusLabel: string;
   placedOn: string; // ISO date
   deliveredAt?: string; // display string

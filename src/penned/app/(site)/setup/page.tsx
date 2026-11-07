@@ -13,6 +13,7 @@ import { demoUser, samplePreviewText, type HandwritingProfile } from "@/lib/mock
 import { SHEET_LINES } from "@/lib/engine/sheet.ts";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import { live, myStyles, uploadStyle } from "@/lib/api";
 
 type Phase = "upload" | "analysing" | "error" | "preview" | "saved";
 
@@ -33,7 +34,48 @@ export default function SetupPage() {
   const [name, setName] = useState("Arjun – Black Ink");
   const [nameError, setNameError] = useState<string>();
   const [ink, setInk] = useState<"blue" | "black">("black");
-  const profiles: HandwritingProfile[] = demoUser.handwritingProfiles;
+  const [liveProfiles, setLiveProfiles] = useState<HandwritingProfile[] | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const profiles: HandwritingProfile[] = live ? (liveProfiles ?? []) : demoUser.handwritingProfiles;
+
+  const loadLive = () =>
+    myStyles()
+      .then((rows) =>
+        setLiveProfiles(
+          rows.map((r) => ({
+            id: r.id,
+            name: r.name,
+            createdAt: r.created_at.slice(0, 10),
+            ink: r.ink,
+            status: r.status === "ready" ? "ready" : r.status === "needs_rescan" ? "needs_rescan" : "processing",
+          })),
+        ),
+      )
+      .catch(() => setLiveProfiles([]));
+
+  useEffect(() => {
+    if (live) loadLive();
+  }, []);
+
+  // Live: the real scan goes to Supabase and an admin reviews every letter in the portal.
+  const submitLive = async () => {
+    const f = files[0]?.file;
+    if (!f) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      await uploadStyle(f, name.trim() || `My handwriting – ${ink === "blue" ? "Blue" : "Black"} Ink`, ink);
+      setSubmitted(true);
+      setFiles([]);
+      loadLive();
+    } catch (e) {
+      setUploadError(e instanceof Error && e.message.includes("log in") ? "Please log in first, then upload your sheet." : "Upload failed. Check your connection and try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   useEffect(() => {
     if (phase !== "analysing") return;
@@ -88,13 +130,19 @@ export default function SetupPage() {
               <li key={p.id}>
                 <Card className="flex items-center justify-between gap-4 p-4">
                   <div>
-                    <p className="font-hand text-2xl leading-none text-pen-blue">{p.name}</p>
+                    <p className={cn("font-hand text-2xl leading-none", p.ink === "black" ? "text-pen-black" : "text-pen-blue")}>{p.name}</p>
                     <p className="mt-2 text-xs text-muted">Created {formatDate(p.createdAt)}</p>
                   </div>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-[#EEF6F1] px-2.5 py-0.5 text-xs font-medium text-success">
-                    <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
-                    Ready
-                  </span>
+                  {p.status === "ready" ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-[#EEF6F1] px-2.5 py-0.5 text-xs font-medium text-success">
+                      <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
+                      Ready
+                    </span>
+                  ) : (
+                    <span className={cn("text-xs font-medium", p.status === "needs_rescan" ? "text-danger" : "text-muted")}>
+                      {p.status === "needs_rescan" ? "Rescan needed" : "In review"}
+                    </span>
+                  )}
                 </Card>
               </li>
             ))}
@@ -196,8 +244,19 @@ export default function SetupPage() {
                     ))}
                   </div>
                 </fieldset>
-                <Button fullWidth disabled={files.length === 0} onClick={() => setPhase("analysing")}>
-                  Analyse my handwriting
+                {submitted && (
+                  <Alert tone="success" title="Sheet uploaded">
+                    We check every letter by hand, usually within an hour. Your style shows as Ready above once it&apos;s approved.
+                  </Alert>
+                )}
+                {uploadError && <Alert tone="error">{uploadError}</Alert>}
+                <Button
+                  fullWidth
+                  disabled={files.length === 0}
+                  loading={uploading}
+                  onClick={() => (live ? submitLive() : setPhase("analysing"))}
+                >
+                  {live ? "Upload for review" : "Analyse my handwriting"}
                 </Button>
               </div>
             )}

@@ -4,7 +4,7 @@ Penned is a Hyderabad service that writes your notes, letters and cards in your 
 
 This folder holds:
 
-- **Customer website** (`app/(site)`): marketing pages and the order flow. Still runs on mock data.
+- **Customer website** (`app/(site)`): marketing pages and the order flow. With Supabase keys in `.env.local` it uses real login (email code), orders, uploads and live tracking; without them it runs as a demo on `lib/mock.ts`.
 - **Admin portal** (`app/admin`): order queue, order detail with text extraction and plotter export, and handwriting review. Uses Supabase.
 - **Handwriting engine** (`lib/engine`): turns a photographed sample sheet into pen strokes, reflows any text (for example an A4 page) onto notebook pages, and writes SVG and G-code for a pen plotter.
 - **Backend** (`supabase/migrations`): tables, row-level security, server-side pricing, order timeline and storage buckets.

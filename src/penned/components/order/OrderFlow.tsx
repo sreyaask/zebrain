@@ -7,6 +7,7 @@ import { Stepper } from "@/components/ui/Stepper";
 import { demoUser, getPaper, timeSlots, type Order } from "@/lib/mock";
 import { rupees } from "@/lib/format";
 import { savePlacedOrder } from "@/lib/store";
+import { live, placeOrder } from "@/lib/api";
 import { UploadStep } from "./UploadStep";
 import { LayoutStep } from "./LayoutStep";
 import { PaperStep } from "./PaperStep";
@@ -30,7 +31,9 @@ function nowTime() {
 
 export function OrderFlow() {
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<OrderDraft>(initialDraft);
+  const [draft, setDraft] = useState<OrderDraft>(() =>
+    live ? { ...initialDraft, delivery: { ...initialDraft.delivery, addressMode: "new", name: "", phone: "" } } : initialDraft,
+  );
   const [uploadError, setUploadError] = useState<string>();
   const [deliveryErrors, setDeliveryErrors] = useState<DeliveryErrors>({});
   const [placed, setPlaced] = useState<Order | null>(null);
@@ -73,7 +76,26 @@ export function OrderFlow() {
 
   const back = () => setStep((s) => Math.max(0, s - 1));
 
-  const onPaid = () => {
+  const onPaid = async (pay: { declined: boolean }) => {
+    if (live) {
+      const order = await placeOrder(
+        {
+          title: draft.title,
+          mode: draft.mode,
+          text: draft.text,
+          files: draft.files,
+          layout: draft.layout,
+          paper: draft.paper,
+          copies: draft.copies,
+          pageCount: contentPages(draft),
+          delivery: { ...draft.delivery, useSaved: draft.delivery.addressMode === "saved", slot: draft.delivery.slot || "within-3h" },
+        },
+        pay,
+      );
+      setPlaced(order);
+      return;
+    }
+    if (pay.declined) throw new Error("PAYMENT_DECLINED");
     const q = draftQuote(draft);
     const paper = getPaper(draft.paper);
     const id = `PEN-${1043 + Math.floor(Math.random() * 40)}`;
@@ -115,7 +137,7 @@ export function OrderFlow() {
           {rupees(placed.total)} paid. A writer is being assigned now, and you&apos;ll be able to follow every page.
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-          <LinkButton href={`/orders/${placed.id}`}>Track this order</LinkButton>
+          <LinkButton href={live ? `/orders/track/?code=${placed.id}` : `/orders/${placed.id}`}>Track this order</LinkButton>
           <LinkButton href="/orders" variant="secondary">
             My orders
           </LinkButton>

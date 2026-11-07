@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { demoUser } from "@/lib/mock";
 import { isSignedIn, setSignedIn } from "@/lib/store";
+import { currentUser, live, onAuthChange, signOut } from "@/lib/api";
 import { LinkButton } from "./Button";
 
 const links = [
@@ -32,6 +33,10 @@ export function Navbar() {
   const [signedIn, setSigned] = useState(false);
 
   useEffect(() => {
+    if (live) {
+      currentUser().then((u) => setSigned(!!u));
+      return onAuthChange(setSigned);
+    }
     const sync = () => setSigned(isSignedIn());
     sync();
     window.addEventListener("penned:auth", sync);
@@ -45,7 +50,8 @@ export function Navbar() {
   useEffect(() => setOpen(false), [pathname]);
 
   const isActive = (href: string) => !href.startsWith("/#") && (pathname === href || pathname.startsWith(href + "/"));
-  const initials = demoUser.name.split(" ").map((p) => p[0]).join("");
+  const initials = live ? "Me" : demoUser.name.split(" ").map((p) => p[0]).join("");
+  const logOut = () => (live ? signOut() : setSignedIn(false));
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur supports-[backdrop-filter]:bg-paper/80">
@@ -73,7 +79,7 @@ export function Navbar() {
           {signedIn ? (
             <button
               type="button"
-              onClick={() => setSignedIn(false)}
+              onClick={logOut}
               className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               title="Log out"
             >
@@ -122,8 +128,8 @@ export function Navbar() {
               </Link>
             ))}
             {signedIn ? (
-              <button type="button" onClick={() => setSignedIn(false)} className="rounded-lg px-2 py-3 text-left text-[15px] text-ink hover:bg-ink/5">
-                Log out ({demoUser.name})
+              <button type="button" onClick={logOut} className="rounded-lg px-2 py-3 text-left text-[15px] text-ink hover:bg-ink/5">
+                Log out{live ? "" : ` (${demoUser.name})`}
               </button>
             ) : (
               <Link href="/login" className="rounded-lg px-2 py-3 text-[15px] text-ink hover:bg-ink/5">

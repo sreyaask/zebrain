@@ -9,6 +9,7 @@ import { Container, PageHeader } from "@/components/ui/Section";
 import { OrderRow } from "@/components/OrderRow";
 import { fetchOrders, type Order } from "@/lib/mock";
 import { loadPlacedOrders } from "@/lib/store";
+import { currentUser, live, myOrders } from "@/lib/api";
 import { cn } from "@/lib/cn";
 
 type Filter = "active" | "past";
@@ -19,11 +20,21 @@ function OrdersList() {
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("active");
+  const [needsLogin, setNeedsLogin] = useState(false);
 
   const load = useCallback(async () => {
     setOrders(null);
     setError(null);
     try {
+      if (live) {
+        if (!(await currentUser())) {
+          setNeedsLogin(true);
+          setOrders([]);
+          return;
+        }
+        setOrders(await myOrders());
+        return;
+      }
       const base = await fetchOrders({ fail: demo === "error", empty: demo === "empty" });
       setOrders(demo === "empty" ? base : [...loadPlacedOrders(), ...base]);
     } catch (e) {
@@ -60,7 +71,13 @@ function OrdersList() {
         ))}
       </div>
 
-      {error ? (
+      {needsLogin ? (
+        <EmptyState
+          title="Log in to see your orders"
+          body="Your orders and their live progress appear here once you're logged in."
+          action={<LinkButton href="/login/">Log in</LinkButton>}
+        />
+      ) : error ? (
         <div className="space-y-4">
           <Alert tone="error" title="Couldn't load orders">
             {error}

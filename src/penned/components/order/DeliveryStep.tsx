@@ -4,6 +4,7 @@ import { Input, Select } from "@/components/ui/Input";
 import { RadioCard } from "@/components/ui/RadioCard";
 import { deliveryAreas, demoUser, timeSlots, type DeliveryArea, type TimeSlotId } from "@/lib/mock";
 import type { DeliveryDetails, OrderDraft } from "./types";
+import { live } from "@/lib/api";
 
 export type DeliveryErrors = Partial<Record<keyof DeliveryDetails, string>>;
 
@@ -35,27 +36,29 @@ export function DeliveryStep({
 
   return (
     <div className="space-y-8">
+      {!live && (
       <fieldset>
-        <legend className="text-sm font-medium text-ink">Deliver to</legend>
-        <div className="mt-2 grid gap-3 sm:grid-cols-2">
-          <RadioCard
-            name="address"
-            value="saved"
-            checked={d.addressMode === "saved"}
-            onChange={() => set({ addressMode: "saved" })}
-            title="Saved address"
-            description={`${saved.line1}, ${saved.area}, ${saved.city} ${saved.pincode}`}
-          />
-          <RadioCard
-            name="address"
-            value="new"
-            checked={d.addressMode === "new"}
-            onChange={() => set({ addressMode: "new" })}
-            title="A different address"
-            description="Anywhere in our delivery areas."
-          />
-        </div>
-      </fieldset>
+          <legend className="text-sm font-medium text-ink">Deliver to</legend>
+          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+            <RadioCard
+              name="address"
+              value="saved"
+              checked={d.addressMode === "saved"}
+              onChange={() => set({ addressMode: "saved" })}
+              title="Saved address"
+              description={`${saved.line1}, ${saved.area}, ${saved.city} ${saved.pincode}`}
+            />
+            <RadioCard
+              name="address"
+              value="new"
+              checked={d.addressMode === "new"}
+              onChange={() => set({ addressMode: "new" })}
+              title="A different address"
+              description="Anywhere in our delivery areas."
+            />
+          </div>
+        </fieldset>
+      )}
 
       {d.addressMode === "new" && (
         <div className="grid animate-fade-in gap-4 sm:grid-cols-2">

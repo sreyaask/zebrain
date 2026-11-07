@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
 import { deliveryAreas } from "@/lib/mock";
+import { joinEarlyList, live } from "@/lib/api";
 
 type State = "idle" | "loading" | "done" | "error";
 
@@ -21,6 +22,15 @@ export function EarlyList() {
     }
     setError(undefined);
     setState("loading");
+    if (live) {
+      try {
+        await joinEarlyList(email, area);
+        setState("done");
+      } catch {
+        setState("error");
+      }
+      return;
+    }
     await new Promise((r) => setTimeout(r, 900));
     // Demo: addresses at example.com simulate a server error.
     if (email.trim().toLowerCase().endsWith("@example.com")) {

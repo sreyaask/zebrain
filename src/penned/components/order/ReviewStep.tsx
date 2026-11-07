@@ -52,7 +52,7 @@ export function ReviewStep({
 }: {
   draft: OrderDraft;
   goTo: (step: number) => void;
-  onPaid: () => void;
+  onPaid: (pay: { declined: boolean }) => Promise<void>;
 }) {
   const q = draftQuote(draft);
   const paper = getPaper(draft.paper);
@@ -67,6 +67,7 @@ export function ReviewStep({
   const [card, setCard] = useState({ number: "", expiry: "", cvv: "", name: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [state, setState] = useState<"idle" | "processing" | "declined">("idle");
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -93,11 +94,16 @@ export function ReviewStep({
     await new Promise((r) => setTimeout(r, method === "upi" ? 2200 : 1600));
     // Demo: these values simulate a declined payment.
     const declined = method === "upi" ? upi.trim().toLowerCase().startsWith("fail@") : card.number.replace(/\s/g, "").endsWith("0002");
-    if (declined) {
-      setState("declined");
-      return;
+    try {
+      await onPaid({ declined });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg === "PAYMENT_DECLINED") setState("declined");
+      else {
+        setState("idle");
+        setOrderError(msg || "Couldn't place the order. Try again.");
+      }
     }
-    onPaid();
   };
 
   const processing = state === "processing";
@@ -250,6 +256,11 @@ export function ReviewStep({
           {state === "declined" && (
             <Alert tone="error" title="Payment declined">
               Your bank didn&apos;t approve this payment. No money was taken. Try again or use another method.
+            </Alert>
+          )}
+          {orderError && (
+            <Alert tone="error" title="Order not placed">
+              {orderError}
             </Alert>
           )}
           {processing && (

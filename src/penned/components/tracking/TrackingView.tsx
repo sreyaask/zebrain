@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Spinner";
@@ -12,6 +11,7 @@ import { orderMeta } from "@/components/OrderRow";
 import { demoUser, orders, pricing, type Order } from "@/lib/mock";
 import { formatDate, rupees } from "@/lib/format";
 import { loadPlacedOrders } from "@/lib/store";
+import { live, orderByCode, watchOrder } from "@/lib/api";
 import { cn } from "@/lib/cn";
 
 function Timeline({ order }: { order: Order }) {
@@ -79,18 +79,43 @@ function Timeline({ order }: { order: Order }) {
   );
 }
 
-export function TrackingView() {
-  const { id } = useParams<{ id: string }>();
+export function TrackingView({ id }: { id: string }) {
   const [order, setOrder] = useState<Order | null | undefined>(undefined);
+  const [address, setAddress] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [callNote, setCallNote] = useState(false);
 
   useEffect(() => {
+    if (live) {
+      // Real order: load it, then follow live status changes from the admin portal.
+      const load = () =>
+        orderByCode(id)
+          .then((r) => {
+            setOrder(r?.order ?? null);
+            setAddress(r?.address ?? null);
+          })
+          .catch((e) => setLoadError(e instanceof Error ? e.message : "Couldn't load this order."));
+      load();
+      return watchOrder(id, load);
+    }
     const t = setTimeout(() => {
       const all = [...loadPlacedOrders(), ...orders];
       setOrder(all.find((o) => o.id.toLowerCase() === String(id).toLowerCase()) ?? null);
     }, 350);
     return () => clearTimeout(t);
   }, [id]);
+
+  if (loadError) {
+    return (
+      <Container className="max-w-md py-24 text-center">
+        <h1 className="text-xl font-semibold">Couldn&apos;t load this order</h1>
+        <p className="mt-2 text-sm text-muted">{loadError}</p>
+        <div className="mt-8 flex justify-center">
+          <LinkButton href="/orders/">Go to my orders</LinkButton>
+        </div>
+      </Container>
+    );
+  }
 
   if (order === undefined) {
     return (
@@ -123,7 +148,9 @@ export function TrackingView() {
     : order.rider
       ? `Arriving in ${order.rider.eta}`
       : order.eta
-        ? `Expected by ${order.eta}`
+        ? /\d(:\d\d)?\s?(AM|PM)$/i.test(order.eta)
+          ? `Expected by ${order.eta}`
+          : `Delivery slot: ${order.eta}`
         : "In progress";
 
   return (
@@ -181,9 +208,9 @@ export function TrackingView() {
           <Card className="p-5">
             <p className="text-sm text-muted">Delivering to</p>
             <p className="mt-1 text-[15px]">
-              {demoUser.name}
+              {live ? null : demoUser.name}
               <span className="block text-muted">
-                {order.area === demoUser.savedAddress.area
+                {address ? address : order.area === demoUser.savedAddress.area
                   ? `${demoUser.savedAddress.line1}, ${demoUser.savedAddress.area}, Hyderabad ${demoUser.savedAddress.pincode}`
                   : `${order.area}, Hyderabad`}
               </span>

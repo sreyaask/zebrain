@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/Input";
 import { Container } from "@/components/ui/Section";
 import { demoUser } from "@/lib/mock";
 import { setSignedIn } from "@/lib/store";
+import { live, sendEmailCode, verifyEmailCode } from "@/lib/api";
 
 const DEMO_OTP = "123456";
 
-export default function LoginPage() {
+function DemoLogin() {
   const router = useRouter();
   const [step, setStep] = useState<"phone" | "otp" | "done">("phone");
   const [phone, setPhone] = useState(demoUser.phone.replace("+91 ", ""));
@@ -149,4 +150,86 @@ export default function LoginPage() {
       </div>
     </Container>
   );
+}
+
+/** Real sign-in: a 6-digit code by email (Supabase). Phone codes need an SMS provider such as Twilio. */
+function EmailLogin() {
+  const router = useRouter();
+  const [step, setStep] = useState<"email" | "code">("email");
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string>();
+  const [loading, setLoading] = useState(false);
+  const codeRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (step === "code") codeRef.current?.focus();
+  }, [step]);
+
+  const send = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setError("Enter a valid email address.");
+    setError(undefined);
+    setLoading(true);
+    try {
+      await sendEmailCode(email.trim().toLowerCase());
+      setStep("code");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't send the code.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verify = async (e: FormEvent) => {
+    e.preventDefault();
+    if (code.length !== 6) return setError("Enter the 6-digit code.");
+    setError(undefined);
+    setLoading(true);
+    try {
+      await verifyEmailCode(email.trim().toLowerCase(), code);
+      router.push("/orders/");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't verify the code.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Container className="flex min-h-[70vh] max-w-sm flex-col justify-center py-16">
+      <div className="animate-slide-up">
+        <h1 className="text-2xl font-semibold tracking-tight">{step === "email" ? "Log in to Penned" : "Enter the code"}</h1>
+        <p className="mt-2 text-[15px] text-muted">{step === "email" ? "We'll email you a 6-digit code. No password needed." : `Sent to ${email.trim()}.`}</p>
+        {step === "email" ? (
+          <form onSubmit={send} noValidate className="mt-8 space-y-4">
+            <Input label="Email" type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} error={error} />
+            <Button type="submit" fullWidth size="lg" loading={loading}>{loading ? "Sending code" : "Send code"}</Button>
+          </form>
+        ) : (
+          <form onSubmit={verify} noValidate className="mt-8 space-y-4">
+            <Input
+              ref={codeRef}
+              label="6-digit code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              error={error}
+              className="[&_input]:text-center [&_input]:font-mono [&_input]:text-lg [&_input]:tracking-[0.5em]"
+            />
+            <Button type="submit" fullWidth size="lg" loading={loading}>{loading ? "Checking" : "Verify and log in"}</Button>
+            <button type="button" onClick={() => { setStep("email"); setCode(""); setError(undefined); }} className="text-sm text-muted hover:text-ink">
+              Use a different email
+            </button>
+          </form>
+        )}
+      </div>
+    </Container>
+  );
+}
+
+export default function LoginPage() {
+  return live ? <EmailLogin /> : <DemoLogin />;
 }

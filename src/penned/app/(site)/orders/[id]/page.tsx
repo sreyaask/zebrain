@@ -13,6 +13,6 @@ export function generateStaticParams() {
 
 export const dynamicParams = false;
 
-export default function TrackingPage() {
-  return <TrackingView />;
+export default function TrackingPage({ params }: { params: { id: string } }) {
+  return <TrackingView id={params.id} />;
 }

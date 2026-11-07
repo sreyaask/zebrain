@@ -2,6 +2,7 @@ import Link from "next/link";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { getPaper, type Order } from "@/lib/mock";
 import { formatDate, rupees } from "@/lib/format";
+import { live } from "@/lib/api";
 
 export function orderMeta(o: Order) {
   const paper = getPaper(o.paper);
@@ -21,7 +22,7 @@ export function OrderRow({ order }: { order: Order }) {
   return (
     <li>
       <Link
-        href={`/orders/${order.id}`}
+        href={live ? `/orders/track/?code=${order.id}` : `/orders/${order.id}`}
         className="group flex flex-col gap-3 px-5 py-4 transition-colors hover:bg-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent sm:flex-row sm:items-center sm:justify-between sm:px-6"
       >
         <div className="min-w-0">

@@ -11,6 +11,8 @@ export interface UploadedFile {
   /** Estimated pages in this file (images = 1). */
   pages: number;
   previewUrl?: string;
+  /** The original file, kept so it can be uploaded when the order is placed. */
+  file?: File;
 }
 
 interface UploaderProps {
@@ -88,6 +90,7 @@ export function Uploader({
           kind: isPdf ? "pdf" : "image",
           pages: isPdf ? estimatePdfPages(f.size) : 1,
           previewUrl: isImage && typeof URL !== "undefined" ? URL.createObjectURL(f) : undefined,
+          file: f,
         });
       }
       if (accepted.length) onAdd(multiple ? accepted : accepted.slice(0, 1));
