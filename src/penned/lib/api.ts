@@ -30,6 +30,9 @@ export function onAuthChange(cb: (signedIn: boolean) => void): () => void {
 export function authMessage(err: { message?: string; code?: string; status?: number } | null | undefined): string {
   const code = err?.code ?? "";
   const msg = (err?.message ?? "").toLowerCase();
+  // With password sign-in, Supabase only sends email when "Confirm email" is on, so an email limit means that setting.
+  if (code === "over_email_send_rate_limit" || msg.includes("email rate limit"))
+    return "Supabase is trying to send a confirmation email. Turn off \"Confirm email\" in Supabase (Authentication → Sign In / Providers → Email), then try again.";
   if (code === "invalid_credentials" || msg.includes("invalid login credentials")) return "Email or password is wrong.";
   if (code === "user_already_exists" || msg.includes("already registered")) return "An account with this email already exists. Log in instead.";
   if (code === "weak_password" || msg.includes("password should")) return "Use a password of at least 8 characters.";

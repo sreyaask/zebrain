@@ -44,6 +44,8 @@ final class AppModel {
     nonisolated static func authMessage(_ error: Error) -> String {
         if let appError = error as? AppError, case .confirmEmailOn = appError { return appError.errorDescription ?? "" }
         let text = String(describing: error).lowercased() + " " + error.localizedDescription.lowercased()
+        // With password sign-in, Supabase only sends email when "Confirm email" is on, so an email limit means that setting.
+        if text.contains("over_email_send_rate_limit") || text.contains("email rate limit") { return AppError.confirmEmailOn.errorDescription ?? "" }
         if text.contains("invalid_credentials") || text.contains("invalid login credentials") { return "Email or password is wrong." }
         if text.contains("user_already_exists") || text.contains("already registered") { return "An account with this email already exists. Log in instead." }
         if text.contains("weak_password") || text.contains("password should") { return "Use a password of at least 8 characters." }
