@@ -25,7 +25,7 @@ Web tokens live in `tailwind.config.ts`. iOS tokens live in `ios/Penned/Theme.sw
 
 ## Type
 - Web: Inter for UI. Caveat ONLY for handwriting samples. Newsreader 500 for the "Penned" wordmark and app icon.
-- iOS: San Francisco via text styles (`.body`, `.headline`…) so Dynamic Type works. Handwriting previews draw the
+- iOS: San Francisco via text styles (`.body`, `.headline`…) so Dynamic Type works. Wordmark in New York (`.serif` design) at the Large Title style. Handwriting previews draw the
   customer's real glyphs (`GlyphLine`), sized with `@ScaledMetric`.
 - Scale (web): 12 / 14 / 15 / 16 / 18 / 24 / 32 / 40–60 hero. Weights: 600 headings, 500 labels, 400 body.
 - Numbers, prices and page counts use tabular figures.
@@ -40,7 +40,11 @@ Web tokens live in `tailwind.config.ts`. iOS tokens live in `ios/Penned/Theme.sw
 ## Patterns
 - One primary action per screen. On iOS multi-step flows it lives in a fixed bottom bar with the running total.
 - Selection: radio cards on web; trailing checkmark rows on iOS.
-- Status: text label plus colour, never colour alone (`StatusPill`, `StatusChip`).
+- Status: text label plus colour, never colour alone (`StatusPill` on web). On iOS, `StatusChip` is neutral text plus an
+  SF Symbol, because Apple reserves the tint colour for things you can tap.
+- iOS colours have light, dark and Increase Contrast variants (`Theme.dynamic`).
+- iOS layouts reflow at accessibility text sizes (`AdaptiveStack`), and handwriting cards scale with `@ScaledMetric`.
+- iOS: closing a half-filled order asks "Discard this order?"; every swipe action also has a visible button.
 - Every screen has empty, loading and error states (`EmptyState`, `Skeleton`, `Alert`; `ContentUnavailableView` on iOS).
 
 ## Avoid

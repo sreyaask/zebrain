@@ -50,6 +50,7 @@ struct AccountView: View {
                     Button("Sign out", role: .destructive) { Task { await model.signOut() } }
                 }
             }
+            .paperBackground()
             .navigationTitle("Account")
         }
     }

@@ -9,59 +9,81 @@ struct SignInView: View {
     @State private var busy = false
     @State private var error: String?
     @FocusState private var field: Field?
+    @ScaledMetric(relativeTo: .body) private var cardHeight: CGFloat = 118
 
     enum Field { case email, password }
 
     private var canSubmit: Bool { email.contains("@") && password.count >= 8 && !busy }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Text("Your handwriting.\nWritten for you.")
-                        .font(.largeTitle.weight(.semibold))
-                        .listRowBackground(Color.clear)
-                        .padding(.vertical, 8)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Wordmark()
+                    Text("Notes, letters and cards, written with a real pen in your handwriting. Delivered in Hyderabad in 2–3 hours.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
-                Section {
-                    TextField("Email", text: $email)
-                        .textContentType(.username)
-                        .keyboardType(.emailAddress)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .focused($field, equals: .email)
-                        .submitLabel(.next)
-                        .onSubmit { field = .password }
-                    SecureField("Password", text: $password)
-                        .textContentType(creating ? .newPassword : .password)
-                        .focused($field, equals: .password)
-                        .submitLabel(.go)
-                        .onSubmit { if canSubmit { Task { await submit() } } }
-                } footer: {
-                    Text(creating ? "At least 8 characters." : "Use the email and password you signed up with.")
-                }
-                Section {
+                .padding(.top, 32)
+
+                HandwritingPage(text: "Your handwriting.\nWritten for you.", ink: .blue, lineSpacing: 1.2)
+                    .frame(height: cardHeight)
+                    .card(padding: 0)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(creating ? "Create your account" : "Log in")
+                        .font(.title2.weight(.semibold))
+                    LabeledField(label: "Email") {
+                        TextField("you@example.com", text: $email)
+                            .textContentType(.username)
+                            .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .focused($field, equals: .email)
+                            .submitLabel(.next)
+                            .onSubmit { field = .password }
+                    }
+                    LabeledField(label: "Password", hint: creating ? "At least 8 characters." : nil) {
+                        SecureField(creating ? "Choose a password" : "Your password", text: $password)
+                            .textContentType(creating ? .newPassword : .password)
+                            .focused($field, equals: .password)
+                            .submitLabel(.go)
+                            .onSubmit { if canSubmit { Task { await submit() } } }
+                    }
+                    if let error {
+                        Label(error, systemImage: "exclamationmark.circle")
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
                     Button {
                         Task { await submit() }
                     } label: {
-                        HStack {
-                            Text(creating ? "Create account" : "Log in").bold()
-                            if busy { Spacer(); ProgressView() }
+                        Group {
+                            if busy { ProgressView() } else { Text(creating ? "Create account" : "Log in") }
                         }
+                        .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
                     .disabled(!canSubmit)
-                    Button(creating ? "I already have an account" : "Create an account") {
+
+                    Button {
                         creating.toggle()
                         error = nil
+                    } label: {
+                        Text(creating ? "I already have an account" : "New to Penned? Create an account")
+                            .frame(maxWidth: .infinity)
                     }
-                    .foregroundStyle(.secondary)
-                }
-                if let error {
-                    Section { Text(error).foregroundStyle(.red) }
+                    .font(.subheadline)
                 }
             }
-            .onAppear { field = .email }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 32)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .paperBackground()
+        .sensoryFeedback(.error, trigger: error)
     }
 
     private func submit() async {
@@ -73,6 +95,25 @@ struct SignInView: View {
             error = nil
         } catch {
             self.error = AppModel.authMessage(error)
+        }
+    }
+}
+
+/// A visible label above a text field, on a card-style background.
+struct LabeledField<Field: View>: View {
+    let label: String
+    var hint: String?
+    @ViewBuilder var field: () -> Field
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label).font(.subheadline.weight(.medium))
+            field()
+                .padding(.horizontal, 14)
+                .frame(minHeight: 48)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.line, lineWidth: 1))
+            if let hint { Text(hint).font(.footnote).foregroundStyle(.secondary) }
         }
     }
 }

@@ -4,45 +4,82 @@ import SwiftUI
 struct HandwritingView: View {
     @Environment(AppModel.self) private var model
     @State private var adding = false
+    @ScaledMetric(relativeTo: .body) private var sheetHeight: CGFloat = 150
 
     var body: some View {
         NavigationStack {
-            List {
-                if model.styles.isEmpty {
-                    ContentUnavailableView {
-                        Label("Set up your handwriting", systemImage: "pencil.and.scribble")
-                    } description: {
-                        Text("Write three short lines on paper and scan them. We'll learn your letters, so every order looks like you wrote it.")
-                    } actions: {
-                        Button("Scan my handwriting") { adding = true }.buttonStyle(.borderedProminent)
-                    }
-                    .listRowBackground(Color.clear)
-                }
-                ForEach(model.styles) { style in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text(style.name).font(.headline)
-                            Spacer()
-                            Text(style.statusLabel)
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(style.status == "ready" ? .green : style.status == "needs_rescan" ? .red : .secondary)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    if model.styles.isEmpty {
+                        VStack(alignment: .leading, spacing: 20) {
+                            HandwritingPage(text: sampleSheet.joined(separator: "\n"), ink: .blue, lineSpacing: 1.1, margin: 0.08)
+                                .frame(height: sheetHeight)
+                                .card(padding: 0)
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Teach us your handwriting").font(.title3.weight(.semibold))
+                                Text("Write three short lines on paper and scan them. We learn every letter, so each order looks like you wrote it.")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Button { adding = true } label: {
+                                Label("Scan my handwriting", systemImage: "doc.viewfinder").frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.large)
                         }
-                        if let glyphs = style.glyphSet, style.status == "ready" {
-                            GlyphLine(text: "The quick brown fox", glyphs: glyphs, ink: Theme.ink(style.ink))
-                        } else if style.status == "needs_rescan" {
-                            Text(style.reviewNote ?? "Please scan the sheet again.").font(.subheadline).foregroundStyle(.secondary)
-                        } else {
-                            Text("We're checking every letter. This usually takes under an hour.").font(.subheadline).foregroundStyle(.secondary)
+                    } else {
+                        ForEach(model.styles) { StyleCard(style: $0) }
+                        Button { adding = true } label: {
+                            Label("Add another style", systemImage: "plus").frame(maxWidth: .infinity)
                         }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
                     }
-                    .padding(.vertical, 4)
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
             }
+            .paperBackground()
             .navigationTitle("Handwriting")
             .refreshable { await model.refresh() }
-            .toolbar { Button { adding = true } label: { Label("Add a style", systemImage: "plus") } }
             .sheet(isPresented: $adding) { AddStyleView() }
         }
+    }
+}
+
+/// One handwriting style: its name, review status, and a page written with the real glyphs once approved.
+private struct StyleCard: View {
+    let style: HandwritingProfile
+    @ScaledMetric(relativeTo: .body) private var sampleHeight: CGFloat = 112
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(style.name).font(.headline)
+                Spacer()
+                Text(style.statusLabel)
+                    .font(.caption.weight(.medium))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .foregroundStyle(style.status == "ready" ? Color.green : style.status == "needs_rescan" ? .red : .secondary)
+                    .background(.quaternary.opacity(0.6), in: Capsule())
+            }
+            if let glyphs = style.glyphSet, style.status == "ready" {
+                HandwritingPage(text: "The quick brown fox jumps over the lazy dog.\nThank you for everything.", glyphs: glyphs, ink: style.ink, lineSpacing: 1.1)
+                    .frame(height: sampleHeight)
+                    .background(Theme.paper, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            } else if style.status == "needs_rescan" {
+                Label(style.reviewNote ?? "Please scan the sheet again.", systemImage: "arrow.clockwise")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                Label("We're checking every letter. This usually takes under an hour.", systemImage: "clock")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .card()
     }
 }
 
@@ -95,6 +132,7 @@ struct AddStyleView: View {
 
                 if let error { Section { Text(error).foregroundStyle(.red) } }
             }
+            .paperBackground()
             .navigationTitle("New handwriting style")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

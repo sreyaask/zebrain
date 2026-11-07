@@ -42,6 +42,15 @@ struct NewOrderView: View {
     @State private var placing = false
     @State private var placed: Order?
     @State private var error: String?
+    @State private var confirmDiscard = false
+
+    /// True once the customer has put something in that would be lost by closing.
+    private var hasWork: Bool { placed == nil && (!files.isEmpty || !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || step != .content) }
+
+    private var previewText: String {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? "# Laws of Motion\nNewton's Second Law: the rate of change of momentum of a body is directly proportional to the applied force." : String(t.prefix(600))
+    }
 
     private var pages: Int { estimatePages(text: text, size: pageSize, marginMm: margin, lineSpacing: spacing) }
     private var quote: Quote { Quote(paper: paper, units: paper.isCard ? copies : pages) }
@@ -55,8 +64,17 @@ struct NewOrderView: View {
             .navigationTitle(placed == nil ? step.title : "Order placed")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(placed == nil ? "Cancel" : "Close") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(placed == nil ? "Cancel" : "Close") { if hasWork { confirmDiscard = true } else { dismiss() } }
+                        .confirmationDialog("Discard this order?", isPresented: $confirmDiscard, titleVisibility: .visible) {
+                            Button("Discard order", role: .destructive) { dismiss() }
+                            Button("Keep editing", role: .cancel) {}
+                        } message: {
+                            Text("The pages and details you've added will be lost.")
+                        }
+                }
             }
+            .interactiveDismissDisabled(hasWork)
             .fullScreenCover(isPresented: $scanning) {
                 DocumentScanner(onFinish: { imgs in scanning = false; Task { await addImages(imgs) } }, onCancel: { scanning = false })
                     .ignoresSafeArea()
@@ -95,6 +113,7 @@ struct NewOrderView: View {
             case .review: reviewStep
             }
         }
+        .paperBackground()
         .safeAreaInset(edge: .bottom) { actionBar }
     }
 
@@ -107,14 +126,14 @@ struct NewOrderView: View {
                     .foregroundStyle(.red)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            HStack(alignment: .firstTextBaseline) {
+            AdaptiveStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(quote.total > 0 ? rupees(quote.total) : "—").font(.headline.monospacedDigit())
                     Text(quote.total > 0 ? "\(quote.billableUnits) \(paper.isCard ? "cards" : "pages")\(quote.delivery == 0 ? " · free delivery" : "")" : "Add content to see the price")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Spacer()
+                Spacer(minLength: 0)
                 if step != .content {
                     Button("Back") { go(-1) }
                         .buttonStyle(.bordered)
@@ -150,7 +169,16 @@ struct NewOrderView: View {
             PhotosPicker(selection: $photos, maxSelectionCount: 40, matching: .images) { Label("Choose photos", systemImage: "photo.on.rectangle") }
             Button("Import PDF", systemImage: "doc.richtext") { importingPDF = true }
             ForEach(files) { f in
-                LabeledContent(f.name, value: "\(f.pages) \(f.pages == 1 ? "page" : "pages")")
+                HStack {
+                    LabeledContent(f.name, value: "\(f.pages) \(f.pages == 1 ? "page" : "pages")")
+                    Button(role: .destructive) {
+                        files.removeAll { $0.id == f.id }
+                    } label: {
+                        Image(systemName: "minus.circle.fill").foregroundStyle(.red)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Remove \(f.name)")
+                }
             }
             .onDelete { files.remove(atOffsets: $0) }
             if reading { HStack { ProgressView(); Text("Reading text from your pages") } }
@@ -178,6 +206,28 @@ struct NewOrderView: View {
     }
 
     @ViewBuilder private var layoutStep: some View {
+        Section {
+            HandwritingPage(
+                text: previewText,
+                glyphs: readyStyles.first(where: { $0.id == styleID })?.glyphSet,
+                ink: ink,
+                ruled: paper == .ruledNotebook,
+                lineSpacing: spacing,
+                margin: margin / pageSize.mm.w,
+                headingStyle: heading,
+                pageWidthMm: pageSize.mm.w
+            )
+            .aspectRatio(pageSize.mm.w / pageSize.mm.h, contentMode: .fit)
+            .frame(maxWidth: 230)
+            .background(Theme.surface)
+            .overlay(Rectangle().strokeBorder(Theme.line))
+            .frame(maxWidth: .infinity)
+            .listRowBackground(Color.clear)
+        } header: {
+            Text("Preview")
+        } footer: {
+            Text(readyStyles.contains(where: { $0.id == styleID }) ? "Drawn with your own letters. About \(pages) \(pages == 1 ? "page" : "pages")." : "Shown in a sample hand until your style is approved.")
+        }
         Section("Ink") {
             Picker("Ink", selection: $ink) { ForEach(Ink.allCases) { Text($0.label).tag($0) } }.pickerStyle(.segmented)
         }
@@ -192,11 +242,6 @@ struct NewOrderView: View {
             }
             Picker("Headings", selection: $heading) { ForEach(HeadingStyle.allCases) { Text($0.label).tag($0) } }
             Picker("Page size", selection: $pageSize) { ForEach(PageSize.allCases) { Text($0.label).tag($0) } }
-        }
-        if let style = readyStyles.first(where: { $0.id == styleID }), let glyphs = style.glyphSet {
-            Section("Preview in your handwriting") {
-                GlyphLine(text: String(text.split(separator: "\n").first?.prefix(28) ?? "Your handwriting"), glyphs: glyphs, ink: Theme.ink(ink))
-            }
         }
     }
 
