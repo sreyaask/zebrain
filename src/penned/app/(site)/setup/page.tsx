@@ -31,7 +31,7 @@ export default function SetupPage() {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [phase, setPhase] = useState<Phase>("upload");
   const [progress, setProgress] = useState(0);
-  const [name, setName] = useState("Arjun – Black Ink");
+  const [name, setName] = useState(live ? "My handwriting – Black Ink" : "Arjun – Black Ink");
   const [nameError, setNameError] = useState<string>();
   const [ink, setInk] = useState<"blue" | "black">("black");
   const [liveProfiles, setLiveProfiles] = useState<HandwritingProfile[] | null>(null);
@@ -234,7 +234,7 @@ export default function SetupPage() {
                           checked={ink === c}
                           onChange={() => {
                             setInk(c);
-                            setName(`Arjun – ${c === "blue" ? "Blue" : "Black"} Ink`);
+                            setName(`${live ? "My handwriting" : "Arjun"} – ${c === "blue" ? "Blue" : "Black"} Ink`);
                           }}
                           className="sr-only"
                         />

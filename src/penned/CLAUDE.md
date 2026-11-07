@@ -69,9 +69,12 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   (`price_order()`), so clients can't set totals. `is_staff()` = admin user OR a server role (SQL editor, service role).
   The order code sequence starts at PEN-1043. Payment is a demo RPC `demo_mark_paid()`.
   The migration was validated locally with PGlite and stubbed auth/storage (RLS, tamper-proof pricing, role guard).
-- A Supabase project "penned" was NOT created yet. The free plan allows 2 active projects and `invistaar` and `zebrain`
-  are active. The user chose to pause `zebrain`, but the API refused ("hibernating"), so the user must pause it from
-  the dashboard. NEVER delete or modify `invistaar` (the user said so explicitly). Org id: icjcfrxwkrwvqffnonrq, region ap-south-1.
+- Supabase project "penned": id `tgwnrfrnutkdifzgsran` (ap-south-1, org icjcfrxwkrwvqffnonrq), created 7 Nov 2026 after the
+  user paused `zebrain`. Both migrations are applied. The anon key is in `ios/Penned/Config.swift` and in `.env.local` (git-ignored).
+  NEVER delete or modify `invistaar` (the user said so explicitly). A full live end-to-end test passed on 7 Nov 2026:
+  customer upload and order, admin extraction (9/9 lines), OCR, plotter job and status → customer tracking. All test data was removed.
+  No admin account exists yet; the user must create one (see README "Connect Supabase").
+  Network: the "zebrain" cloud environment allows tgwnrfrnutkdifzgsran.supabase.co. In tests, Node fetch needs NODE_USE_ENV_PROXY=1.
 - Engine `lib/engine/` (pure TS, imports use `.ts` extensions): binarize → components → line grouping → marks
   (merging horizontal overlaps, splitting/merging to match the sheet) → Zhang–Suen thinning → stroke tracing →
   glyphs in x-height units. `layoutHandwriting()` reflows text to notebook pages. `plot.ts` writes SVG and G-code.
@@ -79,7 +82,7 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   Tests: `node --test tests/engine.test.mts` and `node tests/extract.e2e.mjs` (renders a sheet in Chromium).
 - Admin portal: `/admin` (queue), `/admin/order/?id=`, `/admin/handwriting/`, `/admin/handwriting/review/?id=`. Static-export
   friendly (query params, not dynamic routes). Needs NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY.
-  The PDF.js worker is copied to public/ by `scripts/copy-pdf-worker.mjs` (bundling it breaks minification).
+  The PDF.js worker is copied to public/ by `scripts/copy-static-assets.mjs` (bundling it breaks minification).
 - iOS: `ios/Penned.xcodeproj` (Xcode 16 synced folders, supabase-swift ≥ 2.20, iOS 17). It was never compiled because no Mac
   was available. Uses email OTP (the Supabase email template needs `{{ .Token }}`). Fill in `ios/Penned/Config.swift`.
 - Customer website: `lib/api.ts` switches on `live` (= Supabase env vars set). Live: email-code login, real orders

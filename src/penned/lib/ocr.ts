@@ -10,7 +10,13 @@ type Progress = (fraction: number, label: string) => void;
 async function ocr(images: Blob[], onProgress?: Progress): Promise<string> {
   const { createWorker } = await import("tesseract.js");
   let current = 0;
+  const base = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/tesseract`;
   const worker = await createWorker("eng", 1, {
+    // Self-hosted engine and English data (copied by scripts/copy-static-assets.mjs).
+    workerPath: `${base}/worker.min.js`,
+    corePath: base,
+    langPath: base,
+    gzip: true,
     logger: (m: { status: string; progress: number }) => {
       if (m.status === "recognizing text") onProgress?.((current + m.progress) / images.length, `Reading page ${current + 1} of ${images.length}`);
     },
@@ -29,7 +35,7 @@ async function ocr(images: Blob[], onProgress?: Progress): Promise<string> {
 
 async function pdfToText(blob: Blob, onProgress?: Progress): Promise<string> {
   const pdfjs = await import("pdfjs-dist");
-  // Served as a static file (copied from pdfjs-dist by scripts/copy-pdf-worker.mjs) so the bundler leaves it alone.
+  // Served as a static file (copied from pdfjs-dist by scripts/copy-static-assets.mjs) so the bundler leaves it alone.
   pdfjs.GlobalWorkerOptions.workerSrc = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/pdf.worker.min.mjs`;
   const doc = await pdfjs.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }).promise;
   const pages: string[] = [];

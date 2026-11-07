@@ -140,7 +140,7 @@ function OrderDetail() {
           <p className="font-mono text-xs text-muted">{order.code}</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{order.title || "Untitled order"}</h1>
           <p className="mt-1 text-sm text-muted">
-            {order.paper === "premium-card" ? `${order.copies} cards` : `${order.page_count} pages (billed ${order.billable_units})`} · {getPaper(order.paper).name} ·{" "}
+            {order.paper === "premium-card" ? `${order.copies} cards` : `${order.page_count} ${order.page_count === 1 ? "page" : "pages"} (billed ${order.billable_units})`} · {getPaper(order.paper).name} ·{" "}
             {getPageSize(order.page_size).label} · {order.ink} ink · {rupees(order.total)}{" "}
             <span className={order.payment_status === "paid" ? "" : "text-danger"}>({order.payment_status})</span>
           </p>
