@@ -11,7 +11,12 @@ struct RootView: View {
             } else {
                 switch model.auth {
                 case .loading:
-                    ProgressView().controlSize(.large)
+                    VStack(spacing: 16) {
+                        Wordmark()
+                        ProgressView()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Theme.paper.ignoresSafeArea())
                 case .signedOut:
                     SignInView()
                 case .signedIn:

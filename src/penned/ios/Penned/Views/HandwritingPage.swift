@@ -25,6 +25,8 @@ struct HandwritingPage: View {
             let mm = pageWidthMm.map { size.width / $0 }
             let xh = mm.map { 2.6 * $0 } ?? baseXHeight
             let pitch = mm.map { 7.2 * lineSpacing * $0 } ?? xh * 3.4 * lineSpacing
+            // Nothing to draw until the view has a real size (avoids an endless ruling loop).
+            guard size.width > 20, size.height > 10, pitch > 1, xh > 0.5 else { return }
             let left = max(12, size.width * margin)
             let right = size.width - max(10, size.width * 0.06)
             let inkColor = Theme.ink(ink)

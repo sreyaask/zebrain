@@ -17,6 +17,12 @@ final class AppModel {
     var userID: UUID? { if case let .signedIn(id, _) = auth { id } else { nil } }
 
     func start() async {
+        // Decide straight away from the saved session, so the app never waits on a blank screen.
+        if let session = client.auth.currentSession {
+            auth = .signedIn(userID: session.user.id, email: session.user.email)
+        } else {
+            auth = .signedOut
+        }
         for await (_, session) in client.auth.authStateChanges {
             if let session {
                 auth = .signedIn(userID: session.user.id, email: session.user.email)
