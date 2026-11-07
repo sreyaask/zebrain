@@ -9,7 +9,8 @@ import { Container, PageHeader } from "@/components/ui/Section";
 import { Uploader, type UploadedFile } from "@/components/ui/Uploader";
 import { PagePreview } from "@/components/ui/PagePreview";
 import { defaultLayout } from "@/lib/pricing";
-import { demoUser, pangram, samplePreviewText, type HandwritingProfile } from "@/lib/mock";
+import { demoUser, samplePreviewText, type HandwritingProfile } from "@/lib/mock";
+import { SHEET_LINES } from "@/lib/engine/sheet.ts";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
@@ -20,7 +21,8 @@ const stages = ["Finding the lines on your page", "Separating each letter and nu
 const tips = [
   "Use the pen you'd like us to write with: blue or black, gel or ballpoint.",
   "Write on plain white paper, in your normal everyday handwriting.",
-  "Write the line three times so we see how your letters vary.",
+  "Write each line on its own line, three times over, so we see how your letters vary.",
+  "Keep letters separate, not joined, so we can learn each one.",
   "Photograph from straight above in good light, with no shadows.",
 ];
 
@@ -131,9 +133,11 @@ export default function SetupPage() {
           {/* Step 1: pangram */}
           <Card className="p-5 sm:p-6">
             <p className="text-xs font-medium text-muted">Step 1</p>
-            <h2 className="mt-1 text-base font-semibold">Write this on paper</h2>
+            <h2 className="mt-1 text-base font-semibold">Write these lines on paper</h2>
             <blockquote className="mt-4 rounded-xl border border-line bg-paper p-4 text-[17px] leading-relaxed tracking-wide text-ink">
-              {pangram}
+              {SHEET_LINES.map((l) => (
+                <span key={l} className="block">{l}</span>
+              ))}
             </blockquote>
             <ul className="mt-5 space-y-2.5 text-sm text-muted">
               {tips.map((t) => (

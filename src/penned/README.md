@@ -1,6 +1,14 @@
-# Penned: front-end UI
+# Penned
 
-Penned is a Hyderabad service that writes your notes, letters and cards in your own handwriting with a real pen, then delivers them in 2–3 hours. This folder has the front-end only. There is no backend: everything runs on mock data and local state.
+Penned is a Hyderabad service that writes your notes, letters and cards in your own handwriting with a real pen, then delivers them in 2–3 hours.
+
+This folder holds:
+
+- **Customer website** (`app/(site)`): marketing pages and the order flow. Still runs on mock data.
+- **Admin portal** (`app/admin`): order queue, order detail with text extraction and plotter export, and handwriting review. Uses Supabase.
+- **Handwriting engine** (`lib/engine`): turns a photographed sample sheet into pen strokes, reflows any text (for example an A4 page) onto notebook pages, and writes SVG and G-code for a pen plotter.
+- **Backend** (`supabase/migrations`): tables, row-level security, server-side pricing, order timeline and storage buckets.
+- **iPhone app** (`ios/`): SwiftUI customer app. See `ios/README.md`.
 
 Built with Next.js 14 (App Router), TypeScript and Tailwind CSS.
 
@@ -12,7 +20,25 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-Other scripts: `npm run build`, `npm start`, `npm run typecheck`.
+Other scripts: `npm run build`, `npm run typecheck`, `npm test` (engine unit tests plus an end-to-end extraction test that needs Chromium).
+
+## Connect Supabase
+
+1. Apply `supabase/migrations/*.sql` to a Supabase project (SQL editor, or `supabase db push`).
+2. Copy `.env.example` to `.env.local` and fill in the project URL and publishable key.
+3. Create your admin user in Supabase → Authentication → Users → Add user (email and password), then run:
+   `update public.profiles set role = 'admin' where id = (select id from auth.users where email = 'you@example.com');`
+4. Open `/admin` and sign in.
+
+## How a job flows
+
+1. **Handwriting sample:** the customer writes the three-line sheet (three times, letters separate) and uploads a photo from the app. In **Admin → Handwriting**, run *Extract handwriting*. The engine finds each line, matches every mark to its character, thins it to a centre line and traces pen strokes. Review the boxes and the character grid, then approve it or ask for a rescan.
+2. **Order:** the customer scans or uploads pages. The app reads the text on the phone; the portal can also read it (*Read text from files*: Tesseract for photos, the PDF's text layer, or OCR for scanned PDFs).
+3. **A4 → notebook:** in the order, *Generate pages* re-flows the text to the order's page size, margins, line spacing and heading style, and draws it with the customer's glyphs. Each letter picks a different sample, with slight size, slant and baseline variation, so no two letters are identical.
+4. **Plotter:** choose a preset (Z-axis lift, GRBL servo, or SVG for AxiDraw/Inkscape), adjust the pen commands and offsets, then save. One SVG per page plus a single G-code file (it pauses with `M0` between pages) are uploaded to the private `plotter` bucket.
+5. **Status:** move the order through Writing (with pages written), Quality check, Out for delivery (rider and ETA) and Delivered. The customer's app shows each step.
+
+Payments are a demo: `demo_mark_paid()` marks an order paid. Swap in a payment gateway webhook before launch.
 
 ## Pages
 

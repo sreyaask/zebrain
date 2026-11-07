@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { LinkButton } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { Reveal } from "@/components/ui/Reveal";
 import { Container, SectionHeading } from "@/components/ui/Section";
 import { NotebookHero } from "@/components/home/NotebookHero";
 import { EarlyList } from "@/components/home/EarlyList";
@@ -13,7 +11,7 @@ const steps = [
   {
     n: "01",
     title: "Scan your handwriting",
-    body: "Write one short pangram on paper and take a photo. We learn your letters, slant and spacing in about a minute.",
+    body: "Write three short lines on paper and photograph them. We learn each of your letters, its slant and its spacing.",
   },
   {
     n: "02",
@@ -66,25 +64,18 @@ export default function HomePage() {
       {/* How it works */}
       <section aria-labelledby="how-it-works-title" className="scroll-mt-16 py-20 sm:py-24" id="how-it-works">
         <Container>
-          <Reveal>
             <SectionHeading
-              eyebrow="How it works"
               id="how-it-works-title"
               title="Three steps, then it's at your door"
               body="Set up your handwriting once. After that, every order takes about two minutes to place."
             />
-          </Reveal>
-          <ol className="mt-12 grid gap-4 md:grid-cols-3">
-            {steps.map((s, i) => (
-              <Reveal key={s.n} delay={i * 90}>
-                <li className="h-full list-none">
-                  <Card className="h-full p-6">
-                    <p className="font-mono text-xs text-muted">{s.n}</p>
-                    <h3 className="mt-6 text-lg font-semibold text-ink">{s.title}</h3>
-                    <p className="mt-2 text-[15px] leading-relaxed text-muted">{s.body}</p>
-                  </Card>
-                </li>
-              </Reveal>
+          <ol className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
+            {steps.map((s) => (
+              <li key={s.n} className="border-t border-ink/80 pt-5">
+                <p className="text-sm tabular-nums text-muted">{s.n}</p>
+                <h3 className="mt-3 text-lg font-semibold text-ink">{s.title}</h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-muted">{s.body}</p>
+              </li>
             ))}
           </ol>
         </Container>
@@ -93,17 +84,13 @@ export default function HomePage() {
       {/* Use cases */}
       <section aria-labelledby="use-cases" className="border-y border-line bg-surface py-20 sm:py-24">
         <Container>
-          <Reveal>
             <SectionHeading
               id="use-cases"
-              eyebrow="What people write"
               title="Anything you'd write by hand, if you had the time"
             />
-          </Reveal>
           <div className="mt-12 grid gap-4 sm:grid-cols-2">
-            {useCases.map((u, i) => (
-              <Reveal key={u.title} delay={(i % 2) * 90}>
-                <div className="flex h-full flex-col justify-between rounded-xl border border-line bg-paper p-6">
+            {useCases.map((u) => (
+                <div key={u.title} className="flex h-full flex-col justify-between rounded-xl border border-line bg-paper p-6">
                   <p className="font-hand text-[28px] leading-tight text-pen-blue" aria-hidden="true">
                     {u.sample}
                   </p>
@@ -112,7 +99,6 @@ export default function HomePage() {
                     <p className="mt-1.5 text-[15px] leading-relaxed text-muted">{u.body}</p>
                   </div>
                 </div>
-              </Reveal>
             ))}
           </div>
         </Container>
@@ -122,64 +108,50 @@ export default function HomePage() {
       <section aria-labelledby="pricing-teaser" className="py-20 sm:py-24">
         <Container>
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-            <Reveal>
               <SectionHeading
                 id="pricing-teaser"
-                eyebrow="Pricing"
                 title="Priced per page. Nothing hidden."
                 body="Paper and ink are included. You see the exact total before you pay."
               />
-            </Reveal>
             <Link href="/pricing" className="text-sm font-medium text-accent underline-offset-4 hover:underline">
               See full pricing
             </Link>
           </div>
-          <div className="mt-12 grid gap-4 md:grid-cols-3">
+          <dl className="mt-10 divide-y divide-line border-y border-line">
             {[
               { price: rupees(pricing.perPage), unit: "per page", body: `Notebooks and loose A4. ${pricing.notebookMinimumPages}-page minimum for notebooks.` },
               { price: rupees(pricing.perPremiumCard), unit: "per card", body: "Premium 300 gsm A6 card with envelope." },
               { price: rupees(pricing.deliveryFee), unit: "delivery", body: `Flat fee. Free on orders above ${rupees(pricing.freeDeliveryAbove)}.` },
-            ].map((p, i) => (
-              <Reveal key={p.unit} delay={i * 90}>
-                <Card className="h-full p-6">
-                  <p className="text-3xl font-semibold tracking-tight text-ink">
-                    {p.price}
-                    <span className="ml-1.5 text-sm font-normal text-muted">{p.unit}</span>
-                  </p>
-                  <p className="mt-3 text-[15px] leading-relaxed text-muted">{p.body}</p>
-                </Card>
-              </Reveal>
+            ].map((p) => (
+              <div key={p.unit} className="grid gap-1 py-5 sm:grid-cols-[180px_1fr] sm:items-baseline">
+                <dt className="text-2xl font-semibold tabular-nums tracking-tight text-ink">
+                  {p.price}
+                  <span className="ml-1.5 text-sm font-normal text-muted">{p.unit}</span>
+                </dt>
+                <dd className="text-[15px] leading-relaxed text-muted">{p.body}</dd>
+              </div>
             ))}
-          </div>
+          </dl>
         </Container>
       </section>
 
       {/* FAQ */}
       <section aria-labelledby="faq" className="border-t border-line py-20 sm:py-24">
         <Container className="grid gap-10 lg:grid-cols-[1fr_1.6fr]">
-          <Reveal>
-            <SectionHeading id="faq" eyebrow="Questions" title="Before you order" />
-          </Reveal>
-          <Reveal delay={80}>
+            <SectionHeading id="faq" title="Before you order" />
             <Faq />
-          </Reveal>
         </Container>
       </section>
 
       {/* Early list */}
       <section aria-labelledby="early-list" className="border-t border-line bg-surface py-20 sm:py-24">
         <Container className="grid items-start gap-10 lg:grid-cols-2">
-          <Reveal>
             <SectionHeading
               id="early-list"
-              eyebrow="Opening soon in Hyderabad"
               title="Join the early list"
               body="We're opening area by area, starting with Kondapur, Gachibowli and Madhapur. Leave your email and we'll tell you the day Penned reaches you."
             />
-          </Reveal>
-          <Reveal delay={80}>
             <EarlyList />
-          </Reveal>
         </Container>
       </section>
     </>

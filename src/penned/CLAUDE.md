@@ -63,3 +63,24 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
 - An early-list email at `@example.com` shows the server error.
 - `/orders?demo=empty` and `/orders?demo=error` show the empty and error states.
 - `/orders/PEN-9999` shows the not-found state in dev. On the static export, unknown IDs get the site 404.
+
+## Backend, admin, engine, iOS (added 7 Nov 2026)
+- Supabase schema: `supabase/migrations/20261107000001_penned_core.sql`. Prices are computed by trigger
+  (`price_order()`), so clients can't set totals. `is_staff()` = admin user OR a server role (SQL editor, service role).
+  The order code sequence starts at PEN-1043. Payment is a demo RPC `demo_mark_paid()`.
+  The migration was validated locally with PGlite and stubbed auth/storage (RLS, tamper-proof pricing, role guard).
+- A Supabase project "penned" was NOT created yet. The free plan allows 2 active projects and `invistaar` and `zebrain`
+  are active. The user chose to pause `zebrain`, but the API refused ("hibernating"), so the user must pause it from
+  the dashboard. NEVER delete or modify `invistaar` (the user said so explicitly). Org id: icjcfrxwkrwvqffnonrq, region ap-south-1.
+- Engine `lib/engine/` (pure TS, imports use `.ts` extensions): binarize → components → line grouping → marks
+  (merging horizontal overlaps, splitting/merging to match the sheet) → Zhang–Suen thinning → stroke tracing →
+  glyphs in x-height units. `layoutHandwriting()` reflows text to notebook pages. `plot.ts` writes SVG and G-code.
+  The sample sheet (3 lines, written 3×, letters separate) is in `lib/engine/sheet.ts` and must match `ios/Penned/Views/HandwritingView.swift`.
+  Tests: `node --test tests/engine.test.mts` and `node tests/extract.e2e.mjs` (renders a sheet in Chromium).
+- Admin portal: `/admin` (queue), `/admin/order/?id=`, `/admin/handwriting/`, `/admin/handwriting/review/?id=`. Static-export
+  friendly (query params, not dynamic routes). Needs NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY.
+  The PDF.js worker is copied to public/ by `scripts/copy-pdf-worker.mjs` (bundling it breaks minification).
+- iOS: `ios/Penned.xcodeproj` (Xcode 16 synced folders, supabase-swift ≥ 2.20, iOS 17). It was never compiled because no Mac
+  was available. Uses email OTP (the Supabase email template needs `{{ .Token }}`). Fill in `ios/Penned/Config.swift`.
+- Customer WEBSITE order flow is still mock data (not wired to Supabase yet).
+- Writing method: a pen plotter (user's choice). The iPhone app is for customers; the admin portal is web.

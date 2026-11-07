@@ -1,7 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Caveat, Inter, Newsreader } from "next/font/google";
-import { Navbar } from "@/components/ui/Navbar";
-import { Footer } from "@/components/ui/Footer";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -18,13 +16,7 @@ export const viewport: Viewport = { themeColor: "#FAF9F6", width: "device-width"
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-IN" className={`${inter.variable} ${caveat.variable} ${serif.variable}`}>
-      <body className="flex min-h-screen flex-col font-sans">
-        <Navbar />
-        <main id="main" className="flex-1">
-          {children}
-        </main>
-        <Footer />
-      </body>
+      <body className="min-h-dvh font-sans">{children}</body>
     </html>
   );
 }
