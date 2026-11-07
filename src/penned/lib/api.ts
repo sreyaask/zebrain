@@ -26,14 +26,26 @@ export function onAuthChange(cb: (signedIn: boolean) => void): () => void {
   return () => data.subscription.unsubscribe();
 }
 
+/** Turns Supabase auth errors into something a customer can act on. */
+export function authMessage(err: { message?: string; code?: string; status?: number } | null | undefined): string {
+  const code = err?.code ?? "";
+  const msg = (err?.message ?? "").toLowerCase();
+  if (code === "over_email_send_rate_limit" || err?.status === 429 || msg.includes("rate limit"))
+    return "Too many codes have been requested. Please wait a while and try again.";
+  if (code === "otp_expired" || msg.includes("expired")) return "That code doesn't match or has expired.";
+  if (code === "email_address_invalid" || msg.includes("email address")) return "We can't send email to this address. Check it, or try another email.";
+  if (code === "email_address_not_authorized" || msg.includes("not authorized")) return "Email sign-in isn't open to this address yet.";
+  return "Something went wrong. Please try again.";
+}
+
 export async function sendEmailCode(email: string) {
   const { error } = await supabase().auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(authMessage(error));
 }
 
 export async function verifyEmailCode(email: string, token: string) {
   const { error } = await supabase().auth.verifyOtp({ email, token, type: "email" });
-  if (error) throw new Error(error.message.includes("expired") || error.message.includes("invalid") ? "That code doesn't match or has expired." : error.message);
+  if (error) throw new Error(authMessage(error));
 }
 
 export async function signOut() {

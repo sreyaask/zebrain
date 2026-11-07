@@ -70,7 +70,7 @@ struct SignInView: View {
             error = nil
             codeSent = true
         } catch {
-            self.error = "Couldn't send the code. Check the email address and try again."
+            self.error = AppModel.authMessage(error)
         }
     }
 
@@ -79,7 +79,7 @@ struct SignInView: View {
         do {
             try await model.verify(email: email.trimmingCharacters(in: .whitespaces).lowercased(), code: code)
         } catch {
-            self.error = "That code doesn't match or has expired."
+            self.error = AppModel.authMessage(error)
         }
     }
 }

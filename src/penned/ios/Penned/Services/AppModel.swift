@@ -35,6 +35,27 @@ final class AppModel {
         try await client.auth.signInWithOTP(email: email, shouldCreateUser: true)
     }
 
+    /// Turns Supabase auth errors into something a customer can act on.
+    nonisolated static func authMessage(_ error: Error) -> String {
+        let text = String(describing: error).lowercased() + " " + error.localizedDescription.lowercased()
+        if text.contains("rate_limit") || text.contains("rate limit") || text.contains("429") {
+            return "Too many codes have been requested. Please wait a while and try again."
+        }
+        if text.contains("otp_expired") || text.contains("expired") {
+            return "That code doesn't match or has expired."
+        }
+        if text.contains("email_address_invalid") || text.contains("email address") {
+            return "We can't send email to this address. Check it, or try another email."
+        }
+        if text.contains("not_authorized") || text.contains("not authorized") {
+            return "Email sign-in isn't open to this address yet."
+        }
+        if text.contains("offline") || text.contains("network") || text.contains("internet") {
+            return "You're offline. Check your connection and try again."
+        }
+        return "Something went wrong. Please try again."
+    }
+
     func verify(email: String, code: String) async throws {
         try await client.auth.verifyOTP(email: email, token: code, type: .email)
     }
