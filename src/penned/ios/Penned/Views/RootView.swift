@@ -58,11 +58,18 @@ struct MainTabs: View {
 
 struct AccountView: View {
     @Environment(AppModel.self) private var model
+    @AppStorage(Sounds.settingKey) private var soundEffects = true
     var body: some View {
         NavigationStack {
             List {
                 if case let .signedIn(_, email) = model.auth, let email {
                     LabeledContent("Signed in as", value: email)
+                }
+                Section {
+                    Toggle("Sound effects", isOn: $soundEffects)
+                        .onChange(of: soundEffects) { _, on in if on { Sounds.shared.play(.tap) } }
+                } footer: {
+                    Text("Short sounds for taps, steps and finished orders. They follow your phone's silent switch.")
                 }
                 Section("Help") {
                     Text("Free rewrite of any page within 24 hours of delivery.")

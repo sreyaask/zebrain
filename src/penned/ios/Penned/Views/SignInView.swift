@@ -92,8 +92,10 @@ struct SignInView: View {
             if creating { try await model.signUp(email: e, password: password) }
             else { try await model.signIn(email: e, password: password) }
             error = nil
+            Sounds.shared.play(.success)
         } catch {
             self.error = AppModel.authMessage(error)
+            Sounds.shared.play(.error)
         }
     }
 }

@@ -161,9 +161,11 @@ struct AddStyleView: View {
         uploading = true; defer { uploading = false }
         do {
             try await model.uploadHandwriting(jpeg: jpeg, name: name.trimmingCharacters(in: .whitespaces), ink: ink)
+            Sounds.shared.play(.scribble)
             dismiss()
         } catch {
             self.error = "Upload failed. Check your connection and try again."
+            Sounds.shared.play(.error)
         }
     }
 }

@@ -6,6 +6,7 @@ struct PennedApp: App {
 
     init() {
         print("[Penned] 1. App launched. Supabase configured: \(Config.isConfigured)")
+        Sounds.warmUp()
     }
 
     var body: some Scene {

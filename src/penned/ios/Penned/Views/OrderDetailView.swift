@@ -124,7 +124,14 @@ struct OrderDetailView: View {
 
     private func pay() async {
         paying = true; defer { paying = false }
-        do { try await model.demoPay(order); await reload() } catch { self.error = "Payment didn't go through. Try again." }
+        do {
+            try await model.demoPay(order)
+            await reload()
+            Sounds.shared.play(.success)
+        } catch {
+            self.error = "Payment didn't go through. Try again."
+            Sounds.shared.play(.error)
+        }
     }
 }
 

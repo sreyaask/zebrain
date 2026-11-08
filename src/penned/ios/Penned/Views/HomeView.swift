@@ -48,6 +48,7 @@ struct HomeView: View {
                 if let order = active.first {
                     NavigationLink(value: order) { TrackPill(order: order, more: active.count - 1) }
                         .buttonStyle(.plain)
+                        .simultaneousGesture(TapGesture().onEnded { Sounds.shared.play(.tap) })
                         .padding(.horizontal, 16)
                         .padding(.bottom, 8)
                 }
@@ -149,15 +150,18 @@ struct HomeView: View {
 
     private var tiles: some View {
         LazyVGrid(columns: typeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.flexible(), spacing: 14), GridItem(.flexible())], spacing: 14) {
-            ActionTile(title: "Complete notes", subtitle: "Your notes as a neat notebook", price: "₹9 / page", symbol: OrderKind.completeNotes.symbol) { newKind = .completeNotes }
-            ActionTile(title: "Missed notes", subtitle: "Catch up on lessons you missed", price: "₹9 / page", symbol: OrderKind.missedNotes.symbol) { newKind = .missedNotes }
-            ActionTile(title: "Letters & cards", subtitle: "Thank-yous, letters, invites", price: "₹15 / card", symbol: OrderKind.letters.symbol) { newKind = .letters }
+            ActionTile(title: "Complete notes", subtitle: "Your notes as a neat notebook", price: "₹9 / page", symbol: OrderKind.completeNotes.symbol) { Sounds.shared.play(.tap); newKind = .completeNotes }
+            ActionTile(title: "Missed notes", subtitle: "Catch up on lessons you missed", price: "₹9 / page", symbol: OrderKind.missedNotes.symbol) { Sounds.shared.play(.tap); newKind = .missedNotes }
+            ActionTile(title: "Letters & cards", subtitle: "Thank-yous, letters, invites", price: "₹15 / card", symbol: OrderKind.letters.symbol) { Sounds.shared.play(.tap); newKind = .letters }
             ActionTile(
                 title: "Your handwriting",
                 subtitle: readyStyle != nil ? "Personalised and ready" : "Set it up once",
                 price: readyStyle != nil ? "Ready" : "Free",
                 symbol: "pencil.and.scribble"
-            ) { tab = .handwriting }
+            ) {
+                Sounds.shared.play(.tap)
+                tab = .handwriting
+            }
         }
     }
 

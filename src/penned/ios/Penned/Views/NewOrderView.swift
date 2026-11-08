@@ -532,9 +532,11 @@ struct NewOrderView: View {
     private func go(_ delta: Int) {
         if delta > 0, let problem = validate() {
             error = problem
+            Sounds.shared.play(.error)
             return
         }
         error = nil
+        Sounds.shared.play(delta > 0 ? .step : .tap)
         stepIndex = min(max(0, stepIndex + delta), steps.count - 1)
     }
 
@@ -615,8 +617,10 @@ struct NewOrderView: View {
             try await model.demoPay(order)
             order = try await model.order(id: order.id)
             placed = order
+            Sounds.shared.play(.success)
         } catch {
             self.error = "Couldn't place the order. Check your connection and try again."
+            Sounds.shared.play(.error)
         }
     }
 }
