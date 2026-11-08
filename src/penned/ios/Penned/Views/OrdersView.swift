@@ -2,7 +2,7 @@ import SwiftUI
 
 struct OrdersView: View {
     @Environment(AppModel.self) private var model
-    @State private var showNew = false
+    @State private var newKind: OrderKind?
 
     var active: [Order] { model.orders.filter { $0.status != .delivered && $0.status != .cancelled } }
     var past: [Order] { model.orders.filter { $0.status == .delivered || $0.status == .cancelled } }
@@ -17,8 +17,11 @@ struct OrdersView: View {
                             .foregroundStyle(.red)
                     }
 
-                    if model.orders.isEmpty {
-                        EmptyOrders { showNew = true }
+                    if !model.hasLoaded {
+                        ProgressView("Loading your orders")
+                            .frame(maxWidth: .infinity, minHeight: 200)
+                    } else if model.orders.isEmpty {
+                        EmptyOrders { newKind = .completeNotes }
                     } else {
                         if !active.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
@@ -30,7 +33,11 @@ struct OrdersView: View {
                             }
                         }
 
-                        Button { showNew = true } label: {
+                        Menu {
+                            ForEach(OrderKind.allCases) { k in
+                                Button(k.title, systemImage: k.symbol) { newKind = k }
+                            }
+                        } label: {
                             Label("New order", systemImage: "plus").frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
@@ -59,9 +66,15 @@ struct OrdersView: View {
             .navigationDestination(for: Order.self) { OrderDetailView(order: $0) }
             .refreshable { await model.refresh() }
             .toolbar {
-                Button { showNew = true } label: { Label("New order", systemImage: "plus") }
+                Menu {
+                    ForEach(OrderKind.allCases) { k in
+                        Button(k.title, systemImage: k.symbol) { newKind = k }
+                    }
+                } label: {
+                    Label("New order", systemImage: "plus")
+                }
             }
-            .sheet(isPresented: $showNew) { NewOrderView() }
+            .sheet(item: $newKind) { NewOrderView(kind: $0) }
         }
     }
 }

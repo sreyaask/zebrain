@@ -17,18 +17,19 @@ struct HandwritingPage: View {
     var pageWidthMm: Double?
     @ScaledMetric(relativeTo: .body) private var baseXHeight: CGFloat = 8
 
-    private let tracking = 0.22
-    private let space = 0.75
+    private let tracking: CGFloat = 0.22
+    private let space: CGFloat = 0.75
 
     var body: some View {
         Canvas { ctx, size in
-            let mm = pageWidthMm.map { size.width / $0 }
-            let xh = mm.map { 2.6 * $0 } ?? baseXHeight
-            let pitch = mm.map { 7.2 * lineSpacing * $0 } ?? xh * 3.4 * lineSpacing
+            let mm: CGFloat? = pageWidthMm.map { size.width / CGFloat($0) }
+            let xh: CGFloat = mm.map { 2.6 * $0 } ?? baseXHeight
+            let spacing = CGFloat(lineSpacing)
+            let pitch: CGFloat = mm.map { 7.2 * spacing * $0 } ?? xh * 3.4 * spacing
             // Nothing to draw until the view has a real size (avoids an endless ruling loop).
             guard size.width > 20, size.height > 10, pitch > 1, xh > 0.5 else { return }
-            let left = max(12, size.width * margin)
-            let right = size.width - max(10, size.width * 0.06)
+            let left: CGFloat = max(12, size.width * CGFloat(margin))
+            let right: CGFloat = size.width - max(10, size.width * 0.06)
             let inkColor = Theme.ink(ink)
 
             if ruled {

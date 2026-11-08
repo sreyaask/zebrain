@@ -10,7 +10,10 @@ struct HandwritingView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    if model.styles.isEmpty {
+                    if !model.hasLoaded {
+                        ProgressView("Loading your handwriting")
+                            .frame(maxWidth: .infinity, minHeight: 200)
+                    } else if model.styles.isEmpty {
                         VStack(alignment: .leading, spacing: 20) {
                             HandwritingPage(text: sampleSheet.joined(separator: "\n"), ink: .blue, lineSpacing: 1.1, margin: 0.08)
                                 .frame(height: sheetHeight)

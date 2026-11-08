@@ -28,11 +28,15 @@ struct RootView: View {
 }
 
 struct MainTabs: View {
+    enum Tab: Hashable { case home, orders, handwriting, account }
+    @State private var tab: Tab = .home
+
     var body: some View {
-        TabView {
-            OrdersView().tabItem { Label("Orders", systemImage: "doc.text") }
-            HandwritingView().tabItem { Label("Handwriting", systemImage: "pencil.and.scribble") }
-            AccountView().tabItem { Label("Account", systemImage: "person") }
+        TabView(selection: $tab) {
+            HomeView(tab: $tab).tabItem { Label("Home", systemImage: "house") }.tag(Tab.home)
+            OrdersView().tabItem { Label("Orders", systemImage: "doc.text") }.tag(Tab.orders)
+            HandwritingView().tabItem { Label("Handwriting", systemImage: "pencil.and.scribble") }.tag(Tab.handwriting)
+            AccountView().tabItem { Label("Account", systemImage: "person") }.tag(Tab.account)
         }
     }
 }

@@ -13,6 +13,8 @@ final class AppModel {
     var orders: [Order] = []
     var styles: [HandwritingProfile] = []
     var lastError: String?
+    /// False until the first load finishes, so screens show loading instead of a misleading empty state.
+    var hasLoaded = false
 
     var userID: UUID? { if case let .signedIn(id, _) = auth { id } else { nil } }
 
@@ -29,6 +31,7 @@ final class AppModel {
                 await refresh()
             } else {
                 auth = .signedOut
+                hasLoaded = false
                 orders = []
                 styles = []
             }
@@ -74,8 +77,10 @@ final class AppModel {
             async let s: [HandwritingProfile] = client.from("handwriting_profiles").select().order("created_at", ascending: false).execute().value
             (orders, styles) = try await (o, s)
             lastError = nil
+            hasLoaded = true
         } catch {
             lastError = "Couldn't load your data. Pull to try again."
+            hasLoaded = true
         }
     }
 
