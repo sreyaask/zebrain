@@ -358,6 +358,8 @@ export interface Product {
   tagline: string;
   description: string;
   uses: string[];
+  /** The main ways the product is used, with a sentence each (shown for Notes). */
+  highlights?: { title: string; body: string }[];
   priceLabel: string;
   priceNote: string;
   /** What one unit is called in the order flow. */
@@ -389,24 +391,39 @@ export const products: Product[] = [
   {
     slug: "notes",
     name: "Notes",
-    summary: "Study notes, lecture notes and notebook continuations, in your own hand.",
-    tagline: "Your notes, in your handwriting.",
+    summary: "Neat, handwritten copies of your notes, ready to revise from.",
+    tagline: "Handwritten notes, ready to study from.",
     description:
-      "Send a photo of your notebook, a PDF or typed text. We continue it in your handwriting on the same kind of notebook, with your margins, spacing and headings, and deliver it the same evening.",
-    uses: ["Study notes", "Notebook continuations", "Revision notes", "Lecture notes", "Personal notes and diaries"],
+      "Penned makes neat, handwritten copies of your notes so you can revise from a clean notebook, catch up after absences, or keep a tidy record of lessons.",
+    uses: ["Revision notebooks", "Catch-up notes", "Organized study copies"],
+    highlights: [
+      {
+        title: "Revision notebooks",
+        body: "Your own notes, rewritten neatly and indexed for exam prep, with a contents list of your headings at the front.",
+      },
+      {
+        title: "Catch-up notes",
+        body: "A clean copy of lessons missed due to illness or travel, ordered by the student or a parent.",
+      },
+      {
+        title: "Organized study copies",
+        body: "Teacher handouts or summaries, filed neatly into a student's notebook.",
+      },
+    ],
     priceLabel: "₹6 a page",
-    priceNote: "30-page minimum for notebooks. Paper and ink included.",
+    priceNote: "30-page minimum for notebooks. Paper, ink and contents list included.",
     unit: { one: "page", many: "pages" },
     sample: "# Ch. 4 – Laws of Motion\nNewton's Second Law: the rate of change of momentum of a body is directly proportional to the applied force.\nF = ma, where m is mass and a is acceleration.\nThird Law: every action has an equal and opposite reaction.",
     sampleSize: "b5",
     samplePaper: "ruled-notebook",
     steps: [
-      { title: "Upload your pages", body: "A photo of your notebook, a PDF, or typed text. We read the text for you." },
-      { title: "Set up the notebook", body: "Pick the notebook size and ruling, then margins, spacing and headings, with a live preview." },
-      { title: "Written and delivered", body: "A pen machine writes every page in your hand. Delivered in 2–3 hours." },
+      { title: "Upload your notes", body: "Photos of your notebook, a handout or summary as a PDF, or typed text. We read the text for you." },
+      { title: "Set up the notebook", body: "Pick the notebook size and ruling, margins and spacing, and whether to start with a contents list." },
+      { title: "Written and delivered", body: "Every page written neatly in your handwriting with a real pen. Delivered in 2–3 hours." },
     ],
     faqs: [
-      { q: "Can you continue a notebook I've already started?", a: "Yes. Choose the same notebook size and ruling, and match the margins in the layout editor. We start on a fresh notebook that matches yours." },
+      { q: "How is a revision notebook indexed?", a: "Lines you mark as headings (start them with #) become a numbered contents list at the front of the notebook, so you can find each topic quickly before an exam." },
+      { q: "Can a parent order catch-up notes?", a: "Yes. A parent can upload the class notes or handouts and have a clean copy delivered for the student to read and revise from." },
       { q: "How many pages can you write in one order?", a: "Up to 500. You'll see a live page count while we write, and larger orders may take a little longer than 3 hours." },
     ],
   },

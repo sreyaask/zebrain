@@ -132,6 +132,11 @@ export function ReviewStep({
                     ? `${plural(draft.files.length, "file")} uploaded`
                     : `${draft.text.trim().split(/\s+/).filter(Boolean).length} words typed`}
                 </Row>
+                {draft.product === "notes" && (
+                  <Row label="Contents list" onEdit={() => goTo("upload")}>
+                    {draft.contentsPage ? "Yes, built from your headings" : "No"}
+                  </Row>
+                )}
                 <Row label="Layout" onEdit={() => goTo("layout")}>
                   <span className="capitalize">{draft.layout.ink}</span> ink · {draft.layout.marginMm} mm margins · {draft.layout.lineSpacing.toFixed(1)}× spacing
                 </Row>

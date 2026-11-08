@@ -3,7 +3,7 @@
 import { Input, Textarea } from "@/components/ui/Input";
 import { Segmented } from "@/components/ui/Segmented";
 import { Uploader } from "@/components/ui/Uploader";
-import type { OrderDraft } from "./types";
+import { headingsIn, type OrderDraft } from "./types";
 
 interface Props {
   draft: OrderDraft;
@@ -66,6 +66,23 @@ export function UploadStep({ draft, update, error }: Props) {
             { value: "a4", label: "Large (A4)" },
           ]}
         />
+      )}
+      {draft.product === "notes" && (
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-surface p-4 focus-within:ring-2 focus-within:ring-accent">
+          <input
+            type="checkbox"
+            checked={draft.contentsPage}
+            onChange={(e) => update({ contentsPage: e.target.checked })}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[#1E3A8A]"
+          />
+          <span>
+            <span className="block text-[15px] font-medium text-ink">Start with a contents list</span>
+            <span className="mt-0.5 block text-sm leading-relaxed text-muted">
+              A numbered list of your headings at the front, so each topic is easy to find when you revise. Free.
+              {draft.mode === "text" && ` ${headingsIn(draft.text).length} ${headingsIn(draft.text).length === 1 ? "heading" : "headings"} so far.`}
+            </span>
+          </span>
+        </label>
       )}
       {error && (
         <p className="text-sm text-danger" role="alert">

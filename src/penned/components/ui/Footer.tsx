@@ -8,7 +8,7 @@ export function Footer() {
         <div>
           <p className="font-serif text-xl text-ink">Penned</p>
           <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">
-            Your handwriting, delivered. Written with a real pen on real paper, across Hyderabad in 2–3 hours.
+            Handwritten notes, ready to study from. Written with a real pen and delivered across Hyderabad in 2–3 hours.
           </p>
         </div>
         <div>

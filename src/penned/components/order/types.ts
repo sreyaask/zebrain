@@ -33,6 +33,8 @@ export interface OrderDraft {
   message: string;
   recipients: string; // one per line
   csv: CsvList | null;
+  /** Notes: begin the notebook with a numbered contents list of the headings. */
+  contentsPage: boolean;
   // Shared
   layout: LayoutSettings;
   paper: PaperId;
@@ -50,6 +52,7 @@ export const initialDraft: OrderDraft = {
   message: "",
   recipients: "",
   csv: null,
+  contentsPage: true,
   layout: defaultLayout,
   paper: "ruled-notebook",
   copies: 1,
@@ -186,9 +189,25 @@ export function draftQuote(d: OrderDraft): ProductQuote {
   return quoteFor(d.product, orderUnits(d), { paper: d.paper });
 }
 
+/** Headings in the notes: lines that start with "# ". */
+export function headingsIn(text: string): string[] {
+  return text
+    .split("\n")
+    .filter((l) => l.startsWith("# "))
+    .map((l) => l.slice(2).trim())
+    .filter(Boolean);
+}
+
+/** Puts a contents list (numbered headings) in front of the notes. */
+export function withContents(text: string): string {
+  const headings = headingsIn(text);
+  if (!headings.length) return text;
+  return `# Contents\n${headings.map((h, i) => `${i + 1}. ${h}`).join("\n")}\n\n${text}`;
+}
+
 export function previewText(d: OrderDraft): string {
-  if (d.mode === "text" && d.text.trim()) return d.text;
-  return d.product === "journals-gifts" ? getProduct("journals-gifts")!.sample : filesPreviewText;
+  const body = d.mode === "text" && d.text.trim() ? d.text : d.product === "journals-gifts" ? getProduct("journals-gifts")!.sample : filesPreviewText;
+  return d.product === "notes" && d.contentsPage ? withContents(body) : body;
 }
 
 /**
@@ -196,7 +215,8 @@ export function previewText(d: OrderDraft): string {
  * the recipient list, so the writing team has everything in one place.
  */
 export function orderText(d: OrderDraft): string {
-  if (d.product === "notes" || d.product === "journals-gifts") return d.text;
+  if (d.product === "notes") return d.contentsPage ? withContents(d.text) : d.text;
+  if (d.product === "journals-gifts") return d.text;
   const style = selectedStyle(d);
   const list =
     d.product === "business-mail" && d.csv

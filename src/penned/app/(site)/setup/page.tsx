@@ -305,7 +305,7 @@ export default function SetupPage() {
                   text={`# Preview\n${samplePreviewText}`}
                   layout={{ ...defaultLayout, ink, pageSize: "a6", marginMm: 10, lineSpacing: 1.1 }}
                   paper="ruled-notebook"
-                  caption="Your cloned style, shown on a ruled card"
+                  caption="Your handwriting style, shown on a ruled card"
                 />
                 <Input
                   label="Name this style"

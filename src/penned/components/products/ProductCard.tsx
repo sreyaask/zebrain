@@ -29,10 +29,12 @@ export function ProductCard({ product, featured = false }: { product: Product; f
         {featured && <p className="text-sm font-medium text-accent">Our main service</p>}
         <h3 className={cn("font-semibold text-ink", featured ? "mt-1 text-2xl tracking-tight" : "text-lg")}>{product.name}</h3>
         <p className="mt-1.5 text-[15px] leading-relaxed text-muted">{product.summary}</p>
-        {featured && (
-          <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
-            {product.uses.slice(0, 4).map((u) => (
-              <li key={u}>{u}</li>
+        {featured && product.highlights && (
+          <ul className="mt-5 space-y-3">
+            {product.highlights.map((h) => (
+              <li key={h.title} className="text-sm leading-relaxed">
+                <span className="font-medium text-ink">{h.title}.</span> <span className="text-muted">{h.body}</span>
+              </li>
             ))}
           </ul>
         )}

@@ -134,7 +134,9 @@ export function OrderFlow() {
     const product = getProduct(draft.product)!;
     const isPages = draft.product === "notes" || draft.product === "journals-gifts";
     const units = orderUnits(draft);
-    const title = draft.title.trim() || (isPages ? `${product.name}, ${units} ${units === 1 ? "page" : "pages"}` : `${product.name} ×${units}`);
+    const baseTitle = draft.title.trim() || (isPages ? `${product.name}, ${units} ${units === 1 ? "page" : "pages"}` : `${product.name} ×${units}`);
+    // With photos the text is read later, so the contents-list request travels with the order.
+    const title = draft.product === "notes" && draft.contentsPage && draft.mode === "files" ? `${baseTitle} · contents list` : baseTitle;
 
     if (live) {
       // The Supabase client is loaded only now, when the order is actually placed.

@@ -50,14 +50,15 @@ export default function HomePage() {
         <Container className="grid items-center gap-12 py-12 sm:py-20 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:py-24">
           <div>
             <h1 className="text-[40px] font-semibold leading-[1.05] tracking-tight text-ink [text-wrap:balance] sm:text-6xl">
-              Your handwriting, delivered.
+              Handwritten notes, ready to study from.
             </h1>
             <p className="mt-5 max-w-lg text-lg leading-relaxed text-ink">
-              Anything you&apos;d write by hand, written for you, in your handwriting.
+              Penned makes neat, handwritten copies of your notes so you can revise from a clean notebook, catch up after absences, or keep a
+              tidy record of lessons.
             </p>
             <p className="mt-3 max-w-lg text-base leading-relaxed text-muted">
-              Our AI learns your handwriting from one sample. Real pen machines write it on real paper, and we deliver anywhere in our
-              Hyderabad areas in 2–3 hours. Notes, letters, cards, invitations and more.
+              Written with a real pen in your handwriting, and delivered across Hyderabad in 2–3 hours. We also write letters, cards and
+              invitations.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <LinkButton href="/order/" size="lg">
@@ -87,7 +88,7 @@ export default function HomePage() {
           <SectionHeading
             id="products-title"
             title="What we write"
-            body="Notes are where we started. Anything else you'd write by hand, we can write too."
+            body="Notes are our main service. We also write letters, cards, invitations and more by hand."
           />
           <div className="mt-10 grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2">

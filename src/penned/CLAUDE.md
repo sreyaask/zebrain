@@ -110,3 +110,11 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   `components/ui/Uploader.tsx` has a numbered page grid, move buttons (WCAG 2.5.7) plus drag on desktop, paste, and Undo.
 - Motion: 150–300 ms ease-out, only where it explains something, always off under prefers-reduced-motion
   (keyframes in `tailwind.config.ts` and `app/globals.css`). "How it works" graphics are in `components/home/StepGraphics.tsx`.
+
+## Notes positioning (added 8 Nov 2026)
+- Headline: "Penned: handwritten notes, ready to study from." Pitch: neat handwritten copies of your notes to revise from a clean
+  notebook, catch up after absences, or keep a tidy record of lessons. Uses: Revision notebooks, Catch-up notes, Organized study copies.
+- Keep out of Notes copy: assignments/homework/worksheets or anything submitted as the student's own work; "clone your handwriting"
+  as a headline; any claim it helps avoid writing notes or get past a teacher's ban. "Notebook continuations" was removed for this reason.
+- "Indexed": Notes has a free "Start with a contents list" option (on by default) that puts numbered headings at the front
+  (`withContents` in components/order/types.ts). It's a list on page 1, not a separate page: the engine has no page breaks.

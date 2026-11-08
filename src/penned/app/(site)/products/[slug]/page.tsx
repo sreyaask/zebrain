@@ -54,11 +54,22 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
       <section aria-labelledby="uses" className="py-14 sm:py-20">
         <Container className="grid gap-10 md:grid-cols-[1fr_1.4fr]">
           <h2 id="uses" className="text-2xl font-semibold tracking-tight text-ink">Made for</h2>
-          <ul className="divide-y divide-line border-y border-line">
-            {product.uses.map((u) => (
-              <li key={u} className="py-3.5 text-[15px] text-ink">{u}</li>
-            ))}
-          </ul>
+          {product.highlights ? (
+            <dl className="divide-y divide-line border-y border-line">
+              {product.highlights.map((h) => (
+                <div key={h.title} className="py-4">
+                  <dt className="text-[15px] font-medium text-ink">{h.title}</dt>
+                  <dd className="mt-1 text-[15px] leading-relaxed text-muted">{h.body}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <ul className="divide-y divide-line border-y border-line">
+              {product.uses.map((u) => (
+                <li key={u} className="py-3.5 text-[15px] text-ink">{u}</li>
+              ))}
+            </ul>
+          )}
         </Container>
       </section>
 
