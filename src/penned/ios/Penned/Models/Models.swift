@@ -303,6 +303,14 @@ struct NewOrder: Encodable {
     }
 }
 
+/// A customer's rating of a delivered order (public.order_feedback).
+struct OrderFeedback: Codable, Hashable {
+    let orderId: UUID
+    let rating: Int
+    let comment: String?
+    enum CodingKeys: String, CodingKey { case rating, comment; case orderId = "order_id" }
+}
+
 struct NewOrderFile: Encodable {
     let orderId: UUID
     let path: String

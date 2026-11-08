@@ -43,16 +43,30 @@ struct RootView: View {
 }
 
 struct MainTabs: View {
-    enum Tab: Hashable { case home, orders, handwriting, account }
+    enum Tab: Hashable { case home, orders, scan, handwriting, account }
     @State private var tab: Tab = .home
+    @State private var lastTab: Tab = .home
+    @State private var scanning = false
 
     var body: some View {
         TabView(selection: $tab) {
             HomeView(tab: $tab).tabItem { Label("Home", systemImage: "house") }.tag(Tab.home)
             OrdersView().tabItem { Label("Orders", systemImage: "doc.text") }.tag(Tab.orders)
+            // The middle tab works like a camera "+" button: it opens the scanner and you stay where you were.
+            Color.clear.tabItem { Label("Scan", systemImage: "plus.viewfinder") }.tag(Tab.scan)
             HandwritingView().tabItem { Label("Handwriting", systemImage: "pencil.and.scribble") }.tag(Tab.handwriting)
             AccountView().tabItem { Label("Account", systemImage: "person") }.tag(Tab.account)
         }
+        .onChange(of: tab) { old, new in
+            if new == .scan {
+                tab = old == .scan ? lastTab : old
+                Sounds.shared.play(.tap)
+                scanning = true
+            } else {
+                lastTab = new
+            }
+        }
+        .sheet(isPresented: $scanning) { NewOrderView(kind: .completeNotes, startWithScanner: true) }
     }
 }
 

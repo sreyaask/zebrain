@@ -139,3 +139,8 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   ONLY colour besides black/white and is reserved for money and success: FREE, savings, Paid, Delivered, promise icons, and the
   `.pennedConfirm` button (Place order, Pay). `LiveDot` pulses on in-progress orders; `Skeleton`/`SkeletonCard` replace loading spinners;
   `NotebookThumb` draws the ruled/plain/own notebook in the notebook step.
+- Familiar patterns (iOS, 8 Nov 2026): don't clone another app's look (App Store 4.1 copycat rule; it also reads as a knock-off).
+  Borrowed habits instead, in Penned's own style: a middle "Scan" tab that opens the scanner (`MainTabs` in RootView), story circles
+  on Home explaining how it works / prices / own notebook / promise (`Views/FamiliarViews.swift`), and a star rating after delivery
+  saved to `order_feedback` (migration 20261108000004, applied live; owner can rate their own delivered order once; admins read it,
+  shown on the admin order page). Ratings are private until the team chooses to publish real reviews.

@@ -125,6 +125,18 @@ final class AppModel {
         return order
     }
 
+    /// The customer's rating for an order, if they gave one.
+    func feedback(for order: Order) async -> OrderFeedback? {
+        let rows: [OrderFeedback]? = try? await client.from("order_feedback").select("order_id, rating, comment").eq("order_id", value: order.id).limit(1).execute().value
+        return rows?.first
+    }
+
+    /// Saves a rating. The database only allows it once, for the customer's own delivered order.
+    func rate(_ order: Order, rating: Int, comment: String) async throws {
+        let c = comment.trimmingCharacters(in: .whitespacesAndNewlines)
+        try await client.from("order_feedback").insert(OrderFeedback(orderId: order.id, rating: rating, comment: c.isEmpty ? nil : String(c.prefix(1000)))).execute()
+    }
+
     /// Looks a notebook up by its barcode. nil when we don't know it yet.
     func notebook(barcode: String) async -> CatalogNotebook? {
         let rows: [CatalogNotebook]? = try? await client.from("notebook_catalog").select().eq("barcode", value: barcode).limit(1).execute().value

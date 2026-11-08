@@ -8,6 +8,8 @@ import UniformTypeIdentifiers
 /// - Letters & cards:              Card → Message → Delivery → Review & pay
 struct NewOrderView: View {
     let kind: OrderKind
+    /// Opens the camera straight away (from the Scan tab).
+    var startWithScanner = false
 
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -206,6 +208,7 @@ struct NewOrderView: View {
                 }
             }
             .onAppear {
+                if startWithScanner && files.isEmpty && DocumentScanner.isAvailable { scanning = true }
                 styleID = styleID ?? readyStyles.first?.id
                 if kind == .letters {
                     ink = .black

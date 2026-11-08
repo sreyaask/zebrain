@@ -21,6 +21,8 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     header
                     VStack(alignment: .leading, spacing: 28) {
+                        StoryRow()
+                            .padding(.horizontal, -16)
                         TrustStrip()
                             .padding(.horizontal, -16)
                             .contentMargins(.horizontal, 16, for: .scrollContent)

@@ -119,6 +119,7 @@ struct OrderDetailView: View {
                 .card()
 
                 if order.status == .delivered {
+                    RateOrderCard(order: order)
                     VStack(alignment: .leading, spacing: 0) { GuaranteeRow(guarantee: .rewrite) }.card(padding: 0)
                 }
 

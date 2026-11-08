@@ -40,6 +40,7 @@ function OrderDetail() {
   const id = useSearchParams().get("id");
   const [data, setData] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ rating: number; comment: string | null } | null>(null);
   const [text, setText] = useState("");
   const [styleId, setStyleId] = useState<string>("");
   const [savingText, setSavingText] = useState(false);
@@ -55,12 +56,14 @@ function OrderDetail() {
     const { data: order, error } = await sb.from("orders").select("*").eq("id", id).maybeSingle();
     if (error) return setError(error.message);
     if (!order) return setError("This order doesn't exist, or you don't have access to it.");
-    const [files, events, jobs, styles] = await Promise.all([
+    const [files, events, jobs, styles, feedback] = await Promise.all([
       sb.from("order_files").select("*").eq("order_id", id).order("created_at"),
       sb.from("order_events").select("*").eq("order_id", id).order("created_at"),
       sb.from("plotter_jobs").select("*").eq("order_id", id).order("created_at", { ascending: false }),
       sb.from("handwriting_profiles").select("*").eq("user_id", order.user_id).order("created_at", { ascending: false }),
+      sb.from("order_feedback").select("rating, comment").eq("order_id", id).maybeSingle(),
     ]);
+    setFeedback((feedback.data as { rating: number; comment: string | null } | null) ?? null);
     const o = order as DbOrder;
     setData({ order: o, files: (files.data ?? []) as DbOrderFile[], events: (events.data ?? []) as DbOrderEvent[], jobs: (jobs.data ?? []) as DbPlotterJob[], styles: (styles.data ?? []) as DbHandwriting[] });
     setText((t) => t || o.source_text);
@@ -145,6 +148,12 @@ function OrderDetail() {
             {getPageSize(order.page_size).label} · {order.ink} ink · {rupees(order.total)}{" "}
             <span className={order.payment_status === "paid" ? "" : "text-danger"}>({order.payment_status})</span>
           </p>
+          {feedback && (
+            <p className="mt-1 text-sm">
+              <span className="font-medium">Customer rating: {feedback.rating}/5</span>
+              {feedback.comment ? ` — “${feedback.comment}”` : ""}
+            </p>
+          )}
           {order.notebook_source === "own" && (
             <p className="mt-1 text-sm">
               <span className="font-medium">Customer's own notebook</span> — rider collects it first.
