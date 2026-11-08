@@ -279,7 +279,7 @@ enum OrderKind: String, Identifiable, CaseIterable {
 }
 
 /// Card and letter paper for Letters & cards.
-enum CardStyle: String, CaseIterable, Identifiable {
+enum CardPaper: String, CaseIterable, Identifiable {
     case ivory, kraft, cotton, letter
     var id: String { rawValue }
     var name: String {

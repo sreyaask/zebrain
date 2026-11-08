@@ -35,7 +35,7 @@ struct NewOrderView: View {
     @State private var subject = ""
     @State private var lessonsMissed = ""
     // Letters & cards
-    @State private var cardStyle: CardStyle = .ivory
+    @State private var cardStyle: CardPaper = .ivory
     @State private var message = ""
     @State private var recipients = ""
     // Layout
@@ -419,7 +419,7 @@ struct NewOrderView: View {
             Text("Preview")
         }
         Section {
-            ForEach(CardStyle.allCases) { s in
+            ForEach(CardPaper.allCases) { s in
                 Button {
                     cardStyle = s
                     pageSize = s.size
