@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    @State private var slow = false
 
     var body: some View {
         Group {
@@ -14,16 +15,30 @@ struct RootView: View {
                     VStack(spacing: 16) {
                         Wordmark()
                         ProgressView()
+                        if slow {
+                            Text("Still connecting. Check your internet connection.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                            Button("Try again") { Task { await model.start() } }
+                                .buttonStyle(.bordered)
+                        }
                     }
+                    .padding()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Theme.paper.ignoresSafeArea())
+                    .task {
+                        try? await Task.sleep(for: .seconds(6))
+                        slow = true
+                    }
                 case .signedOut:
-                    SignInView()
+                    SignInView().onAppear { print("[Penned] 5. Sign in screen on screen") }
                 case .signedIn:
-                    MainTabs()
+                    MainTabs().onAppear { print("[Penned] 5. Home on screen") }
                 }
             }
         }
+        .onAppear { print("[Penned] 2. First screen created") }
     }
 }
 

@@ -19,13 +19,17 @@ final class AppModel {
     var userID: UUID? { if case let .signedIn(id, _) = auth { id } else { nil } }
 
     func start() async {
+        print("[Penned] 3. Checking for a saved login")
         // Decide straight away from the saved session, so the app never waits on a blank screen.
         if let session = client.auth.currentSession {
             auth = .signedIn(userID: session.user.id, email: session.user.email)
+            print("[Penned] 4. Saved login found: showing Home")
         } else {
             auth = .signedOut
+            print("[Penned] 4. No saved login: showing Sign in")
         }
-        for await (_, session) in client.auth.authStateChanges {
+        for await (event, session) in client.auth.authStateChanges {
+            print("[Penned] auth event: \(event)")
             if let session {
                 auth = .signedIn(userID: session.user.id, email: session.user.email)
                 await refresh()
@@ -78,7 +82,9 @@ final class AppModel {
             (orders, styles) = try await (o, s)
             lastError = nil
             hasLoaded = true
+            print("[Penned] loaded \(orders.count) orders, \(styles.count) handwriting styles")
         } catch {
+            print("[Penned] ERROR loading data: \(error)")
             lastError = "Couldn't load your data. Pull to try again."
             hasLoaded = true
         }

@@ -4,6 +4,10 @@ import SwiftUI
 struct PennedApp: App {
     @State private var model = AppModel()
 
+    init() {
+        print("[Penned] 1. App launched. Supabase configured: \(Config.isConfigured)")
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
