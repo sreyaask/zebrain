@@ -89,3 +89,14 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   (`/orders/track/?code=PEN-…` for tracking, with realtime updates), order placement uploads files to `uploads/<uid>/<order_id>/`,
   handwriting upload for admin review, early list insert. Without env vars it is the original demo on lib/mock.ts.
 - Writing method: a pen plotter (user's choice). The iPhone app is for customers; the admin portal is web.
+
+## Products (added 8 Nov 2026)
+- Penned is a multi-product handwriting service; Notes is the main product. Catalogue, demo prices, sample reviews and FAQ
+  live in `lib/mock.ts` (`products`, `productPricing`, `sampleReviews`). Prices are computed by `lib/productPricing.ts`.
+- Demo prices: Notes ₹6/page (30-page notebook minimum), Letters & Cards ₹49/card, Invitations ₹39 (₹35 from 50, ₹32 from 100),
+  Business Mail estimate ₹59 (₹49 from 100, ₹42 from 500), Journals from ₹299 (40 pages, ₹6 per extra page).
+  The live database `price_order()` still uses the old ₹9/page and ₹15/card; it was deliberately not changed.
+- The order flow's steps per product are in `components/order/types.ts` (`flows`). Cards, invites and business notes are sent
+  through the existing order API as typed text containing the message and the recipient list (no backend changes).
+- Copy rules: never "homework", "assignments", "skip writing" or anything implying cheating. Use "notes", "study notes", "personal notes".
+- Reviews on the homepage are placeholders marked "Sample review — replace before launch". Don't present them as real.

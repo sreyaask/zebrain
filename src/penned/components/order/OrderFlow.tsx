@@ -1,44 +1,63 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Stepper } from "@/components/ui/Stepper";
-import { demoUser, getPaper, timeSlots, type Order } from "@/lib/mock";
+import { demoUser, getProduct, timeSlots, type Order, type ProductSlug } from "@/lib/mock";
 import { rupees } from "@/lib/format";
+import { unitWord } from "@/lib/productPricing";
 import { savePlacedOrder } from "@/lib/store";
 import { live, placeOrder } from "@/lib/api";
+import { ProductStep } from "./ProductStep";
 import { UploadStep } from "./UploadStep";
 import { LayoutStep } from "./LayoutStep";
 import { PaperStep } from "./PaperStep";
+import { StyleStep } from "./StyleStep";
+import { MessageStep } from "./MessageStep";
+import { BulkStep } from "./BulkStep";
 import { DeliveryStep, validateDelivery, type DeliveryErrors } from "./DeliveryStep";
 import { ReviewStep } from "./ReviewStep";
-import { contentPages, draftQuote, initialDraft, type OrderDraft } from "./types";
-
-const steps = ["Upload", "Layout", "Paper", "Delivery", "Review & pay"];
-
-const stepCopy: { title: string; body: string }[] = [
-  { title: "What should we write?", body: "Upload photos or a PDF of the pages to copy, or type the text yourself." },
-  { title: "Set up the page", body: "Changes show instantly in the preview. Nothing is written until you pay." },
-  { title: "Choose your paper", body: "Paper and ink are included in the price." },
-  { title: "Where should we deliver?", body: "We deliver within our Hyderabad areas in 2–3 hours." },
-  { title: "Review and pay", body: "Check everything once. You can still go back and change any step." },
-];
+import {
+  contentPages,
+  draftQuote,
+  flows,
+  initialDraft,
+  orderText,
+  orderUnits,
+  productDefaults,
+  recipientNames,
+  selectedStyle,
+  stepCopy,
+  stepLabel,
+  type OrderDraft,
+  type StepId,
+} from "./types";
 
 function nowTime() {
   return new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }).toUpperCase();
 }
 
+const slugs = Object.keys(flows) as ProductSlug[];
+
 export function OrderFlow() {
-  const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<OrderDraft>(() =>
-    live ? { ...initialDraft, delivery: { ...initialDraft.delivery, addressMode: "new", name: "", phone: "" } } : initialDraft,
-  );
+  const requested = useSearchParams().get("product");
+  const [stepIndex, setStepIndex] = useState(0);
+  const [draft, setDraft] = useState<OrderDraft>(() => {
+    const base = live ? { ...initialDraft, delivery: { ...initialDraft.delivery, addressMode: "new" as const, name: "", phone: "" } } : initialDraft;
+    const slug = slugs.includes(requested as ProductSlug) ? (requested as ProductSlug) : "notes";
+    return { ...base, ...productDefaults(slug, base) };
+  });
   const [uploadError, setUploadError] = useState<string>();
+  const [messageErrors, setMessageErrors] = useState<{ message?: string; recipients?: string }>({});
   const [deliveryErrors, setDeliveryErrors] = useState<DeliveryErrors>({});
   const [placed, setPlaced] = useState<Order | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const first = useRef(true);
+
+  const flow = flows[draft.product];
+  const stepId: StepId = flow[Math.min(stepIndex, flow.length - 1)];
 
   useEffect(() => {
     if (first.current) {
@@ -47,47 +66,71 @@ export function OrderFlow() {
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
     headingRef.current?.focus({ preventScroll: true });
-  }, [step, placed]);
+  }, [stepIndex, placed]);
 
   const update = (patch: Partial<OrderDraft>) => {
     setDraft((d) => ({ ...d, ...patch }));
     if (patch.files || patch.text !== undefined || patch.mode) setUploadError(undefined);
+    if (patch.message !== undefined || patch.recipients !== undefined || patch.csv !== undefined) setMessageErrors({});
     if (patch.delivery) setDeliveryErrors({});
   };
 
-  const next = () => {
-    if (step === 0) {
+  const goTo = (id: StepId) => {
+    const i = flow.indexOf(id);
+    if (i >= 0) setStepIndex(i);
+  };
+
+  const validate = (): boolean => {
+    if (stepId === "upload") {
       if (draft.mode === "files" && draft.files.length === 0) {
         setUploadError("Add at least one photo or PDF to continue.");
-        return;
+        return false;
       }
       if (draft.mode === "text" && draft.text.trim().length < 10) {
         setUploadError("Type or paste the text you'd like written. It needs at least a sentence.");
-        return;
+        return false;
       }
     }
-    if (step === 3) {
+    if (stepId === "message" || stepId === "bulk") {
+      const e: { message?: string; recipients?: string } = {};
+      if (draft.message.trim().length < 5) e.message = "Write the message you'd like on each card.";
+      if (recipientNames(draft).length === 0)
+        e.recipients = stepId === "bulk" ? "Upload a CSV with at least one recipient." : "Add at least one name, one per line.";
+      setMessageErrors(e);
+      if (Object.keys(e).length) return false;
+    }
+    if (stepId === "delivery") {
       const e = validateDelivery(draft.delivery);
       setDeliveryErrors(e);
-      if (Object.keys(e).length) return;
+      if (Object.keys(e).length) return false;
     }
-    setStep((s) => Math.min(steps.length - 1, s + 1));
+    return true;
   };
 
-  const back = () => setStep((s) => Math.max(0, s - 1));
+  const next = () => {
+    if (!validate()) return;
+    setStepIndex((s) => Math.min(flow.length - 1, s + 1));
+  };
+  const back = () => setStepIndex((s) => Math.max(0, s - 1));
 
   const onPaid = async (pay: { declined: boolean }) => {
+    const product = getProduct(draft.product)!;
+    const isPages = draft.product === "notes" || draft.product === "journals-gifts";
+    const units = orderUnits(draft);
+    const title = draft.title.trim() || (isPages ? `${product.name}, ${units} ${units === 1 ? "page" : "pages"}` : `${product.name} ×${units}`);
+
     if (live) {
+      // Existing order API: cards, invites and business notes go as typed text with the recipient list.
       const order = await placeOrder(
         {
-          title: draft.title,
-          mode: draft.mode,
-          text: draft.text,
-          files: draft.files,
+          title,
+          mode: isPages ? draft.mode : "text",
+          text: orderText(draft),
+          files: isPages ? draft.files : [],
           layout: draft.layout,
           paper: draft.paper,
-          copies: draft.copies,
-          pageCount: contentPages(draft),
+          copies: isPages ? 1 : Math.max(1, units),
+          pageCount: isPages ? contentPages(draft) : 1,
           delivery: { ...draft.delivery, useSaved: draft.delivery.addressMode === "saved", slot: draft.delivery.slot || "within-3h" },
         },
         pay,
@@ -97,14 +140,13 @@ export function OrderFlow() {
     }
     if (pay.declined) throw new Error("PAYMENT_DECLINED");
     const q = draftQuote(draft);
-    const paper = getPaper(draft.paper);
     const id = `PEN-${1043 + Math.floor(Math.random() * 40)}`;
     const area = draft.delivery.addressMode === "saved" ? demoUser.savedAddress.area : draft.delivery.area || "Kondapur";
     const order: Order = {
       id,
-      title: draft.title.trim() || (paper.unit === "card" ? `Cards ×${draft.copies}` : `Handwritten notes, ${q.units} pages`),
+      title,
       quantity: q.units,
-      unit: paper.unit,
+      unit: isPages ? "page" : "card",
       paper: draft.paper,
       ink: draft.layout.ink,
       total: q.total,
@@ -134,11 +176,11 @@ export function OrderFlow() {
           Order {placed.id} is placed
         </h2>
         <p className="mt-2 text-[15px] text-muted">
-          {rupees(placed.total)} paid. A writer is being assigned now, and you&apos;ll be able to follow every page.
+          {rupees(placed.total)} paid. A pen machine is being set up with your handwriting, and you&apos;ll be able to follow every page.
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-          <LinkButton href={live ? `/orders/track/?code=${placed.id}` : `/orders/${placed.id}`}>Track this order</LinkButton>
-          <LinkButton href="/orders" variant="secondary">
+          <LinkButton href={live ? `/orders/track/?code=${placed.id}` : `/orders/${placed.id}/`}>Track this order</LinkButton>
+          <LinkButton href="/orders/" variant="secondary">
             My orders
           </LinkButton>
         </div>
@@ -147,44 +189,59 @@ export function OrderFlow() {
   }
 
   const q = draftQuote(draft);
-  const pages = contentPages(draft);
+  const style = selectedStyle(draft);
+  const copy = stepCopy(stepId, draft.product);
+  const isReview = stepId === "review";
 
   return (
     <div>
-      <Stepper steps={steps} current={step} onStepClick={setStep} />
+      <Stepper steps={flow.map((id) => stepLabel(id, draft.product))} current={stepIndex} onStepClick={setStepIndex} />
 
-      <div key={step} className="mt-10 animate-slide-up">
+      <div key={`${draft.product}-${stepId}`} className="mt-10 animate-slide-up">
         <h2 ref={headingRef} tabIndex={-1} className="text-xl font-semibold tracking-tight focus:outline-none sm:text-2xl">
-          {stepCopy[step].title}
+          {copy.title}
         </h2>
-        <p className="mt-1.5 text-[15px] text-muted">{stepCopy[step].body}</p>
+        <p className="mt-1.5 text-[15px] text-muted">{copy.body}</p>
 
         <div className="mt-8">
-          {step === 0 && <UploadStep draft={draft} update={update} error={uploadError} />}
-          {step === 1 && <LayoutStep draft={draft} update={update} />}
-          {step === 2 && <PaperStep draft={draft} update={update} />}
-          {step === 3 && <DeliveryStep draft={draft} update={update} errors={deliveryErrors} />}
-          {step === 4 && <ReviewStep draft={draft} goTo={setStep} onPaid={onPaid} />}
+          {stepId === "product" && <ProductStep draft={draft} update={update} />}
+          {stepId === "upload" && <UploadStep draft={draft} update={update} error={uploadError} />}
+          {stepId === "layout" && <LayoutStep draft={draft} update={update} />}
+          {stepId === "paper" && <PaperStep draft={draft} update={update} />}
+          {stepId === "style" && <StyleStep draft={draft} update={update} />}
+          {stepId === "message" && <MessageStep draft={draft} update={update} errors={messageErrors} />}
+          {stepId === "bulk" && <BulkStep draft={draft} update={update} errors={messageErrors} />}
+          {stepId === "delivery" && <DeliveryStep draft={draft} update={update} errors={deliveryErrors} />}
+          {isReview && <ReviewStep draft={draft} goTo={goTo} onPaid={onPaid} />}
         </div>
       </div>
 
-      {step < 4 && (
+      {!isReview && (
         <div className="sticky bottom-0 z-10 -mx-5 mt-10 border-t border-line bg-paper/95 px-5 py-4 backdrop-blur sm:mx-0 sm:rounded-xl sm:border sm:px-5">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0 text-sm" aria-live="polite">
-              {pages > 0 || draft.paper === "premium-card" ? (
+              {q.total > 0 ? (
                 <>
-                  <p className="font-medium tabular-nums text-ink">{rupees(q.total)}</p>
+                  <p className="font-medium tabular-nums text-ink">
+                    {q.estimate ? "About " : ""}
+                    {rupees(q.total)}
+                  </p>
                   <p className="truncate text-muted">
-                    {q.billableUnits} {q.unitLabel}s{q.delivery === 0 ? " · free delivery" : ` · incl. ${rupees(q.delivery)} delivery`}
+                    {getProduct(draft.product)!.name}
+                    {draft.product === "journals-gifts"
+                      ? ` · ${style?.name ?? "Book"}`
+                      : ` · ${q.billableUnits} ${unitWord(q, q.billableUnits)}`}
+                    {q.delivery === 0 ? " · free delivery" : ""}
                   </p>
                 </>
               ) : (
-                <p className="text-muted">Add content to see your price</p>
+                <p className="text-muted">
+                  {getProduct(draft.product)!.name} · {getProduct(draft.product)!.priceLabel}
+                </p>
               )}
             </div>
             <div className="flex shrink-0 gap-2">
-              {step > 0 && (
+              {stepIndex > 0 && (
                 <Button variant="secondary" onClick={back}>
                   Back
                 </Button>
@@ -194,7 +251,7 @@ export function OrderFlow() {
           </div>
         </div>
       )}
-      {step === 4 && (
+      {isReview && (
         <div className="mt-8">
           <Button variant="ghost" onClick={back}>
             ← Back to delivery

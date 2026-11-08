@@ -44,12 +44,13 @@ Payments are a demo: `demo_mark_paid()` marks an order paid. Swap in a payment g
 
 | Route | What it is |
 | --- | --- |
-| `/` | Home: hero with a notebook page that writes itself in, How it works, use cases, pricing teaser, FAQ, early-list signup |
+| `/` | Home: pen-machine hero, How it works, products (Notes featured), Why handwritten, per-product pricing, sample reviews (marked as placeholders), FAQ |
+| `/products/[slug]` | One page per product: notes, letters-cards, invitations, business-mail, journals-gifts |
 | `/setup` | Handwriting setup: pangram, photo upload or camera, mock analysis, preview of the cloned style |
-| `/order` | Five-step order flow: Upload → Layout (live preview) → Paper → Delivery → Review & pay |
+| `/order` | Starts with "What do you want written?"; steps adapt per product (Notes: upload + notebook size; Cards/Invites: card style + recipients; Business: CSV list; Journals: book + contents). `?product=<slug>` preselects |
 | `/orders` | My orders, split into Active and Past tabs |
 | `/orders/[id]` | Order tracking timeline, with page progress and rider details (try `PEN-1042` and `PEN-1037`) |
-| `/pricing` | Price table and a calculator |
+| `/pricing` | Per-product prices and a calculator |
 | `/login` | Phone number and OTP login |
 
 ## Demo behaviour

@@ -27,7 +27,7 @@ export function Stepper({ steps, current, onStepClick }: StepperProps) {
       >
         <div className="h-full rounded-full bg-accent transition-[width] duration-500 ease-out" style={{ width: `${pct}%` }} />
       </div>
-      <ol className="mt-3 hidden grid-cols-5 gap-2 sm:grid">
+      <ol className="mt-3 hidden gap-2 sm:grid" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
         {steps.map((label, i) => {
           const done = i < current;
           const active = i === current;

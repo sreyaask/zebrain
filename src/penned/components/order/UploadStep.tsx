@@ -17,7 +17,7 @@ export function UploadStep({ draft, update, error }: Props) {
       <Input
         label="Order name"
         optional
-        placeholder="e.g. Chemistry Ch. 2 Notes"
+        placeholder={draft.product === "journals-gifts" ? "e.g. Amma's Recipes" : "e.g. Chemistry Ch. 2 Notes"}
         value={draft.title}
         onChange={(e) => update({ title: e.target.value })}
         hint="Helps you find it later in My orders."
@@ -53,6 +53,18 @@ export function UploadStep({ draft, update, error }: Props) {
             rows={10}
           />
         </div>
+      )}
+      {draft.product === "notes" && (
+        <Segmented
+          label="Notebook size"
+          value={draft.layout.pageSize === "a4" || draft.layout.pageSize === "a5" ? draft.layout.pageSize : "b5"}
+          onChange={(pageSize) => update({ layout: { ...draft.layout, pageSize } })}
+          options={[
+            { value: "b5", label: "Regular (B5)" },
+            { value: "a5", label: "Small (A5)" },
+            { value: "a4", label: "Large (A4)" },
+          ]}
+        />
       )}
       {error && (
         <p className="text-sm text-danger" role="alert">

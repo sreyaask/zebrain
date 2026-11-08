@@ -10,6 +10,7 @@ import { currentUser, live, onAuthChange, signOut } from "@/lib/api";
 import { LinkButton } from "./Button";
 
 const links = [
+  { href: "/#products", label: "What we write" },
   { href: "/#how-it-works", label: "How it works" },
   { href: "/pricing", label: "Pricing" },
   { href: "/setup", label: "Handwriting" },
@@ -49,7 +50,8 @@ export function Navbar() {
 
   useEffect(() => setOpen(false), [pathname]);
 
-  const isActive = (href: string) => !href.startsWith("/#") && (pathname === href || pathname.startsWith(href + "/"));
+  const isActive = (href: string) =>
+    href === "/#products" ? pathname.startsWith("/products") : !href.startsWith("/#") && (pathname === href || pathname.startsWith(href + "/"));
   const initials = live ? "Me" : demoUser.name.split(" ").map((p) => p[0]).join("");
   const logOut = () => (live ? signOut() : setSignedIn(false));
 
@@ -93,8 +95,8 @@ export function Navbar() {
               Log in
             </Link>
           )}
-          <LinkButton href="/order" size="sm">
-            Start an order
+          <LinkButton href="/order/" size="sm">
+            Get started
           </LinkButton>
         </div>
         <button
@@ -136,8 +138,8 @@ export function Navbar() {
                 Log in
               </Link>
             )}
-            <LinkButton href="/order" className="mt-3" fullWidth>
-              Start an order
+            <LinkButton href="/order/" className="mt-3" fullWidth>
+              Get started
             </LinkButton>
           </nav>
         </div>

@@ -5,9 +5,10 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Segmented } from "@/components/ui/Segmented";
-import { demoUser, getPageSize, getPaper, pricing, timeSlots } from "@/lib/mock";
+import { demoUser, getPageSize, getPaper, getProduct, productPricing, timeSlots } from "@/lib/mock";
 import { plural, rupees } from "@/lib/format";
-import { draftQuote, type OrderDraft } from "./types";
+import { unitWord } from "@/lib/productPricing";
+import { draftQuote, recipientNames, selectedStyle, type OrderDraft, type StepId } from "./types";
 
 function Row({ label, children, onEdit }: { label: string; children: ReactNode; onEdit?: () => void }) {
   return (
@@ -51,11 +52,15 @@ export function ReviewStep({
   onPaid,
 }: {
   draft: OrderDraft;
-  goTo: (step: number) => void;
+  goTo: (step: StepId) => void;
   onPaid: (pay: { declined: boolean }) => Promise<void>;
 }) {
   const q = draftQuote(draft);
   const paper = getPaper(draft.paper);
+  const product = getProduct(draft.product)!;
+  const style = selectedStyle(draft);
+  const people = recipientNames(draft);
+  const isPages = draft.product === "notes" || draft.product === "journals-gifts";
   const slot = timeSlots.find((s) => s.id === draft.delivery.slot);
   const addr =
     draft.delivery.addressMode === "saved"
@@ -116,19 +121,39 @@ export function ReviewStep({
             Your order
           </h3>
           <dl className="mt-2 divide-y divide-line rounded-xl border border-line bg-surface px-4">
-            <Row label="Content" onEdit={() => goTo(0)}>
-              {draft.mode === "files"
-                ? `${plural(draft.files.length, "file")} uploaded`
-                : `${draft.text.trim().split(/\s+/).length} words typed`}
+            <Row label="Product" onEdit={() => goTo("product")}>
+              {product.name}
               {draft.title && <span className="block text-sm text-muted">{draft.title}</span>}
             </Row>
-            <Row label="Layout" onEdit={() => goTo(1)}>
-              <span className="capitalize">{draft.layout.ink}</span> ink · {draft.layout.marginMm} mm margins · {draft.layout.lineSpacing.toFixed(1)}× spacing
-            </Row>
-            <Row label="Paper" onEdit={() => goTo(2)}>
-              {paper.name} · {getPageSize(draft.layout.pageSize).label}
-            </Row>
-            <Row label="Delivery" onEdit={() => goTo(3)}>
+            {isPages ? (
+              <>
+                <Row label="Content" onEdit={() => goTo("upload")}>
+                  {draft.mode === "files"
+                    ? `${plural(draft.files.length, "file")} uploaded`
+                    : `${draft.text.trim().split(/\s+/).filter(Boolean).length} words typed`}
+                </Row>
+                <Row label="Layout" onEdit={() => goTo("layout")}>
+                  <span className="capitalize">{draft.layout.ink}</span> ink · {draft.layout.marginMm} mm margins · {draft.layout.lineSpacing.toFixed(1)}× spacing
+                </Row>
+                <Row label={draft.product === "journals-gifts" ? "Book" : "Paper"} onEdit={() => goTo(draft.product === "journals-gifts" ? "style" : "paper")}>
+                  {style?.name ?? paper.name} · {getPageSize(draft.layout.pageSize).label}
+                </Row>
+              </>
+            ) : (
+              <>
+                <Row label={draft.product === "business-mail" ? "Stationery" : "Card"} onEdit={() => goTo("style")}>
+                  {style?.name} · <span className="capitalize">{draft.layout.ink}</span> ink
+                </Row>
+                <Row label={draft.product === "invitations" ? "Guests" : "Recipients"} onEdit={() => goTo(draft.product === "business-mail" ? "bulk" : "message")}>
+                  {plural(people.length, q.unit.one, q.unit.many)}
+                  <span className="block truncate text-sm text-muted">
+                    {people.slice(0, 3).join(", ")}
+                    {people.length > 3 ? ` and ${people.length - 3} more` : ""}
+                  </span>
+                </Row>
+              </>
+            )}
+            <Row label="Delivery" onEdit={() => goTo("delivery")}>
               {addr}
               <span className="block text-sm text-muted">
                 {slot?.label} · {draft.delivery.name}, +91 {draft.delivery.phone}
@@ -144,15 +169,13 @@ export function ReviewStep({
           <dl className="mt-2 space-y-2.5 rounded-xl border border-line bg-surface p-4 text-[15px]">
             <div className="flex justify-between gap-4">
               <dt className="text-muted">
-                Writing · {q.billableUnits} {q.unitLabel}s × {rupees(q.unitPrice)}
+                {draft.product === "journals-gifts"
+                  ? `${style?.name ?? "Book"} · ${plural(q.units, "page")}`
+                  : `${product.name} · ${q.billableUnits} ${unitWord(q, q.billableUnits)} × ${rupees(q.unitPrice)}`}
               </dt>
               <dd className="tabular-nums text-ink">{rupees(q.writing)}</dd>
             </div>
-            {q.minimumApplied && (
-              <p className="text-xs text-muted">
-                {pricing.notebookMinimumPages}-page notebook minimum applied (your content is {q.units} pages).
-              </p>
-            )}
+            {q.note && <p className="text-xs text-muted">{q.note}</p>}
             <div className="flex justify-between gap-4">
               <dt className="text-muted">Paper and ink</dt>
               <dd className="text-ink">Included</dd>
@@ -163,11 +186,11 @@ export function ReviewStep({
             </div>
             {q.delivery > 0 && (
               <p className="text-xs text-muted">
-                Add {rupees(pricing.freeDeliveryAbove + 1 - q.writing)} more for free delivery.
+                Add {rupees(productPricing.freeDeliveryAbove + 1 - q.writing)} more for free delivery.
               </p>
             )}
             <div className="flex justify-between gap-4 border-t border-line pt-3 font-semibold">
-              <dt>Total</dt>
+              <dt>{q.estimate ? "Estimated total" : "Total"}</dt>
               <dd className="tabular-nums">{rupees(q.total)}</dd>
             </div>
           </dl>
