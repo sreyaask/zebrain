@@ -32,7 +32,7 @@ struct HomeView: View {
                         if model.hasLoaded {
                             handwritingCard
                         } else {
-                            ProgressView().frame(maxWidth: .infinity, minHeight: 80)
+                            SkeletonCard(lines: 2)
                         }
                         VStack(alignment: .leading, spacing: 14) {
                             SectionLabel("Order something")
@@ -78,7 +78,8 @@ struct HomeView: View {
             }
             Text("2–3 hours")
                 .font(.system(.largeTitle, design: .rounded, weight: .black))
-            Label("Hyderabad · Kondapur, Madhapur, Gachibowli & more", systemImage: "mappin.and.ellipse")
+            Label(model.orders.first.map { "Delivering to \($0.area), Hyderabad" } ?? "Hyderabad · Kondapur, Madhapur, Gachibowli & more",
+                  systemImage: "mappin.and.ellipse")
                 .font(.footnote.weight(.semibold))
                 .opacity(0.8)
                 .lineLimit(1)
@@ -251,6 +252,7 @@ struct TrackPill: View {
                 .font(.headline.weight(.bold))
                 .frame(width: 40, height: 40)
                 .background(Theme.paper.opacity(0.15), in: Circle())
+                .overlay(alignment: .topTrailing) { LiveDot().offset(x: 3, y: -3) }
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(order.headline).font(.subheadline.weight(.heavy)).lineLimit(1)

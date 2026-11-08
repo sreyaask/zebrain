@@ -135,3 +135,7 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   every page checked by a person, private files, live tracking), Blinkit-style `BillCard`, `HelpCenterView` (FAQ), contact buttons,
   `OrderPlacedView` (what happens next) and a shareable text receipt. Support contacts are in `Config.swift`
   (`supportWhatsApp`, `supportPhone`, `supportEmail`); empty values are hidden. Never add ratings, reviews or user counts.
+- Visual trust cues (iOS, 8 Nov 2026): screens sit on `Theme.canvas` (light grey) so white cards stand out. `Theme.success` green is the
+  ONLY colour besides black/white and is reserved for money and success: FREE, savings, Paid, Delivered, promise icons, and the
+  `.pennedConfirm` button (Place order, Pay). `LiveDot` pulses on in-progress orders; `Skeleton`/`SkeletonCard` replace loading spinners;
+  `NotebookThumb` draws the ruled/plain/own notebook in the notebook step.

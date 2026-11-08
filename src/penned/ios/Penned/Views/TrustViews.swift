@@ -58,9 +58,12 @@ struct TrustStrip: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(items) { g in
-                    Label(g.short, systemImage: g.symbol)
+                    Label {
+                        Text(g.short).foregroundStyle(Theme.ink)
+                    } icon: {
+                        Image(systemName: g.symbol).foregroundStyle(Theme.success)
+                    }
                         .font(.caption.weight(.heavy))
-                        .foregroundStyle(Theme.ink)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 7)
                         .background(Theme.surface, in: Capsule())
@@ -81,6 +84,7 @@ struct GuaranteeRow: View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: guarantee.symbol)
                 .font(.title3.weight(.bold))
+                .foregroundStyle(Theme.success)
                 .frame(width: 32)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
@@ -133,7 +137,7 @@ struct BillCard: View {
                         if let was = line.freeInsteadOf {
                             Text(rupees(was)).strikethrough().font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                         }
-                        Text("FREE").font(.subheadline.weight(.heavy))
+                        Text("FREE").font(.subheadline.weight(.heavy)).foregroundStyle(Theme.success)
                     } else {
                         Text(rupees(line.amount)).font(.subheadline.monospacedDigit())
                     }
@@ -150,10 +154,11 @@ struct BillCard: View {
             if saved > 0 {
                 Label("You save \(rupees(saved)) on this order", systemImage: "tag.fill")
                     .font(.footnote.weight(.heavy))
+                    .foregroundStyle(Theme.success)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
+                    .padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Theme.fill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(Theme.successFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
             if let footnote {
                 Text(footnote).font(.caption).foregroundStyle(.secondary)
@@ -365,9 +370,10 @@ struct OrderPlacedView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 40, weight: .black))
-                        .foregroundStyle(Theme.paper)
+                        .foregroundStyle(.white)
                         .frame(width: 88, height: 88)
-                        .background(Theme.ink, in: Circle())
+                        .background(Theme.success, in: Circle())
+                        .background(Circle().fill(Theme.successFill).padding(-14))
                         .scaleEffect(appeared || reduceMotion ? 1 : 0.6)
                         .opacity(appeared || reduceMotion ? 1 : 0)
                         .accessibilityHidden(true)
@@ -406,7 +412,7 @@ struct OrderPlacedView: View {
                 }
                 .card(padding: 0)
 
-                Button(action: onDone) { Text("Track my order").frame(maxWidth: .infinity) }
+                Button(action: onDone) { Label("Track my order", systemImage: "location.fill").frame(maxWidth: .infinity) }
                     .buttonStyle(.pennedPrimary)
             }
             .padding(.horizontal, 20)

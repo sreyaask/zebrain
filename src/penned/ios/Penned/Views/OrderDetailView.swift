@@ -25,7 +25,15 @@ struct OrderDetailView: View {
                 // Status and timeline
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(order.headline).font(.title2.weight(.black))
+                        HStack(spacing: 8) {
+                            if order.status != .delivered && order.status != .cancelled { LiveDot() }
+                            Text(order.headline).font(.title2.weight(.black))
+                        }
+                        if order.status == .delivered, let at = order.deliveredAt {
+                            Label("Delivered \(at.formatted(date: .abbreviated, time: .shortened))", systemImage: "checkmark.circle.fill")
+                                .font(.subheadline.weight(.heavy))
+                                .foregroundStyle(Theme.success)
+                        }
                         if order.status != .cancelled {
                             BoldProgress(value: order.journey)
                                 .accessibilityLabel("Order progress")
@@ -46,7 +54,7 @@ struct OrderDetailView: View {
                             Group { if paying { ProgressView() } else { Text("Pay \(rupees(order.total))") } }
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.pennedPrimary)
+                        .buttonStyle(.pennedConfirm)
                         .disabled(paying)
                         Text("Demo checkout. No real payment is made.").font(.caption).foregroundStyle(.secondary)
                     }
@@ -89,7 +97,13 @@ struct OrderDetailView: View {
                         }
                     }
                     DetailRow(label: "Placed") { Text(order.createdAt.formatted(date: .abbreviated, time: .shortened)) }
-                    DetailRow(label: "Payment") { Text(order.paymentStatus == "paid" ? "Paid" : "Not paid yet") }
+                    DetailRow(label: "Payment") {
+                        if order.paymentStatus == "paid" {
+                            Label("Paid", systemImage: "checkmark.circle.fill").foregroundStyle(Theme.success).fontWeight(.heavy)
+                        } else {
+                            Text("Not paid yet")
+                        }
+                    }
                     DetailRow(label: "Deliver to") {
                         Text("\(order.addressLine1), \(order.area), Hyderabad \(order.pincode)").multilineTextAlignment(.trailing)
                     }

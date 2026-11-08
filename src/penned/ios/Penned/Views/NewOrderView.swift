@@ -261,7 +261,12 @@ struct NewOrderView: View {
             }
             AdaptiveStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(quote.total > 0 ? rupees(quote.total) : "—").font(.headline.monospacedDigit())
+                    HStack(spacing: 4) {
+                        Text(quote.total > 0 ? rupees(quote.total) : "—").font(.headline.weight(.black).monospacedDigit())
+                            .contentTransition(.numericText(value: Double(quote.total)))
+                            .animation(.snappy, value: quote.total)
+                        if quote.total > 0 { Text("TOTAL").font(.caption2.weight(.heavy)).foregroundStyle(.secondary) }
+                    }
                     Text(quote.total > 0
                          ? "\(quote.billableUnits) \(isNotes ? "pages" : (cardStyle == .letter ? "letters" : "cards"))\(quote.notebook > 0 ? " + notebook" : "")\(quote.delivery == 0 ? " · free delivery" : "")"
                          : (isNotes ? "Add your notes to see the price" : "Add recipients to see the price"))
@@ -277,9 +282,11 @@ struct NewOrderView: View {
                     Button {
                         Task { await place() }
                     } label: {
-                        if placing { ProgressView() } else { Text("Place order") }
+                        if placing { ProgressView() } else {
+                            HStack(spacing: 6) { Text("Place order"); Image(systemName: "chevron.right").font(.subheadline.weight(.black)) }
+                        }
                     }
-                    .buttonStyle(.pennedPrimary)
+                    .buttonStyle(.pennedConfirm)
                     .disabled(placing)
                 } else {
                     Button("Continue") { go(1) }
@@ -397,11 +404,11 @@ struct NewOrderView: View {
     @ViewBuilder private var paperStep: some View {
         Section {
             NotebookOption(title: "Ruled notebook", detail: "A new ruled notebook with a margin.", price: rupees(Quote.notebookPrice),
-                           symbol: "line.3.horizontal", selected: notebook == .ruled) { choose(.ruled) }
+                           thumb: .ruled, selected: notebook == .ruled) { choose(.ruled) }
             NotebookOption(title: "Plain notebook", detail: "A new unruled notebook.", price: rupees(Quote.notebookPrice),
-                           symbol: "rectangle.portrait", selected: notebook == .plain) { choose(.plain) }
+                           thumb: .plain, selected: notebook == .plain) { choose(.plain) }
             NotebookOption(title: "Continue in my notebook", detail: "Our rider collects it, we write in it and bring it back.", price: "Free",
-                           symbol: "barcode.viewfinder", selected: notebook == .own) { choose(.own) }
+                           thumb: .own, selected: notebook == .own) { choose(.own) }
         } header: {
             Text("Notebook")
         } footer: {
@@ -758,26 +765,29 @@ private struct NotebookOption: View {
     let title: String
     let detail: String
     let price: String
-    let symbol: String
+    let thumb: NotebookThumb.Kind
     let selected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
-                Image(systemName: symbol)
-                    .font(.title3.weight(.bold))
-                    .frame(width: 44, height: 44)
-                    .background(selected ? Theme.ink : Theme.fill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .foregroundStyle(selected ? Theme.paper : Theme.ink)
-                    .accessibilityHidden(true)
+                NotebookThumb(kind: thumb)
+                    .padding(6)
+                    .background(Theme.fill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(.headline.weight(.heavy)).foregroundStyle(Theme.ink)
                     Text(detail).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 6)
                 VStack(alignment: .trailing, spacing: 6) {
-                    PillTag(text: price, inverted: selected)
+                    if price == "Free" {
+                        Text("FREE").font(.caption.weight(.heavy)).foregroundStyle(Theme.success)
+                            .padding(.horizontal, 9).padding(.vertical, 4)
+                            .background(Theme.successFill, in: Capsule())
+                    } else {
+                        PillTag(text: price, inverted: selected)
+                    }
                     Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                         .font(.title3.weight(.bold))
                         .foregroundStyle(Theme.ink)

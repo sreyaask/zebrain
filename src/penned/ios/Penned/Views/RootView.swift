@@ -26,7 +26,7 @@ struct RootView: View {
                     }
                     .padding()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Theme.paper.ignoresSafeArea())
+                    .background(Theme.canvas.ignoresSafeArea())
                     .task {
                         try? await Task.sleep(for: .seconds(6))
                         slow = true

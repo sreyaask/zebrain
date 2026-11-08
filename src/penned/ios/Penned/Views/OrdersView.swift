@@ -18,8 +18,7 @@ struct OrdersView: View {
                     }
 
                     if !model.hasLoaded {
-                        ProgressView("Loading your orders")
-                            .frame(maxWidth: .infinity, minHeight: 200)
+                        VStack(spacing: 14) { SkeletonCard(); SkeletonCard(lines: 2) }
                     } else if model.orders.isEmpty {
                         EmptyOrders { newKind = .completeNotes }
                     } else {
@@ -85,7 +84,10 @@ struct ActiveOrderCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             AdaptiveStack {
-                Text(order.code).font(.caption.monospaced()).foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    LiveDot()
+                    Text("LIVE · \(order.code)").font(.caption.weight(.heavy).monospaced()).foregroundStyle(.secondary)
+                }
                 Spacer(minLength: 0)
                 StatusChip(status: order.status)
             }

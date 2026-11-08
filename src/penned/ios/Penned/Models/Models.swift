@@ -133,11 +133,13 @@ struct Order: Codable, Identifiable, Hashable {
     /// Optional so older rows (before notebook pricing) still decode.
     let notebookSource: NotebookSource?
     let notebookAmount: Int?
+    let deliveredAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case id, code, title, status, paper, ink, copies, total, area, pincode, eta
         case notebookSource = "notebook_source"
         case notebookAmount = "notebook_amount"
+        case deliveredAt = "delivered_at"
         case paymentStatus = "payment_status"
         case pageCount = "page_count"
         case billableUnits = "billable_units"

@@ -11,7 +11,7 @@ struct HandwritingView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     if !model.hasLoaded {
-                        ProgressView("Loading your handwriting")
+                        SkeletonCard()
                             .frame(maxWidth: .infinity, minHeight: 200)
                     } else if model.styles.isEmpty {
                         VStack(alignment: .leading, spacing: 20) {
