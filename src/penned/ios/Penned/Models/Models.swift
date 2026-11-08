@@ -24,9 +24,9 @@ enum PaperID: String, Codable, CaseIterable, Identifiable {
     }
     var detail: String {
         switch self {
-        case .plainNotebook: "100 pages, unruled. 30-page minimum."
-        case .ruledNotebook: "100 pages, ruled with margin. 30-page minimum."
-        case .looseA4: "80 gsm sheets for letters and assignments."
+        case .plainNotebook: "A new unruled notebook."
+        case .ruledNotebook: "A new ruled notebook with a margin."
+        case .looseA4: "80 gsm sheets for letters."
         case .premiumCard: "300 gsm card with envelope."
         }
     }
@@ -130,9 +130,14 @@ struct Order: Codable, Identifiable, Hashable {
     let riderName: String?
     let eta: String?
     let createdAt: Date
+    /// Optional so older rows (before notebook pricing) still decode.
+    let notebookSource: NotebookSource?
+    let notebookAmount: Int?
 
     enum CodingKeys: String, CodingKey {
         case id, code, title, status, paper, ink, copies, total, area, pincode, eta
+        case notebookSource = "notebook_source"
+        case notebookAmount = "notebook_amount"
         case paymentStatus = "payment_status"
         case pageCount = "page_count"
         case billableUnits = "billable_units"
@@ -193,6 +198,63 @@ struct GlyphSet: Codable, Hashable {
     let glyphs: [String: [Glyph]]
 }
 
+// MARK: - Notebooks
+
+/// Who supplies the notebook: a new one from us (₹120), or the customer's own (collected by the rider, no charge).
+enum NotebookSource: String, Codable {
+    case new, own
+}
+
+/// A notebook's page and ruling, in millimetres. Stored on the order so we can write into the customer's own notebook.
+struct NotebookSpec: Codable, Hashable {
+    var name: String?
+    var widthMm: Double
+    var heightMm: Double
+    var linePitchMm: Double?
+    var marginMm: Double?
+    var ruled: Bool
+    var pages: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case name, ruled, pages
+        case widthMm = "width_mm"
+        case heightMm = "height_mm"
+        case linePitchMm = "line_pitch_mm"
+        case marginMm = "margin_mm"
+    }
+
+    /// Plausible measurements, matching the database checks.
+    var isValid: Bool {
+        (50...400).contains(widthMm) && (50...500).contains(heightMm)
+            && (!ruled || (linePitchMm.map { (3...20).contains($0) } ?? false))
+            && (marginMm.map { (0...60).contains($0) } ?? true)
+    }
+}
+
+/// A row of public.notebook_catalog: notebooks we already know by barcode.
+struct CatalogNotebook: Decodable {
+    let barcode: String
+    let name: String
+    let widthMm: Double
+    let heightMm: Double
+    let linePitchMm: Double?
+    let marginMm: Double?
+    let ruled: Bool
+    let pages: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case barcode, name, ruled, pages
+        case widthMm = "width_mm"
+        case heightMm = "height_mm"
+        case linePitchMm = "line_pitch_mm"
+        case marginMm = "margin_mm"
+    }
+
+    var spec: NotebookSpec {
+        NotebookSpec(name: name, widthMm: widthMm, heightMm: heightMm, linePitchMm: linePitchMm, marginMm: marginMm, ruled: ruled, pages: pages)
+    }
+}
+
 // MARK: - Inserts
 
 struct NewOrder: Encodable {
@@ -215,9 +277,15 @@ struct NewOrder: Encodable {
     var pincode: String
     var landmark: String?
     var timeSlot: TimeSlot
+    var notebookSource: NotebookSource = .new
+    var notebookBarcode: String?
+    var notebookSpec: NotebookSpec?
 
     enum CodingKeys: String, CodingKey {
         case title, paper, ink, copies, area, pincode, landmark
+        case notebookSource = "notebook_source"
+        case notebookBarcode = "notebook_barcode"
+        case notebookSpec = "notebook_spec"
         case sourceMode = "source_mode"
         case sourceText = "source_text"
         case pageSize = "page_size"

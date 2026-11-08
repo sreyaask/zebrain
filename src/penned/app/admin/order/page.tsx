@@ -110,7 +110,8 @@ function OrderDetail() {
     setOcr({ fraction: 0, label: "Downloading files" });
     try {
       const blobs = [];
-      for (const f of files) {
+      // Diagram crops are traced by the plotter panel, not read as text.
+      for (const f of files.filter((x) => !/diagram-[\w-]+\.png$/.test(x.path))) {
         const { data: blob, error } = await supabase().storage.from("uploads").download(f.path);
         if (error || !blob) throw new Error(`Couldn't download ${f.path.split("/").pop()}`);
         blobs.push({ blob, kind: f.kind });
@@ -144,6 +145,13 @@ function OrderDetail() {
             {getPageSize(order.page_size).label} · {order.ink} ink · {rupees(order.total)}{" "}
             <span className={order.payment_status === "paid" ? "" : "text-danger"}>({order.payment_status})</span>
           </p>
+          {order.notebook_source === "own" && (
+            <p className="mt-1 text-sm">
+              <span className="font-medium">Customer's own notebook</span> — rider collects it first.
+              {order.notebook_barcode ? ` Barcode ${order.notebook_barcode}.` : ""}
+              {order.notebook_spec?.width_mm ? ` ${order.notebook_spec.width_mm}×${order.notebook_spec.height_mm} mm, lines ${order.notebook_spec.line_pitch_mm ?? "?"} mm, margin ${order.notebook_spec.margin_mm ?? "?"} mm${order.notebook_spec.ruled === false ? ", plain" : ""}.` : ""}
+            </p>
+          )}
         </div>
         {order.status === "cancelled" ? <span className="text-sm text-muted">Cancelled</span> : <StatusPill status={order.status} label={statusLabel[order.status]} />}
       </div>
@@ -214,7 +222,7 @@ function OrderDetail() {
           </Section>
 
           <Section title="Plotter output">
-            <PlotterPanel order={order} text={text} glyphSet={style?.status === "ready" ? style.glyph_set : null} onSaved={load} />
+            <PlotterPanel order={order} text={text} glyphSet={style?.status === "ready" ? style.glyph_set : null} files={files} onSaved={load} />
             {jobs.length > 0 && (
               <div className="mt-6">
                 <h3 className="text-sm font-medium">Saved jobs</h3>

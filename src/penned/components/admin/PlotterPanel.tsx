@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { Select } from "@/components/ui/Input";
 import {
-  layoutHandwriting, pageSpecFor, pageToSvg, pagesToGcode, estimateMinutes, plotterPresets,
-  type GlyphSet, type LayoutResult, type PlotterSettings,
+  binarize, layoutHandwriting, pageSpecFor, pageToSvg, pagesToGcode, estimateMinutes, plotterPresets, traceDiagram, DIAGRAM_LINE,
+  type Diagram, type GlyphSet, type LayoutResult, type PageSpec, type PlotterSettings,
 } from "@/lib/engine/index.ts";
 import { getPageSize } from "@/lib/mock";
-import type { DbOrder } from "@/lib/db";
+import type { DbOrder, DbOrderFile } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
+import { loadImagePixels } from "@/lib/adminData";
 
 type PresetId = keyof typeof plotterPresets;
 
@@ -18,33 +19,73 @@ interface Props {
   order: DbOrder;
   text: string;
   glyphSet: GlyphSet | null;
+  /** The order's uploaded files; diagram crops are named diagram-<id>.png. */
+  files: DbOrderFile[];
   onSaved: () => void;
 }
 
+/** Page geometry: the customer's own notebook when they measured it, otherwise the standard size. */
+function specFor(order: DbOrder): PageSpec {
+  const n = order.notebook_spec;
+  if (order.notebook_source === "own" && n && n.width_mm && n.height_mm) {
+    const pitch = Number(n.line_pitch_mm) || 7.2 * Number(order.line_spacing);
+    return {
+      widthMm: Number(n.width_mm),
+      heightMm: Number(n.height_mm),
+      marginLeftMm: Number(n.margin_mm ?? order.margin_mm),
+      marginRightMm: 8,
+      topMm: pitch * 2,
+      bottomMm: 10,
+      linePitchMm: pitch,
+      xHeightMm: Math.min(2.6, pitch * 0.36),
+    };
+  }
+  return pageSpecFor(getPageSize(order.page_size), Number(order.margin_mm), Number(order.line_spacing));
+}
+
 /** Generates handwriting pages for an order and exports SVG + G-code for the plotter. */
-export function PlotterPanel({ order, text, glyphSet, onSaved }: Props) {
+export function PlotterPanel({ order, text, glyphSet, files, onSaved }: Props) {
   const [preset, setPreset] = useState<PresetId>("z-axis");
   const [settings, setSettings] = useState<PlotterSettings>(plotterPresets["z-axis"].settings);
   const [result, setResult] = useState<LayoutResult | null>(null);
   const [pageIdx, setPageIdx] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [preparing, setPreparing] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "error" | "success"; text: string } | null>(null);
 
-  const spec = useMemo(
-    () => pageSpecFor(getPageSize(order.page_size), Number(order.margin_mm), Number(order.line_spacing)),
-    [order.page_size, order.margin_mm, order.line_spacing],
-  );
+  const spec = useMemo(() => specFor(order), [order]);
   const ruled = order.paper === "ruled-notebook";
 
-  const generate = () => {
+  /** Downloads and traces every diagram the text refers to. */
+  const loadDiagrams = async (): Promise<Record<string, Diagram>> => {
+    const ids = Array.from(new Set(text.split("\n").map((l) => l.trim().match(DIAGRAM_LINE)?.[1]).filter((x): x is string => !!x)));
+    const out: Record<string, Diagram> = {};
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i];
+      const file = files.find((f) => f.path.endsWith(`diagram-${id}.png`));
+      if (!file) continue;
+      setPreparing(`Tracing diagram ${i + 1} of ${ids.length}`);
+      try {
+        const img = await loadImagePixels("uploads", file.path, 1600);
+        out[id] = traceDiagram(binarize(img.pixels, img.width, img.height));
+      } catch {
+        /* reported as missing below */
+      }
+    }
+    return out;
+  };
+
+  const generate = async () => {
     setMessage(null);
     if (!glyphSet) return;
+    const diagrams = await loadDiagrams();
+    setPreparing(null);
     // Cards: the same text on every card.
-    const r = layoutHandwriting(text, glyphSet, spec, { headingStyle: order.heading_style, seed: order.code });
+    const r = layoutHandwriting(text, glyphSet, spec, { headingStyle: order.heading_style, seed: order.code, diagrams });
     if (order.paper === "premium-card" && order.copies > 1) {
       const one = r.pages;
       r.pages = Array.from({ length: order.copies }, (_, c) =>
-        layoutHandwriting(text, glyphSet, spec, { headingStyle: order.heading_style, seed: `${order.code}-${c}` }).pages[0] ?? one[0],
+        layoutHandwriting(text, glyphSet, spec, { headingStyle: order.heading_style, seed: `${order.code}-${c}`, diagrams }).pages[0] ?? one[0],
       );
     }
     setResult(r);
@@ -133,8 +174,8 @@ export function PlotterPanel({ order, text, glyphSet, onSaved }: Props) {
         </div>
       </details>
 
-      <Button onClick={generate} disabled={!text.trim()}>
-        {result ? "Regenerate pages" : "Generate pages"}
+      <Button onClick={() => void generate()} disabled={!text.trim() || !!preparing}>
+        {preparing ?? (result ? "Regenerate pages" : "Generate pages")}
       </Button>
       {!text.trim() && <p className="text-sm text-muted">Add the text to write first.</p>}
 
@@ -149,6 +190,11 @@ export function PlotterPanel({ order, text, glyphSet, onSaved }: Props) {
           {order.paper !== "premium-card" && result.pages.length > paidUnits && (
             <Alert tone="error" title="More pages than the customer paid for">
               The layout needs {result.pages.length} pages but the order covers {paidUnits}. Tighten spacing or margins, or contact the customer before writing.
+            </Alert>
+          )}
+          {result.missingDiagrams.length > 0 && (
+            <Alert tone="error" title="Some diagrams could not be loaded">
+              Space was left for {result.missingDiagrams.length === 1 ? "1 diagram" : `${result.missingDiagrams.length} diagrams`} ({result.missingDiagrams.join(", ")}). Draw them by hand or ask the customer to re-upload.
             </Alert>
           )}
           {result.missing.length > 0 && (

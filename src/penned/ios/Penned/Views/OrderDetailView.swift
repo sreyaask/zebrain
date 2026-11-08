@@ -70,7 +70,10 @@ struct OrderDetailView: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     PriceRow(label: "Writing · \(order.billableUnits) × \(rupees(order.unitPrice))", value: rupees(order.writingAmount))
-                    PriceRow(label: "Paper and ink", value: "Included")
+                    if !order.paper.isCard {
+                        PriceRow(label: order.notebookSource == .own ? "Notebook (yours)" : "Notebook",
+                                 value: (order.notebookAmount ?? 0) == 0 ? "Free" : rupees(order.notebookAmount ?? 0))
+                    }
                     PriceRow(label: "Delivery", value: order.deliveryAmount == 0 ? "Free" : rupees(order.deliveryAmount))
                     Divider()
                     PriceRow(label: "Total", value: rupees(order.total), emphasized: true)

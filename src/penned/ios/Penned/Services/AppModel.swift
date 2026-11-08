@@ -115,11 +115,20 @@ final class AppModel {
         guard let uid = userID else { throw AppError.signedOut }
         let order: Order = try await client.from("orders").insert(draft).select().single().execute().value
         for (i, file) in files.enumerated() {
-            let path = "\(uid.uuidString.lowercased())/\(order.id.uuidString.lowercased())/\(i + 1).\(file.kind == "pdf" ? "pdf" : "jpg")"
-            try await client.storage.from("uploads").upload(path, data: file.data, options: FileOptions(contentType: file.kind == "pdf" ? "application/pdf" : "image/jpeg"))
+            // Diagrams keep their names (diagram-<id>.png): the text refers to them by id.
+            let name = file.uploadName ?? "\(i + 1).\(file.kind == "pdf" ? "pdf" : "jpg")"
+            let path = "\(uid.uuidString.lowercased())/\(order.id.uuidString.lowercased())/\(name)"
+            let type = file.kind == "pdf" ? "application/pdf" : (name.hasSuffix(".png") ? "image/png" : "image/jpeg")
+            try await client.storage.from("uploads").upload(path, data: file.data, options: FileOptions(contentType: type))
             try await client.from("order_files").insert(NewOrderFile(orderId: order.id, path: path, kind: file.kind, pages: file.pages)).execute()
         }
         return order
+    }
+
+    /// Looks a notebook up by its barcode. nil when we don't know it yet.
+    func notebook(barcode: String) async -> CatalogNotebook? {
+        let rows: [CatalogNotebook]? = try? await client.from("notebook_catalog").select().eq("barcode", value: barcode).limit(1).execute().value
+        return rows?.first
     }
 
     /// Demo payment. Replace with a payment gateway (and its webhook) before launch.
@@ -147,4 +156,8 @@ struct ScannedFile: Identifiable {
     let kind: String // "image" | "pdf"
     let pages: Int
     let name: String
+    /// Fixed upload file name, e.g. "diagram-<id>.png". nil = numbered by position.
+    var uploadName: String? = nil
+    /// Diagrams are uploaded for tracing but not listed as pages.
+    var isDiagram: Bool { uploadName?.hasPrefix("diagram-") ?? false }
 }

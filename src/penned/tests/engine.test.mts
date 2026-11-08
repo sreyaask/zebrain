@@ -115,3 +115,67 @@ test("sheet definition: 91 characters per repetition", () => {
 
 // End-to-end extraction with a rendered sheet is in tests/extract.e2e.mjs (needs Chromium).
 export { extractGlyphs };
+
+// ---------- Diagrams ----------
+import { traceDiagram, DIAGRAM_LINE } from "../lib/engine/index.ts";
+
+function diagramBitmap(): Bitmap {
+  // A 300×200 box with a diagonal: like a simple ray diagram.
+  const bm = blank(300, 200);
+  bar(bm, 10, 10, 290, 13);
+  bar(bm, 10, 187, 290, 190);
+  bar(bm, 10, 10, 13, 190);
+  bar(bm, 287, 10, 290, 190);
+  for (let x = 20; x < 280; x++) {
+    const y = Math.round(20 + (x - 20) * (160 / 260));
+    for (let d = -1; d <= 1; d++) bm.data[(y + d) * bm.width + x] = 1;
+  }
+  return bm;
+}
+
+test("traceDiagram turns a scanned diagram into a handful of strokes", () => {
+  const d = traceDiagram(diagramBitmap());
+  assert.equal(d.width, 300);
+  assert.equal(d.height, 200);
+  assert.ok(d.strokes.length >= 1 && d.strokes.length <= 12, `strokes: ${d.strokes.length}`);
+  for (const s of d.strokes) for (const p of s) assert.ok(p.x >= 0 && p.x <= 300 && p.y >= 0 && p.y <= 200);
+});
+
+test("diagram lines are recognised", () => {
+  assert.equal("[[diagram:p2-1]]".match(DIAGRAM_LINE)?.[1], "p2-1");
+  assert.equal("see [[diagram:p2-1]]".match(DIAGRAM_LINE), null);
+});
+
+test("layout places a traced diagram between text lines, inside the margins", () => {
+  const set = boxGlyphs("abcdefghijklmnopqrstuvwxyz");
+  const spec = pageSpecFor({ widthMm: 176, heightMm: 250 }, 18, 1.3);
+  const diagram = traceDiagram(diagramBitmap());
+  const text = "the force acts on the ball\n[[diagram:p1-1]]\nthe ball moves along the ray";
+  const r = layoutHandwriting(text, set, spec, { headingStyle: "plain", seed: "d", diagrams: { "p1-1": diagram } });
+  assert.equal(r.pages.length, 1);
+  assert.deepEqual(r.missingDiagrams, []);
+  const page = r.pages[0];
+  // Diagram strokes are the long ones; text glyph boxes are tiny.
+  const big = page.strokes.filter((s) => Math.max(...s.map((p) => p.x)) - Math.min(...s.map((p) => p.x)) > 15);
+  assert.ok(big.length >= 1, "diagram strokes present");
+  const ys = big.flat().map((p) => p.y);
+  const textYs = page.strokes.filter((s) => !big.includes(s)).flat().map((p) => p.y);
+  const firstLineY = Math.min(...textYs);
+  const lastLineY = Math.max(...textYs);
+  assert.ok(Math.min(...ys) > firstLineY, "diagram is below the first line");
+  assert.ok(Math.max(...ys) < lastLineY, "diagram is above the last line");
+  for (const p of big.flat()) assert.ok(p.x >= spec.marginLeftMm - 0.5 && p.x <= spec.widthMm - spec.marginRightMm + 0.5, `x ${p.x} in margins`);
+});
+
+test("a diagram that doesn't fit starts a new page; a missing one is reported", () => {
+  const set = boxGlyphs("ab");
+  const spec = pageSpecFor({ widthMm: 148, heightMm: 210 }, 12, 1.0);
+  const lines = Array(20).fill("ab ab").join("\n");
+  const r = layoutHandwriting(`${lines}\n[[diagram:big]]\nab\n[[diagram:gone]]`, set, spec, {
+    headingStyle: "plain",
+    seed: "e",
+    diagrams: { big: traceDiagram(diagramBitmap()) },
+  });
+  assert.equal(r.pages.length, 2, "diagram moved to page 2");
+  assert.deepEqual(r.missingDiagrams, ["gone"]);
+});

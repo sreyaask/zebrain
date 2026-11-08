@@ -12,18 +12,35 @@ export interface PageSpec {
   xHeightMm: number;
 }
 
+/**
+ * A diagram cut from the customer's page, already traced into pen strokes.
+ * Coordinates are in source pixels (origin top-left, y down); width/height are the crop size.
+ */
+export interface Diagram {
+  strokes: Stroke[];
+  width: number;
+  height: number;
+}
+
+/** A line containing only `[[diagram:<id>]]` marks where a diagram goes. */
+export const DIAGRAM_LINE = /^\[\[diagram:([\w-]+)\]\]$/;
+
 export interface LayoutOptions {
   headingStyle: "underline" | "larger" | "plain";
   /** Seed for natural variation; use the order code so re-runs match. */
   seed: string;
   /** Variation strength, 0 = mechanical, 1 = default. */
   variation?: number;
+  /** Traced diagrams by id, for `[[diagram:<id>]]` lines. */
+  diagrams?: Record<string, Diagram>;
 }
 
 export interface LayoutResult {
   pages: PlotPage[];
   missing: string[];
   lines: number;
+  /** Diagram ids that were referenced but not supplied (space is left for them). */
+  missingDiagrams: string[];
 }
 
 /** Notebook geometry matching the customer-facing layout editor (lib/pricing.ts). */
@@ -117,7 +134,7 @@ export function layoutHandwriting(text: string, set: GlyphSet, spec: PageSpec, o
   const linesPerPage = Math.max(1, Math.floor((spec.heightMm - spec.topMm - spec.bottomMm) / spec.linePitchMm) + 1);
 
   // 1) Break the text into visual lines.
-  type VLine = { words: string[]; scale: number; heading: boolean };
+  type VLine = { words: string[]; scale: number; heading: boolean; diagram?: string };
   const vlines: VLine[] = [];
   const measure = (word: string, scale: number) =>
     Array.from(word).reduce((w, ch) => {
@@ -126,6 +143,11 @@ export function layoutHandwriting(text: string, set: GlyphSet, spec: PageSpec, o
     }, 0);
 
   for (const raw of text.replace(/\r\n?/g, "\n").split("\n")) {
+    const diagram = raw.trim().match(DIAGRAM_LINE);
+    if (diagram) {
+      vlines.push({ words: [], scale: 1, heading: false, diagram: diagram[1] });
+      continue;
+    }
     const heading = raw.startsWith("# ");
     const scale = heading && opts.headingStyle === "larger" ? 1.3 : 1;
     const words = (heading ? raw.slice(2) : raw).split(/[ \t]+/).filter(Boolean);
@@ -159,17 +181,53 @@ export function layoutHandwriting(text: string, set: GlyphSet, spec: PageSpec, o
     if (cur.length) vlines.push({ words: cur, scale, heading });
   }
   // Drop trailing blank lines.
-  while (vlines.length && !vlines[vlines.length - 1].words.length) vlines.pop();
+  while (vlines.length && !vlines[vlines.length - 1].words.length && vlines[vlines.length - 1].diagram === undefined) vlines.pop();
 
-  // 2) Draw each line.
+  // 2) Draw each line. A running cursor (page, row) lets diagrams take several rows.
   const pages: PlotPage[] = [];
   const lastSample = new Map<string, number>();
-  vlines.forEach((line, i) => {
-    const pageIdx = Math.floor(i / linesPerPage);
-    const row = i % linesPerPage;
-    if (!pages[pageIdx]) pages[pageIdx] = { widthMm: spec.widthMm, heightMm: spec.heightMm, strokes: [] };
-    const page = pages[pageIdx];
+  const missingDiagrams = new Set<string>();
+  let pageIdx = 0;
+  let row = 0;
+  const pageAt = (i: number) => (pages[i] ??= { widthMm: spec.widthMm, heightMm: spec.heightMm, strokes: [] });
+  const newPage = () => {
+    pageIdx++;
+    row = 0;
+  };
+
+  vlines.forEach((line) => {
+    if (line.diagram !== undefined) {
+      const d = opts.diagrams?.[line.diagram];
+      if (!d || d.width <= 0 || d.height <= 0) {
+        // Leave room so someone can draw it by hand, and report it.
+        missingDiagrams.add(line.diagram);
+        if (row + 4 > linesPerPage && row > 0) newPage();
+        pageAt(pageIdx);
+        row += 4;
+        return;
+      }
+      // Natural size (~0.13 mm per scan pixel), shrunk to fit the text width and most of a page.
+      const maxH = Math.max(spec.linePitchMm * 3, (linesPerPage - 1) * spec.linePitchMm * 0.8);
+      const scale = Math.min(0.13, usable / d.width, maxH / d.height);
+      const w = d.width * scale;
+      const h = d.height * scale;
+      const rows = Math.max(2, Math.ceil((h + spec.linePitchMm * 0.5) / spec.linePitchMm));
+      if (row > 0 && row + rows > linesPerPage) newPage();
+      const page = pageAt(pageIdx);
+      const x0 = spec.marginLeftMm + (usable - w) / 2;
+      const y0 = spec.topMm + row * spec.linePitchMm - spec.linePitchMm * 0.75;
+      for (const stroke of d.strokes) {
+        if (stroke.length < 2) continue;
+        page.strokes.push(stroke.map((p) => ({ x: round(x0 + p.x * scale), y: round(y0 + p.y * scale) })));
+      }
+      row += rows;
+      return;
+    }
+
+    if (row >= linesPerPage) newPage();
+    const page = pageAt(pageIdx);
     const baseline = spec.topMm + row * spec.linePitchMm - 0.35 + jit(0.25);
+    row += 1;
     const lineSlope = jit(0.004); // the whole line drifts very slightly
     let x = spec.marginLeftMm + jit(0.6);
     const startX = x;
@@ -213,7 +271,7 @@ export function layoutHandwriting(text: string, set: GlyphSet, spec: PageSpec, o
     }
   });
 
-  return { pages, missing: Array.from(missing), lines: vlines.length };
+  return { pages, missing: Array.from(missing), lines: vlines.length, missingDiagrams: Array.from(missingDiagrams) };
 }
 
 const round = (n: number) => Math.round(n * 100) / 100;

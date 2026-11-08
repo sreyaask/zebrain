@@ -118,3 +118,16 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   as a headline; any claim it helps avoid writing notes or get past a teacher's ban. "Notebook continuations" was removed for this reason.
 - "Indexed": Notes has a free "Start with a contents list" option (on by default) that puts numbered headings at the front
   (`withContents` in components/order/types.ts). It's a list on page 1, not a separate page: the engine has no page breaks.
+
+## Notebook pricing, own notebooks, diagrams (added 8 Nov 2026)
+- DB pricing v2 (`supabase/migrations/20261108000003_notebook_pricing.sql`, applied live): pages × ₹11 with no minimum, plus ₹120
+  when Penned supplies a plain/ruled notebook (`notebook_source = 'new'`), delivery ₹49 (free above ₹500). Cards stay ₹15.
+  `notebook_source = 'own'` = "Continue in my notebook": the rider collects it, no notebook charge. `notebook_spec` (jsonb, mm) holds
+  its measurements; `notebook_catalog` maps barcodes to known notebooks (admins write, signed-in users read). The page count is chosen
+  by the customer (detected from their files, editable). The website still shows the older demo prices; the user chose "iPhone app only".
+- iPhone notes flow (Complete and Missed notes): Notes → Notebook (Ruled ₹120 / Plain ₹120 / Continue in my notebook) → Delivery → Review.
+  Layout, ink and contents list are not customer choices. Barcode scanning uses VisionKit DataScanner (`Services/BarcodeScanner.swift`).
+- Reading notes (`ios/Penned/Services/TextRecognizer.swift`): PDF pages are rendered on white (thumbnails are transparent, which broke OCR),
+  digital PDFs use positioned text-layer lines, ink not covered by text becomes a diagram crop uploaded as `diagram-<id>.png`, and the text
+  gets a `[[diagram:<id>]]` line. The admin PlotterPanel traces the crops (`lib/engine/diagram.ts`) and the layout places them between lines.
+- The iOS code has never been compiled here (no Swift toolchain in the cloud container).
