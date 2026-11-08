@@ -59,6 +59,7 @@ struct MainTabs: View {
 struct AccountView: View {
     @Environment(AppModel.self) private var model
     @AppStorage(Sounds.settingKey) private var soundEffects = true
+    @State private var showingHelp = false
     var body: some View {
         NavigationStack {
             List {
@@ -71,18 +72,23 @@ struct AccountView: View {
                 } footer: {
                     Text("Short sounds for taps, steps and finished orders. They follow your phone's silent switch.")
                 }
-                Section("Help") {
-                    Text("Free rewrite of any page within 24 hours of delivery.")
-                    Text("We deliver in Gachibowli, Kondapur, Madhapur, Hitech City, Kukatpally, Banjara Hills, Jubilee Hills, Ameerpet, Secunderabad and LB Nagar.")
+                Section {
+                    Button { showingHelp = true } label: { Label("Help and questions", systemImage: "questionmark.circle") }
+                    if let url = Support.whatsApp(about: nil) { Link(destination: url) { Label("Chat with us on WhatsApp", systemImage: "message") } }
+                    if let url = Support.phone { Link(destination: url) { Label("Call us", systemImage: "phone") } }
+                    if let url = Support.email(about: nil) { Link(destination: url) { Label("Email us", systemImage: "envelope") } }
+                } header: {
+                    Text("Help")
+                } footer: {
+                    Text("Free rewrite of any page within 24 hours of delivery. Your files are private to you and the Penned team.")
                 }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
                 Section {
                     Button("Sign out", role: .destructive) { Task { await model.signOut() } }
                 }
             }
             .paperBackground()
             .navigationTitle("Account")
+            .sheet(isPresented: $showingHelp) { HelpCenterView() }
         }
     }
 }

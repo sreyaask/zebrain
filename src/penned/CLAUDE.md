@@ -131,3 +131,7 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   digital PDFs use positioned text-layer lines, ink not covered by text becomes a diagram crop uploaded as `diagram-<id>.png`, and the text
   gets a `[[diagram:<id>]]` line. The admin PlotterPanel traces the crops (`lib/engine/diagram.ts`) and the layout places them between lines.
 - The iOS code has never been compiled here (no Swift toolchain in the cloud container).
+- Trust (iOS, 8 Nov 2026): `Views/TrustViews.swift` holds the promises (`Guarantee`: final price, free 24 h rewrite, real pen,
+  every page checked by a person, private files, live tracking), Blinkit-style `BillCard`, `HelpCenterView` (FAQ), contact buttons,
+  `OrderPlacedView` (what happens next) and a shareable text receipt. Support contacts are in `Config.swift`
+  (`supportWhatsApp`, `supportPhone`, `supportEmail`); empty values are hidden. Never add ratings, reviews or user counts.

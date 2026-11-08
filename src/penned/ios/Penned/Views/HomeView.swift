@@ -8,6 +8,7 @@ struct HomeView: View {
     @Binding var tab: MainTabs.Tab
     @State private var newKind: OrderKind?
     @State private var addingStyle = false
+    @State private var showingHelp = false
     @ScaledMetric(relativeTo: .body) private var sampleHeight: CGFloat = 88
 
     private var active: [Order] { model.orders.filter { $0.status != .delivered && $0.status != .cancelled } }
@@ -20,6 +21,9 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     header
                     VStack(alignment: .leading, spacing: 28) {
+                        TrustStrip()
+                            .padding(.horizontal, -16)
+                            .contentMargins(.horizontal, 16, for: .scrollContent)
                         if let error = model.lastError {
                             Label(error, systemImage: "wifi.exclamationmark")
                                 .font(.footnote.weight(.semibold))
@@ -56,6 +60,7 @@ struct HomeView: View {
             .navigationDestination(for: Order.self) { OrderDetailView(order: $0) }
             .sheet(item: $newKind) { NewOrderView(kind: $0) }
             .sheet(isPresented: $addingStyle) { AddStyleView() }
+            .sheet(isPresented: $showingHelp) { HelpCenterView() }
         }
     }
 
@@ -171,13 +176,16 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 14) {
             SectionLabel("Why Penned")
             VStack(spacing: 0) {
-                PromiseRow(symbol: "pencil.tip", title: "A real pen, real paper", detail: "Written by a pen machine, never printed")
-                Divider().overlay(Theme.line)
-                PromiseRow(symbol: "arrow.uturn.backward.circle", title: "Free rewrite", detail: "Any page, within 24 hours of delivery")
-                Divider().overlay(Theme.line)
-                PromiseRow(symbol: "location.circle", title: "Live tracking", detail: "Follow every page as it's written")
+                ForEach(Array(Guarantee.allCases.enumerated()), id: \.element) { i, g in
+                    if i > 0 { Divider().overlay(Theme.line) }
+                    GuaranteeRow(guarantee: g)
+                }
             }
             .card(padding: 0)
+            Button { showingHelp = true } label: {
+                Label("Questions? See how Penned works", systemImage: "questionmark.circle").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.pennedSecondary)
         }
     }
 }
@@ -229,28 +237,6 @@ private struct TilePressStyle: ButtonStyle {
         configuration.label
             .offset(y: configuration.isPressed ? 3 : 0)
             .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
-    }
-}
-
-private struct PromiseRow: View {
-    let symbol: String
-    let title: String
-    let detail: String
-    var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: symbol)
-                .font(.title3.weight(.bold))
-                .frame(width: 32)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.subheadline.weight(.heavy))
-                Text(detail).font(.footnote).foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .accessibilityElement(children: .combine)
     }
 }
 

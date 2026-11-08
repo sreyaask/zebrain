@@ -6,6 +6,7 @@ struct OrderDetailView: View {
     @State private var events: [OrderEvent] = []
     @State private var error: String?
     @State private var paying = false
+    @State private var copied = false
 
     var body: some View {
         ScrollView {
@@ -68,30 +69,46 @@ struct OrderDetailView: View {
                     .card()
                 }
 
-                VStack(alignment: .leading, spacing: 10) {
-                    PriceRow(label: "Writing · \(order.billableUnits) × \(rupees(order.unitPrice))", value: rupees(order.writingAmount))
-                    if !order.paper.isCard {
-                        PriceRow(label: order.notebookSource == .own ? "Notebook (yours)" : "Notebook",
-                                 value: (order.notebookAmount ?? 0) == 0 ? "Free" : rupees(order.notebookAmount ?? 0))
-                    }
-                    PriceRow(label: "Delivery", value: order.deliveryAmount == 0 ? "Free" : rupees(order.deliveryAmount))
-                    Divider()
-                    PriceRow(label: "Total", value: rupees(order.total), emphasized: true)
-                }
-                .card()
+                BillCard(lines: order.billLines, total: order.total,
+                         footnote: order.paymentStatus == "paid" ? "Paid. This is the full amount; nothing more is charged." : nil)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    SectionLabel("Deliver to")
-                    Text("\(order.addressLine1), \(order.area), Hyderabad \(order.pincode)")
-                    Text(order.timeSlot.label).font(.subheadline).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Order details").font(.headline.weight(.heavy))
+                    DetailRow(label: "Order ID") {
+                        HStack(spacing: 6) {
+                            Text(order.code).monospaced()
+                            Button {
+                                UIPasteboard.general.string = order.code
+                                copied = true
+                                Sounds.shared.play(.tap)
+                            } label: {
+                                Image(systemName: copied ? "checkmark" : "doc.on.doc").frame(width: 32, height: 32).contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(copied ? "Copied" : "Copy order ID")
+                        }
+                    }
+                    DetailRow(label: "Placed") { Text(order.createdAt.formatted(date: .abbreviated, time: .shortened)) }
+                    DetailRow(label: "Payment") { Text(order.paymentStatus == "paid" ? "Paid" : "Not paid yet") }
+                    DetailRow(label: "Deliver to") {
+                        Text("\(order.addressLine1), \(order.area), Hyderabad \(order.pincode)").multilineTextAlignment(.trailing)
+                    }
+                    DetailRow(label: "Time") { Text(order.timeSlot.label) }
+                    if order.notebookSource == .own {
+                        DetailRow(label: "Notebook") { Text("Yours, collected by our rider") }
+                    }
+                    ShareLink(item: order.receipt, subject: Text("Penned receipt \(order.code)")) {
+                        Label("Share receipt", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.pennedSecondary)
                 }
                 .card()
 
                 if order.status == .delivered {
-                    Text("Not happy with a page? We rewrite it free within 24 hours of delivery.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 0) { GuaranteeRow(guarantee: .rewrite) }.card(padding: 0)
                 }
+
+                OrderHelpCard(order: order)
                 if let error {
                     Label(error, systemImage: "exclamationmark.circle").font(.footnote).foregroundStyle(.red)
                 }
@@ -138,17 +155,17 @@ struct OrderDetailView: View {
     }
 }
 
-private struct PriceRow: View {
+private struct DetailRow<Value: View>: View {
     let label: String
-    let value: String
-    var emphasized = false
+    @ViewBuilder var value: () -> Value
     var body: some View {
-        HStack {
-            Text(label).foregroundStyle(emphasized ? .primary : .secondary)
-            Spacer()
-            Text(value).monospacedDigit()
+        HStack(alignment: .firstTextBaseline) {
+            Text(label).foregroundStyle(.secondary)
+            Spacer(minLength: 12)
+            value()
         }
-        .font(emphasized ? .headline : .subheadline)
+        .font(.subheadline)
+        .accessibilityElement(children: .combine)
     }
 }
 

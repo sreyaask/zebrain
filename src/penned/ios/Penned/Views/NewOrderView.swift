@@ -43,9 +43,9 @@ struct NewOrderView: View {
     // Layout: Penned's house style for notes (the customer doesn't choose it).
     @State private var ink: Ink = .blue
     @State private var pageSize: PageSize = .b5
-    private let margin: Double = 18
-    private let spacing: Double = 1.3
-    private let heading: HeadingStyle = .underline
+    private var margin: Double { 18 }
+    private var spacing: Double { 1.3 }
+    private var heading: HeadingStyle { .underline }
     // Notebook (notes)
     enum NotebookChoice: String, CaseIterable, Identifiable { case ruled, plain, own; var id: String { rawValue } }
     @State private var notebook: NotebookChoice = .ruled
@@ -578,24 +578,34 @@ struct NewOrderView: View {
             }
             LabeledContent("Deliver", value: "\(area) · \(slot.label)")
         }
-        Section("Price") {
-            LabeledContent("Writing · \(quote.billableUnits) × \(rupees(quote.unitPrice))", value: rupees(quote.writing))
-            if isNotes {
-                LabeledContent(notebook == .own ? "Notebook (yours)" : "Notebook", value: quote.notebook == 0 ? "Free" : rupees(quote.notebook))
+        Section {
+            BillCard(
+                lines: quote.billLines(isNotes: isNotes, ownNotebook: isNotes && notebook == .own,
+                                       unitName: isNotes ? "pages" : (cardStyle == .letter ? "letters" : "cards")),
+                total: quote.total,
+                footnote: "This is the final price. Nothing is added after you pay."
+            )
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+        }
+        Section {
+            VStack(alignment: .leading, spacing: 0) {
+                GuaranteeRow(guarantee: .rewrite)
+                Divider().overlay(Theme.line)
+                GuaranteeRow(guarantee: .checked)
+                Divider().overlay(Theme.line)
+                GuaranteeRow(guarantee: .privateFiles)
             }
-            LabeledContent("Delivery", value: quote.delivery == 0 ? "Free" : rupees(quote.delivery))
-            LabeledContent("Total", value: rupees(quote.total)).bold()
+            .card(padding: 0, lifted: false)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+        } header: {
+            Text("Our promise")
         }
     }
 
     private func done(_ order: Order) -> some View {
-        ContentUnavailableView {
-            Label("Order \(order.code) placed", systemImage: "checkmark.circle")
-        } description: {
-            Text(order.paymentStatus == "paid" ? "\(rupees(order.total)) paid. You can follow every page in Orders." : "Saved. Open it in Orders to pay and follow progress.")
-        } actions: {
-            Button("Done") { dismiss() }.buttonStyle(.pennedPrimary)
-        }
+        OrderPlacedView(order: order, ownNotebook: isNotes && notebook == .own) { dismiss() }
     }
 
     // MARK: Actions

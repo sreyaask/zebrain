@@ -31,6 +31,10 @@ struct SignInView: View {
                     .clipShape(RoundedRectangle(cornerRadius: Theme.radius - Theme.border, style: .continuous))
                     .card(padding: 0)
 
+                TrustStrip(items: [.realPen, .rewrite, .privateFiles, .finalPrice])
+                    .padding(.horizontal, -20)
+                    .contentMargins(.horizontal, 20, for: .scrollContent)
+
                 VStack(alignment: .leading, spacing: 16) {
                     Text(creating ? "Create your account" : "Log in")
                         .font(.title.weight(.black))
