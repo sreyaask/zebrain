@@ -149,3 +149,8 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   plus a free note (`orders.delivery_note`, shown on the admin order page), time slots as chips, "Order again" (Home strip, Orders
   long-press, order page) that pre-fills delivery details and the notebook (`NewOrderView(kind:prefill:)`), and a page-1 preview in the
   customer's handwriting on the review step.
+- Connected features (iOS, 8 Nov 2026): `AppModel` polls every 20 s while any order is active and on returning to the app, and shows a
+  `Toast` banner (MainTabs overlay, tap → Orders) when an order's status changes. Drafts: one unfinished order saved on the phone
+  (`DraftStore`, Application Support/Draft, file protection on) via "Save as draft" when leaving the order flow; Home shows "Finish your
+  … order" with Resume. Home also shows a one-tap star rating for the latest unrated delivery (`ratedOrderIDs` from order_feedback) and a
+  "Get started" checklist (handwriting, first order, saved address) until the first order. Orders is searchable by name, ID or area.

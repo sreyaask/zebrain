@@ -43,6 +43,8 @@ struct RootView: View {
 }
 
 struct MainTabs: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.scenePhase) private var scenePhase
     enum Tab: Hashable { case home, orders, scan, handwriting, account }
     @State private var tab: Tab = .home
     @State private var lastTab: Tab = .home
@@ -67,6 +69,22 @@ struct MainTabs: View {
             }
         }
         .sheet(isPresented: $scanning) { NewOrderView(kind: .completeNotes, startWithScanner: true) }
+        // Status banners drop in over any screen; tapping one opens Orders.
+        .overlay(alignment: .top) {
+            if let toast = model.toast {
+                ToastBanner(toast: toast) {
+                    model.toast = nil
+                    if toast.orderID != nil { tab = .orders }
+                }
+                .padding(.horizontal, 12)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(1)
+            }
+        }
+        .animation(.spring(duration: 0.35), value: model.toast)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await model.refresh() } }
+        }
     }
 }
 
@@ -138,5 +156,36 @@ struct SavedAddressesView: View {
         }
         .paperBackground()
         .navigationTitle("Saved addresses")
+    }
+}
+
+/// The drop-down banner for a status change or a saved draft.
+struct ToastBanner: View {
+    let toast: Toast
+    let onTap: () -> Void
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                Image(systemName: toast.symbol)
+                    .font(.headline.weight(.bold))
+                    .frame(width: 38, height: 38)
+                    .background(Theme.paper.opacity(0.15), in: Circle())
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(toast.title).font(.subheadline.weight(.heavy))
+                    Text(toast.detail).font(.caption.weight(.semibold)).opacity(0.8)
+                }
+                Spacer(minLength: 0)
+                if toast.orderID != nil { Image(systemName: "chevron.right").font(.caption.weight(.heavy)).accessibilityHidden(true) }
+            }
+            .foregroundStyle(Theme.paper)
+            .padding(12)
+            .background(Theme.ink, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .shadow(color: .black.opacity(0.25), radius: 14, y: 6)
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .gesture(DragGesture().onEnded { if $0.translation.height < -20 { onTap() } })
     }
 }

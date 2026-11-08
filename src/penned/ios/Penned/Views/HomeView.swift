@@ -10,6 +10,15 @@ struct HomeView: View {
     @State private var addingStyle = false
     @State private var showingHelp = false
     @State private var reorder: Order?
+    @State private var resuming: OrderKind?
+    @State private var quickRating = 0
+    /// The latest delivered order that hasn't been rated yet (within a week).
+    private var toRate: Order? {
+        model.orders.first { o in
+            o.status == .delivered && !model.ratedOrderIDs.contains(o.id)
+                && (o.deliveredAt ?? o.createdAt) > Date().addingTimeInterval(-7 * 86_400)
+        }
+    }
     private var past: [Order] { Array(model.orders.filter { $0.status == .delivered }.prefix(6)) }
     @ScaledMetric(relativeTo: .body) private var sampleHeight: CGFloat = 88
 
@@ -33,6 +42,9 @@ struct HomeView: View {
                                 .font(.footnote.weight(.semibold))
                                 .foregroundStyle(.red)
                         }
+                        if let draft = model.draft { draftCard(draft) }
+                        if model.hasLoaded, let order = toRate { rateCard(order) }
+                        if model.hasLoaded && model.orders.isEmpty { checklist }
                         if model.hasLoaded {
                             handwritingCard
                         } else {
@@ -67,6 +79,7 @@ struct HomeView: View {
             .sheet(isPresented: $addingStyle) { AddStyleView() }
             .sheet(isPresented: $showingHelp) { HelpCenterView() }
             .sheet(item: $reorder) { NewOrderView(kind: $0.kindGuess, prefill: $0) }
+            .sheet(item: $resuming) { NewOrderView(kind: $0, resumeDraft: true) }
         }
     }
 
@@ -175,6 +188,111 @@ struct HomeView: View {
                 tab = .handwriting
             }
         }
+    }
+
+    // MARK: Draft, rating, checklist
+
+    private func draftCard(_ d: OrderDraft) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: "tray.full.fill")
+                .font(.title3.weight(.bold))
+                .frame(width: 44, height: 44)
+                .background(Theme.fill, in: Circle())
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Finish your \(d.orderKind.title.lowercased()) order").font(.subheadline.weight(.heavy))
+                Text("\(d.summary) · saved \(d.savedAt.formatted(.relative(presentation: .named)))")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 4)
+            Button("Resume") {
+                Sounds.shared.play(.tap)
+                resuming = d.orderKind
+            }
+            .font(.subheadline.weight(.heavy))
+            .buttonStyle(.plain)
+            .foregroundStyle(Theme.paper)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 36)
+            .background(Theme.ink, in: Capsule())
+        }
+        .card(padding: 14)
+        .contextMenu {
+            Button("Delete draft", systemImage: "trash", role: .destructive) { model.clearDraft() }
+        }
+    }
+
+    /// One-tap rating for the latest delivery, like food apps ask on the home screen.
+    private func rateCard(_ order: Order) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("How was \(order.title.isEmpty ? order.code : order.title)?").font(.subheadline.weight(.heavy)).lineLimit(1)
+                Spacer()
+                NavigationLink(value: order) { Text("Details").font(.caption.weight(.heavy)) }
+            }
+            HStack(spacing: 4) {
+                ForEach(1...5, id: \.self) { i in
+                    Button {
+                        quickRating = i
+                        Task {
+                            try? await model.rate(order, rating: i, comment: "")
+                            quickRating = 0
+                            model.show(Toast(symbol: "star.fill", title: "Thanks for rating", detail: i <= 3 ? "Not right? Your free rewrite lasts 24 hours." : "Glad you liked it.", orderID: i <= 3 ? order.id : nil))
+                        }
+                    } label: {
+                        Image(systemName: i <= quickRating ? "star.fill" : "star")
+                            .font(.title2.weight(.bold))
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Rate \(i) out of 5")
+                }
+            }
+        }
+        .card(padding: 14)
+    }
+
+    /// Getting started: handwriting, first order, saved address. Disappears once there are orders.
+    private var checklist: some View {
+        let steps: [(String, String, Bool, () -> Void)] = [
+            ("Teach us your handwriting", "pencil.and.scribble", !model.styles.isEmpty, { tab = .handwriting }),
+            ("Place your first order", "doc.viewfinder", !model.orders.isEmpty, { newKind = .completeNotes }),
+            ("Save your address", "mappin.and.ellipse", !model.addresses.isEmpty, { newKind = .completeNotes }),
+        ]
+        let done = steps.filter { $0.2 }.count
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Get started").font(.headline.weight(.heavy))
+                Spacer()
+                Text("\(done) of \(steps.count) done").font(.caption.weight(.heavy)).foregroundStyle(done > 0 ? Theme.success : .secondary)
+            }
+            BoldProgress(value: Double(done) / Double(steps.count))
+            ForEach(Array(steps.enumerated()), id: \.offset) { _, step in
+                Button {
+                    Sounds.shared.play(.tap)
+                    step.3()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: step.2 ? "checkmark.circle.fill" : step.1)
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(step.2 ? Theme.success : Theme.ink)
+                            .frame(width: 28)
+                        Text(step.0)
+                            .font(.subheadline.weight(.bold))
+                            .strikethrough(step.2)
+                            .foregroundStyle(step.2 ? .secondary : Theme.ink)
+                        Spacer()
+                        if !step.2 { Image(systemName: "chevron.right").font(.caption.weight(.heavy)).foregroundStyle(.secondary) }
+                    }
+                    .frame(minHeight: 40)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(step.2)
+            }
+        }
+        .card()
     }
 
     // MARK: Order again

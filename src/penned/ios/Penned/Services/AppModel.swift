@@ -13,6 +13,13 @@ final class AppModel {
     var orders: [Order] = []
     var styles: [HandwritingProfile] = []
     var addresses: [SavedAddress] = []
+    /// Orders the customer has already rated (so Home stops asking).
+    var ratedOrderIDs: Set<UUID> = []
+    /// A banner that drops in when something changes, e.g. "Out for delivery".
+    var toast: Toast?
+    /// The unfinished order saved on this phone, if any.
+    var draft: OrderDraft? = DraftStore.load()?.draft
+    @ObservationIgnored private var pollTask: Task<Void, Never>?
     var lastError: String?
     /// False until the first load finishes, so screens show loading instead of a misleading empty state.
     var hasLoaded = false
@@ -40,6 +47,9 @@ final class AppModel {
                 orders = []
                 styles = []
                 addresses = []
+                ratedOrderIDs = []
+                pollTask?.cancel()
+                pollTask = nil
             }
         }
     }
@@ -81,17 +91,77 @@ final class AppModel {
         do {
             async let o: [Order] = client.from("orders").select().order("created_at", ascending: false).execute().value
             async let s: [HandwritingProfile] = client.from("handwriting_profiles").select().order("created_at", ascending: false).execute().value
+            let before = Dictionary(orders.map { ($0.id, $0.status) }, uniquingKeysWith: { a, _ in a })
             (orders, styles) = try await (o, s)
+            announceChanges(since: before)
+            let rated: [RatedRow] = (try? await client.from("order_feedback").select("order_id").execute().value) ?? []
+            ratedOrderIDs = Set(rated.map(\.orderId))
             addresses = (try? await client.from("addresses").select("id, label, line1, area, pincode, landmark, receiver_name, receiver_phone")
                 .order("created_at", ascending: false).execute().value) ?? []
             lastError = nil
             hasLoaded = true
             print("[Penned] loaded \(orders.count) orders, \(styles.count) handwriting styles")
+            keepLiveIfNeeded()
         } catch {
             print("[Penned] ERROR loading data: \(error)")
             lastError = "Couldn't load your data. Pull to try again."
             hasLoaded = true
         }
+    }
+
+    // MARK: Live updates
+
+    var activeOrders: [Order] { orders.filter { $0.status != .delivered && $0.status != .cancelled } }
+
+    /// While an order is moving, check every 20 seconds so Home, Orders and the banner stay current.
+    private func keepLiveIfNeeded() {
+        guard pollTask == nil, !activeOrders.isEmpty else { return }
+        pollTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(20))
+                guard let self, !Task.isCancelled else { return }
+                if self.activeOrders.isEmpty { break }
+                await self.refresh()
+            }
+            self?.pollTask = nil
+        }
+    }
+
+    /// Shows a banner for the newest status change (not on the first load).
+    private func announceChanges(since before: [UUID: OrderStatus]) {
+        guard !before.isEmpty else { return }
+        guard let changed = orders.first(where: { before[$0.id] != nil && before[$0.id] != $0.status }) else { return }
+        let detail: String
+        switch changed.status {
+        case .writing: detail = "Your pages are being written now."
+        case .qualityCheck: detail = "Every page is being checked."
+        case .outForDelivery: detail = changed.riderName.map { "\($0) is on the way." } ?? "Your order is on the way."
+        case .delivered: detail = "Hope you like it. Tap to rate."
+        case .cancelled: detail = "Tap to see what happened."
+        case .received: detail = "We've got your order."
+        }
+        show(Toast(symbol: changed.status.symbol, title: "\(changed.code): \(changed.status.label)", detail: detail, orderID: changed.id))
+        Sounds.shared.play(changed.status == .delivered ? .success : .step)
+    }
+
+    func show(_ t: Toast) {
+        toast = t
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(5))
+            if self?.toast?.id == t.id { self?.toast = nil }
+        }
+    }
+
+    // MARK: Drafts
+
+    func saveDraft(_ d: OrderDraft, files: [ScannedFile]) {
+        DraftStore.save(d, files: files)
+        draft = d
+    }
+
+    func clearDraft() {
+        DraftStore.clear()
+        draft = nil
     }
 
     func events(for order: Order) async throws -> [OrderEvent] {
@@ -163,6 +233,7 @@ final class AppModel {
     func rate(_ order: Order, rating: Int, comment: String) async throws {
         let c = comment.trimmingCharacters(in: .whitespacesAndNewlines)
         try await client.from("order_feedback").insert(OrderFeedback(orderId: order.id, rating: rating, comment: c.isEmpty ? nil : String(c.prefix(1000)))).execute()
+        ratedOrderIDs.insert(order.id)
     }
 
     /// Looks a notebook up by its barcode. nil when we don't know it yet.
@@ -200,4 +271,93 @@ struct ScannedFile: Identifiable {
     var uploadName: String? = nil
     /// Diagrams are uploaded for tracing but not listed as pages.
     var isDiagram: Bool { uploadName?.hasPrefix("diagram-") ?? false }
+}
+
+private struct RatedRow: Decodable {
+    let orderId: UUID
+    enum CodingKeys: String, CodingKey { case orderId = "order_id" }
+}
+
+/// A short message that drops in from the top. Tapping it opens the order.
+struct Toast: Identifiable, Equatable {
+    let id = UUID()
+    let symbol: String
+    let title: String
+    let detail: String
+    var orderID: UUID?
+}
+
+/// An unfinished order, kept on this phone only (like a message draft).
+struct OrderDraft: Codable, Equatable {
+    struct File: Codable, Equatable {
+        let stored: String
+        let kind: String
+        let pages: Int
+        let name: String
+        let uploadName: String?
+    }
+    var kind: String
+    var savedAt = Date()
+    var title = ""
+    var text = ""
+    var subject = ""
+    var lessonsMissed = ""
+    var forChild = false
+    var notebook = "ruled"
+    var barcode = ""
+    var ownWidth: Double?
+    var ownHeight: Double?
+    var ownPitch: Double?
+    var ownMargin: Double?
+    var ownRuled = true
+    var pageOverride: Int?
+    var cardStyle = "ivory"
+    var message = ""
+    var recipients = ""
+    var files: [File] = []
+
+    var orderKind: OrderKind { OrderKind(rawValue: kind) ?? .completeNotes }
+    var summary: String {
+        let pages = files.filter { $0.uploadName == nil }.count
+        switch orderKind {
+        case .letters: return recipients.isEmpty ? "Card draft" : "Cards for \(recipients.split(separator: "\n").count)"
+        default: return pages > 0 ? "\(pages) \(pages == 1 ? "file" : "files") added" : (text.isEmpty ? "Just started" : "Text added")
+        }
+    }
+}
+
+/// Saves one draft (JSON plus its files) in Application Support.
+enum DraftStore {
+    private static var folder: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return base.appendingPathComponent("Draft", isDirectory: true)
+    }
+
+    static func save(_ draft: OrderDraft, files: [ScannedFile]) {
+        clear()
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        var d = draft
+        d.files = files.enumerated().compactMap { i, f in
+            let name = "\(i).bin"
+            guard (try? f.data.write(to: folder.appendingPathComponent(name), options: .completeFileProtection)) != nil else { return nil }
+            return .init(stored: name, kind: f.kind, pages: f.pages, name: f.name, uploadName: f.uploadName)
+        }
+        if let json = try? JSONEncoder().encode(d) {
+            try? json.write(to: folder.appendingPathComponent("draft.json"), options: .completeFileProtection)
+        }
+    }
+
+    static func load() -> (draft: OrderDraft, files: [ScannedFile])? {
+        guard let json = try? Data(contentsOf: folder.appendingPathComponent("draft.json")),
+              let d = try? JSONDecoder().decode(OrderDraft.self, from: json) else { return nil }
+        let files: [ScannedFile] = d.files.compactMap { f in
+            guard let data = try? Data(contentsOf: folder.appendingPathComponent(f.stored)) else { return nil }
+            return ScannedFile(data: data, kind: f.kind, pages: f.pages, name: f.name, uploadName: f.uploadName)
+        }
+        return (d, files)
+    }
+
+    static func clear() {
+        try? FileManager.default.removeItem(at: folder)
+    }
 }

@@ -4,9 +4,15 @@ struct OrdersView: View {
     @Environment(AppModel.self) private var model
     @State private var newKind: OrderKind?
     @State private var reorder: Order?
+    @State private var query = ""
 
-    var active: [Order] { model.orders.filter { $0.status != .delivered && $0.status != .cancelled } }
-    var past: [Order] { model.orders.filter { $0.status == .delivered || $0.status == .cancelled } }
+    private func matches(_ o: Order) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        return q.isEmpty || o.code.localizedCaseInsensitiveContains(q) || o.title.localizedCaseInsensitiveContains(q) || o.area.localizedCaseInsensitiveContains(q)
+    }
+
+    var active: [Order] { model.orders.filter { $0.status != .delivered && $0.status != .cancelled && matches($0) } }
+    var past: [Order] { model.orders.filter { ($0.status == .delivered || $0.status == .cancelled) && matches($0) } }
 
     var body: some View {
         NavigationStack {
@@ -23,6 +29,9 @@ struct OrdersView: View {
                     } else if model.orders.isEmpty {
                         EmptyOrders { newKind = .completeNotes }
                     } else {
+                        if active.isEmpty && past.isEmpty {
+                            ContentUnavailableView.search(text: query)
+                        }
                         if !active.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 SectionLabel("In progress")
@@ -65,6 +74,7 @@ struct OrdersView: View {
             }
             .paperBackground()
             .navigationTitle("Orders")
+            .searchable(text: $query, prompt: "Search by name, order ID or area")
             .navigationDestination(for: Order.self) { OrderDetailView(order: $0) }
             .refreshable { await model.refresh() }
             .toolbar {

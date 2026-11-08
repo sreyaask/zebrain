@@ -12,6 +12,8 @@ struct NewOrderView: View {
     var startWithScanner = false
     /// "Order again": copies the delivery details and notebook from an earlier order.
     var prefill: Order? = nil
+    /// Opens the draft saved on this phone.
+    var resumeDraft = false
 
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -175,11 +177,19 @@ struct NewOrderView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(placed == nil ? "Cancel" : "Close") { if hasWork { confirmDiscard = true } else { dismiss() } }
-                        .confirmationDialog("Discard this order?", isPresented: $confirmDiscard, titleVisibility: .visible) {
-                            Button("Discard order", role: .destructive) { dismiss() }
+                        .confirmationDialog("Leave this order?", isPresented: $confirmDiscard, titleVisibility: .visible) {
+                            Button("Save as draft") {
+                                model.saveDraft(makeDraft(), files: files)
+                                model.show(Toast(symbol: "tray.and.arrow.down", title: "Draft saved", detail: "Pick it up from Home any time."))
+                                dismiss()
+                            }
+                            Button("Discard order", role: .destructive) {
+                                if resumeDraft { model.clearDraft() }
+                                dismiss()
+                            }
                             Button("Keep editing", role: .cancel) {}
                         } message: {
-                            Text("What you've added will be lost.")
+                            Text("Save it as a draft to finish later, or discard what you've added.")
                         }
                 }
             }
@@ -215,6 +225,7 @@ struct NewOrderView: View {
                 }
             }
             .onAppear {
+                if resumeDraft { applyDraft() }
                 applyPrefill()
                 if startWithScanner && files.isEmpty && DocumentScanner.isAvailable { scanning = true }
                 styleID = styleID ?? readyStyles.first?.id
@@ -657,6 +668,28 @@ struct NewOrderView: View {
         if let p = a.receiverPhone, !p.isEmpty { phone = p }
     }
 
+    private func makeDraft() -> OrderDraft {
+        OrderDraft(kind: kind.rawValue, title: title, text: text, subject: subject, lessonsMissed: lessonsMissed,
+                   forChild: missedFor == .child, notebook: notebook.rawValue, barcode: barcode,
+                   ownWidth: ownWidth, ownHeight: ownHeight, ownPitch: ownPitch, ownMargin: ownMargin, ownRuled: ownRuled,
+                   pageOverride: pageOverride, cardStyle: cardStyle.rawValue, message: message, recipients: recipients)
+    }
+
+    private func applyDraft() {
+        guard !didPrefill, let saved = DraftStore.load(), saved.draft.kind == kind.rawValue else { return }
+        let d = saved.draft
+        files = saved.files
+        title = d.title; text = d.text; subject = d.subject; lessonsMissed = d.lessonsMissed
+        missedFor = d.forChild ? .child : .me
+        notebook = NotebookChoice(rawValue: d.notebook) ?? .ruled
+        barcode = d.barcode
+        ownWidth = d.ownWidth; ownHeight = d.ownHeight; ownPitch = d.ownPitch; ownMargin = d.ownMargin; ownRuled = d.ownRuled
+        pageOverride = d.pageOverride
+        cardStyle = CardPaper(rawValue: d.cardStyle) ?? .ivory
+        pageSize = kind == .letters ? cardStyle.size : pageSize
+        message = d.message; recipients = d.recipients
+    }
+
     /// Fills the form from an earlier order ("Order again"), or the newest saved address.
     private func applyPrefill() {
         guard !didPrefill else { return }
@@ -903,6 +936,7 @@ struct NewOrderView: View {
         )
         do {
             var order = try await model.place(draft, files: isNotes ? files : [])
+            if resumeDraft || model.draft?.kind == kind.rawValue { model.clearDraft() }
             if saveAddress && !matchesSaved {
                 await model.save(address: SavedAddress(
                     id: nil, label: addressLabel, line1: draft.addressLine1, area: area, pincode: pincode,
