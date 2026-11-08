@@ -81,6 +81,11 @@ struct AccountView: View {
                     LabeledContent("Signed in as", value: email)
                 }
                 Section {
+                    NavigationLink { SavedAddressesView() } label: {
+                        LabeledContent { Text("\(model.addresses.count)") } label: { Label("Saved addresses", systemImage: "mappin.and.ellipse") }
+                    }
+                }
+                Section {
                     Toggle("Sound effects", isOn: $soundEffects)
                         .onChange(of: soundEffects) { _, on in if on { Sounds.shared.play(.tap) } }
                 } footer: {
@@ -104,5 +109,34 @@ struct AccountView: View {
             .navigationTitle("Account")
             .sheet(isPresented: $showingHelp) { HelpCenterView() }
         }
+    }
+}
+
+/// Saved addresses: swipe to remove. New ones are saved from the delivery step.
+struct SavedAddressesView: View {
+    @Environment(AppModel.self) private var model
+    var body: some View {
+        List {
+            if model.addresses.isEmpty {
+                ContentUnavailableView("No saved addresses", systemImage: "mappin.slash",
+                                       description: Text("Addresses you deliver to are saved here, so next time it's one tap."))
+                    .listRowBackground(Color.clear)
+            }
+            ForEach(model.addresses) { a in
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: a.symbol).font(.title3.weight(.bold)).frame(width: 28).accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(a.label).font(.headline.weight(.heavy))
+                        Text("\(a.line1), \(a.area), Hyderabad \(a.pincode)").font(.subheadline).foregroundStyle(.secondary)
+                        if let n = a.receiverName { Text(n).font(.footnote).foregroundStyle(.secondary) }
+                    }
+                }
+                .swipeActions {
+                    Button("Remove", systemImage: "trash", role: .destructive) { Task { await model.delete(address: a) } }
+                }
+            }
+        }
+        .paperBackground()
+        .navigationTitle("Saved addresses")
     }
 }

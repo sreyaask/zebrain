@@ -3,6 +3,7 @@ import SwiftUI
 struct OrdersView: View {
     @Environment(AppModel.self) private var model
     @State private var newKind: OrderKind?
+    @State private var reorder: Order?
 
     var active: [Order] { model.orders.filter { $0.status != .delivered && $0.status != .cancelled } }
     var past: [Order] { model.orders.filter { $0.status == .delivered || $0.status == .cancelled } }
@@ -49,6 +50,9 @@ struct OrdersView: View {
                                         if i > 0 { Divider().padding(.leading, 16) }
                                         NavigationLink(value: order) { PastOrderRow(order: order) }
                                             .buttonStyle(.plain)
+                                            .contextMenu {
+                                                Button("Order again", systemImage: "arrow.clockwise") { reorder = order }
+                                            }
                                     }
                                 }
                                 .card(padding: 0)
@@ -73,6 +77,7 @@ struct OrdersView: View {
                 }
             }
             .sheet(item: $newKind) { NewOrderView(kind: $0) }
+            .sheet(item: $reorder) { NewOrderView(kind: $0.kindGuess, prefill: $0) }
         }
     }
 }

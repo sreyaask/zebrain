@@ -134,12 +134,25 @@ struct Order: Codable, Identifiable, Hashable {
     let notebookSource: NotebookSource?
     let notebookAmount: Int?
     let deliveredAt: Date?
+    // Used to pre-fill "Order again".
+    let receiverName: String?
+    let receiverPhone: String?
+    let landmark: String?
+    let deliveryNote: String?
+    let notebookBarcode: String?
+    let notebookSpec: NotebookSpec?
 
     enum CodingKeys: String, CodingKey {
         case id, code, title, status, paper, ink, copies, total, area, pincode, eta
         case notebookSource = "notebook_source"
         case notebookAmount = "notebook_amount"
         case deliveredAt = "delivered_at"
+        case receiverName = "receiver_name"
+        case receiverPhone = "receiver_phone"
+        case landmark
+        case deliveryNote = "delivery_note"
+        case notebookBarcode = "notebook_barcode"
+        case notebookSpec = "notebook_spec"
         case paymentStatus = "payment_status"
         case pageCount = "page_count"
         case billableUnits = "billable_units"
@@ -154,6 +167,12 @@ struct Order: Codable, Identifiable, Hashable {
     }
 
     var quantityLabel: String { paper.isCard ? "\(copies) cards" : "\(pageCount) pages" }
+
+    /// Which flow this order came from, for "Order again".
+    var kindGuess: OrderKind {
+        if paper == .premiumCard || paper == .looseA4 { return .letters }
+        return title.hasPrefix("Missed notes") ? .missedNotes : .completeNotes
+    }
 }
 
 struct OrderEvent: Codable, Identifiable, Hashable {
@@ -282,6 +301,7 @@ struct NewOrder: Encodable {
     var notebookSource: NotebookSource = .new
     var notebookBarcode: String?
     var notebookSpec: NotebookSpec?
+    var deliveryNote: String?
 
     enum CodingKeys: String, CodingKey {
         case title, paper, ink, copies, area, pincode, landmark
@@ -300,6 +320,34 @@ struct NewOrder: Encodable {
         case receiverPhone = "receiver_phone"
         case addressLine1 = "address_line1"
         case timeSlot = "time_slot"
+        case deliveryNote = "delivery_note"
+    }
+}
+
+/// A saved delivery address (public.addresses).
+struct SavedAddress: Codable, Identifiable, Hashable {
+    var id: UUID?
+    var label: String
+    var line1: String
+    var area: String
+    var pincode: String
+    var landmark: String?
+    var receiverName: String?
+    var receiverPhone: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, label, line1, area, pincode, landmark
+        case receiverName = "receiver_name"
+        case receiverPhone = "receiver_phone"
+    }
+
+    var symbol: String {
+        switch label.lowercased() {
+        case "home": "house.fill"
+        case "hostel": "bed.double.fill"
+        case "work": "briefcase.fill"
+        default: "mappin.circle.fill"
+        }
     }
 }
 

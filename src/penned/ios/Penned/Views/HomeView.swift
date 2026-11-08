@@ -9,6 +9,8 @@ struct HomeView: View {
     @State private var newKind: OrderKind?
     @State private var addingStyle = false
     @State private var showingHelp = false
+    @State private var reorder: Order?
+    private var past: [Order] { Array(model.orders.filter { $0.status == .delivered }.prefix(6)) }
     @ScaledMetric(relativeTo: .body) private var sampleHeight: CGFloat = 88
 
     private var active: [Order] { model.orders.filter { $0.status != .delivered && $0.status != .cancelled } }
@@ -40,6 +42,7 @@ struct HomeView: View {
                             SectionLabel("Order something")
                             tiles
                         }
+                        if !past.isEmpty { orderAgain }
                         promises
                     }
                     .padding(.horizontal, 16)
@@ -63,6 +66,7 @@ struct HomeView: View {
             .sheet(item: $newKind) { NewOrderView(kind: $0) }
             .sheet(isPresented: $addingStyle) { AddStyleView() }
             .sheet(isPresented: $showingHelp) { HelpCenterView() }
+            .sheet(item: $reorder) { NewOrderView(kind: $0.kindGuess, prefill: $0) }
         }
     }
 
@@ -170,6 +174,46 @@ struct HomeView: View {
                 Sounds.shared.play(.tap)
                 tab = .handwriting
             }
+        }
+    }
+
+    // MARK: Order again
+
+    private var orderAgain: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionLabel("Order again")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(past) { order in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Image(systemName: order.kindGuess.symbol)
+                                .font(.headline.weight(.bold))
+                                .frame(width: 38, height: 38)
+                                .background(Theme.fill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                .accessibilityHidden(true)
+                            Text(order.title.isEmpty ? order.kindGuess.title : order.title)
+                                .font(.subheadline.weight(.heavy))
+                                .lineLimit(2, reservesSpace: true)
+                            Text("\(order.quantityLabel) · \(order.area)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                            Button {
+                                Sounds.shared.play(.tap)
+                                reorder = order
+                            } label: {
+                                Label("Again", systemImage: "arrow.clockwise").font(.subheadline.weight(.heavy)).frame(maxWidth: .infinity, minHeight: 36)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(Theme.paper)
+                            .background(Theme.ink, in: Capsule())
+                            .accessibilityLabel("Order \(order.title) again")
+                        }
+                        .frame(width: 168)
+                        .card(padding: 12)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 2)
+            }
+            .padding(.horizontal, -16)
         }
     }
 

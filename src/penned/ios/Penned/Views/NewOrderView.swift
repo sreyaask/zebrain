@@ -10,6 +10,8 @@ struct NewOrderView: View {
     let kind: OrderKind
     /// Opens the camera straight away (from the Scan tab).
     var startWithScanner = false
+    /// "Order again": copies the delivery details and notebook from an earlier order.
+    var prefill: Order? = nil
 
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -69,6 +71,11 @@ struct NewOrderView: View {
     @State private var pincode = ""
     @State private var landmark = ""
     @State private var slot: TimeSlot = .within3h
+    @State private var instructions: Set<String> = []
+    @State private var note = ""
+    @State private var saveAddress = true
+    @State private var addressLabel = "Home"
+    @State private var didPrefill = false
     // Submit
     @State private var placing = false
     @State private var placed: Order?
@@ -208,6 +215,7 @@ struct NewOrderView: View {
                 }
             }
             .onAppear {
+                applyPrefill()
                 if startWithScanner && files.isEmpty && DocumentScanner.isAvailable { scanning = true }
                 styleID = styleID ?? readyStyles.first?.id
                 if kind == .letters {
@@ -557,19 +565,127 @@ struct NewOrderView: View {
 
     // MARK: Shared steps
 
+    static let instructionChoices = ["Call when you arrive", "Leave with security", "Don't ring the bell", "Hand it to me only"]
+    static let addressLabels = ["Home", "Hostel", "Work", "Other"]
+
+    /// The address typed matches one already saved, so there's nothing new to save.
+    private var matchesSaved: Bool {
+        model.addresses.contains { $0.line1 == address.trimmingCharacters(in: .whitespaces) && $0.area == area && $0.pincode == pincode }
+    }
+
+    private var deliveryNote: String? {
+        let parts = Self.instructionChoices.filter { instructions.contains($0) } + [note.trimmingCharacters(in: .whitespacesAndNewlines)].filter { !$0.isEmpty }
+        return parts.isEmpty ? nil : String(parts.joined(separator: ". ").prefix(200))
+    }
+
     @ViewBuilder private var deliveryStep: some View {
+        if !model.addresses.isEmpty {
+            Section {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(model.addresses) { a in
+                            let picked = a.line1 == address && a.area == area && a.pincode == pincode
+                            Button { use(a) } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Label(a.label, systemImage: a.symbol).font(.subheadline.weight(.heavy))
+                                    Text("\(a.line1), \(a.area)").font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                }
+                                .frame(width: 170, alignment: .leading)
+                                .padding(12)
+                                .background(picked ? Theme.successFill : Theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(picked ? Theme.success : Theme.ink, lineWidth: picked ? 2.5 : 1.5))
+                                .overlay(alignment: .topTrailing) {
+                                    if picked { Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.success).padding(8) }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(picked ? [.isButton, .isSelected] : .isButton)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+            } header: {
+                Text("Saved addresses")
+            }
+        }
         Section("Address") {
             TextField("Flat, house no., building", text: $address).textContentType(.streetAddressLine1)
             Picker("Area", selection: $area) { ForEach(deliveryAreas, id: \.self) { Text($0) } }
             TextField("Pincode", text: $pincode).keyboardType(.numberPad).textContentType(.postalCode)
             TextField("Landmark (optional)", text: $landmark)
+            if !matchesSaved {
+                Toggle("Save this address", isOn: $saveAddress)
+                if saveAddress {
+                    ChipRow(options: Self.addressLabels, selected: [addressLabel]) { addressLabel = $0 }
+                }
+            }
         }
         Section("Receiver") {
             TextField("Name", text: $receiver).textContentType(.name)
             TextField("Mobile number", text: $phone).keyboardType(.phonePad).textContentType(.telephoneNumber)
         }
-        Section("Delivery time") {
-            Picker("Time", selection: $slot) { ForEach(TimeSlot.allCases) { Text($0.label).tag($0) } }.pickerStyle(.inline).labelsHidden()
+        Section {
+            ChipGrid(options: TimeSlot.allCases.map(\.label), selected: [slot.label]) { label in
+                if let s = TimeSlot.allCases.first(where: { $0.label == label }) { slot = s }
+            }
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+        } header: {
+            Text("When")
+        }
+        Section {
+            ChipGrid(options: Self.instructionChoices, selected: instructions) { choice in
+                if instructions.contains(choice) { instructions.remove(choice) } else { instructions.insert(choice) }
+            }
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+            TextField("Anything else for the rider? (optional)", text: $note)
+        } header: {
+            Text("Delivery instructions")
+        }
+    }
+
+    private func use(_ a: SavedAddress) {
+        Sounds.shared.play(.tap)
+        address = a.line1
+        area = a.area
+        pincode = a.pincode
+        landmark = a.landmark ?? ""
+        if let n = a.receiverName, !n.isEmpty { receiver = n }
+        if let p = a.receiverPhone, !p.isEmpty { phone = p }
+    }
+
+    /// Fills the form from an earlier order ("Order again"), or the newest saved address.
+    private func applyPrefill() {
+        guard !didPrefill else { return }
+        didPrefill = true
+        if let o = prefill {
+            address = o.addressLine1
+            area = o.area
+            pincode = o.pincode
+            landmark = o.landmark ?? ""
+            receiver = o.receiverName ?? ""
+            phone = o.receiverPhone ?? ""
+            if let n = o.deliveryNote {
+                for c in Self.instructionChoices where n.contains(c) { instructions.insert(c) }
+            }
+            if isNotes {
+                if o.notebookSource == .own, let spec = o.notebookSpec {
+                    notebook = .own
+                    barcode = o.notebookBarcode ?? ""
+                    ownWidth = spec.widthMm
+                    ownHeight = spec.heightMm
+                    ownPitch = spec.linePitchMm
+                    ownMargin = spec.marginMm
+                    ownRuled = spec.ruled
+                } else {
+                    notebook = o.paper == .plainNotebook ? .plain : .ruled
+                }
+            }
+        } else if let a = model.addresses.first {
+            use(a)
         }
     }
 
@@ -587,7 +703,9 @@ struct NewOrderView: View {
                 LabeledContent("Recipients", value: "\(recipientNames.count)")
             }
             LabeledContent("Deliver", value: "\(area) · \(slot.label)")
+            if let n = deliveryNote { LabeledContent("Rider note", value: n) }
         }
+        if isNotes { pagePreview }
         Section {
             BillCard(
                 lines: quote.billLines(isNotes: isNotes, ownNotebook: isNotes && notebook == .own,
@@ -611,6 +729,38 @@ struct NewOrderView: View {
             .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
         } header: {
             Text("Our promise")
+        }
+    }
+
+    private var previewSize: (w: Double, h: Double) {
+        if notebook == .own, let s = ownSpec { return (w: s.widthMm, h: s.heightMm) }
+        return pageSize.mm
+    }
+
+    /// Page 1 in the customer's own handwriting, so they see what they're paying for.
+    @ViewBuilder private var pagePreview: some View {
+        let pageText = text.components(separatedBy: "\n").filter { !$0.hasPrefix("[[diagram:") }.joined(separator: "\n")
+        let size = previewSize
+        Section {
+            HandwritingPage(text: String(pageText.prefix(700)), glyphs: glyphs, ink: ink, ruled: paper == .ruledNotebook,
+                            lineSpacing: spacing, margin: margin / size.w, headingStyle: heading, pageWidthMm: size.w)
+                .aspectRatio(CGFloat(size.w / size.h), contentMode: .fit)
+                .frame(maxWidth: 240)
+                .background(Theme.paper)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Theme.ink, lineWidth: 1.5))
+                .overlay(alignment: .bottomTrailing) {
+                    Text("Page 1 of \(max(1, pages))").font(.caption2.weight(.heavy)).foregroundStyle(Theme.paper)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Theme.ink, in: Capsule()).padding(8)
+                }
+                .frame(maxWidth: .infinity)
+                .listRowBackground(Color.clear)
+        } header: {
+            Text("Preview")
+        } footer: {
+            Text(glyphs != nil ? "Drawn with your own letters. Our team does the final layout\(diagramCount > 0 ? " and draws the diagrams" : "")."
+                               : "Shown in a sample hand until your handwriting is ready.")
         }
     }
 
@@ -748,10 +898,16 @@ struct NewOrderView: View {
             timeSlot: slot,
             notebookSource: isNotes ? notebookSource : .new,
             notebookBarcode: isNotes && notebook == .own && !barcode.isEmpty ? BarcodeScanner.Coordinator.clean(barcode) : nil,
-            notebookSpec: isNotes && notebook == .own ? ownSpec : nil
+            notebookSpec: isNotes && notebook == .own ? ownSpec : nil,
+            deliveryNote: deliveryNote
         )
         do {
             var order = try await model.place(draft, files: isNotes ? files : [])
+            if saveAddress && !matchesSaved {
+                await model.save(address: SavedAddress(
+                    id: nil, label: addressLabel, line1: draft.addressLine1, area: area, pincode: pincode,
+                    landmark: draft.landmark, receiverName: draft.receiverName, receiverPhone: draft.receiverPhone))
+            }
             try await model.demoPay(order)
             order = try await model.order(id: order.id)
             placed = order
@@ -821,5 +977,53 @@ private struct MeasureField: View {
                 Text("mm").foregroundStyle(.secondary)
             }
         }
+    }
+}
+
+/// Tap-to-choose chips in a wrapping grid (time slots, delivery instructions).
+struct ChipGrid: View {
+    let options: [String]
+    let selected: Set<String>
+    let onTap: (String) -> Void
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], alignment: .leading, spacing: 8) {
+            ForEach(options, id: \.self) { o in Chip(text: o, on: selected.contains(o)) { onTap(o) } }
+        }
+    }
+}
+
+/// One row of chips (address labels).
+struct ChipRow: View {
+    let options: [String]
+    let selected: Set<String>
+    let onTap: (String) -> Void
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(options, id: \.self) { o in Chip(text: o, on: selected.contains(o)) { onTap(o) } }
+        }
+    }
+}
+
+private struct Chip: View {
+    let text: String
+    let on: Bool
+    let action: () -> Void
+    var body: some View {
+        Button {
+            Sounds.shared.play(.tap)
+            action()
+        } label: {
+            Text(text)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(on ? Theme.paper : Theme.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(on ? Theme.ink : Theme.surface, in: Capsule())
+                .overlay(Capsule().strokeBorder(Theme.ink, lineWidth: 1.5))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
     }
 }

@@ -144,3 +144,8 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   on Home explaining how it works / prices / own notebook / promise (`Views/FamiliarViews.swift`), and a star rating after delivery
   saved to `order_feedback` (migration 20261108000004, applied live; owner can rate their own delivered order once; admins read it,
   shown on the admin order page). Ratings are private until the team chooses to publish real reviews.
+- More familiar features (iOS, 8 Nov 2026; migration 20261108000005 applied live): saved addresses with Home/Hostel/Work/Other labels
+  (existing `addresses` table + label/receiver columns; one per label; managed in Account → Saved addresses), delivery-instruction chips
+  plus a free note (`orders.delivery_note`, shown on the admin order page), time slots as chips, "Order again" (Home strip, Orders
+  long-press, order page) that pre-fills delivery details and the notebook (`NewOrderView(kind:prefill:)`), and a page-1 preview in the
+  customer's handwriting on the review step.

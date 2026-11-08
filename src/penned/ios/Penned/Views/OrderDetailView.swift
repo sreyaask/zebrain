@@ -7,6 +7,7 @@ struct OrderDetailView: View {
     @State private var error: String?
     @State private var paying = false
     @State private var copied = false
+    @State private var reordering = false
 
     var body: some View {
         ScrollView {
@@ -123,6 +124,13 @@ struct OrderDetailView: View {
                     VStack(alignment: .leading, spacing: 0) { GuaranteeRow(guarantee: .rewrite) }.card(padding: 0)
                 }
 
+                if order.status == .delivered || order.status == .cancelled {
+                    Button { reordering = true } label: {
+                        Label("Order again", systemImage: "arrow.clockwise").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.pennedPrimary)
+                }
+
                 OrderHelpCard(order: order)
                 if let error {
                     Label(error, systemImage: "exclamationmark.circle").font(.footnote).foregroundStyle(.red)
@@ -135,6 +143,7 @@ struct OrderDetailView: View {
         .navigationTitle(order.code)
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await reload() }
+        .sheet(isPresented: $reordering) { NewOrderView(kind: order.kindGuess, prefill: order) }
         .sensoryFeedback(.success, trigger: order.paymentStatus)
         .task {
             // Refresh while the order is moving; the admin portal updates it in real time.

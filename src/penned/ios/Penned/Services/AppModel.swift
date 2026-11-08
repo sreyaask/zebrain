@@ -12,6 +12,7 @@ final class AppModel {
     var auth: AuthState = .loading
     var orders: [Order] = []
     var styles: [HandwritingProfile] = []
+    var addresses: [SavedAddress] = []
     var lastError: String?
     /// False until the first load finishes, so screens show loading instead of a misleading empty state.
     var hasLoaded = false
@@ -38,6 +39,7 @@ final class AppModel {
                 hasLoaded = false
                 orders = []
                 styles = []
+                addresses = []
             }
         }
     }
@@ -80,6 +82,8 @@ final class AppModel {
             async let o: [Order] = client.from("orders").select().order("created_at", ascending: false).execute().value
             async let s: [HandwritingProfile] = client.from("handwriting_profiles").select().order("created_at", ascending: false).execute().value
             (orders, styles) = try await (o, s)
+            addresses = (try? await client.from("addresses").select("id, label, line1, area, pincode, landmark, receiver_name, receiver_phone")
+                .order("created_at", ascending: false).execute().value) ?? []
             lastError = nil
             hasLoaded = true
             print("[Penned] loaded \(orders.count) orders, \(styles.count) handwriting styles")
@@ -123,6 +127,30 @@ final class AppModel {
             try await client.from("order_files").insert(NewOrderFile(orderId: order.id, path: path, kind: file.kind, pages: file.pages)).execute()
         }
         return order
+    }
+
+    // MARK: Addresses
+
+    func save(address: SavedAddress) async {
+        // One address per label: saving "Home" again replaces the old Home.
+        if let old = addresses.first(where: { $0.label.caseInsensitiveCompare(address.label) == .orderedSame }), let id = old.id {
+            _ = try? await client.from("addresses").delete().eq("id", value: id).execute()
+        }
+        if let saved: SavedAddress = try? await client.from("addresses").insert(address)
+            .select("id, label, line1, area, pincode, landmark, receiver_name, receiver_phone").single().execute().value {
+            addresses.removeAll { $0.label.caseInsensitiveCompare(address.label) == .orderedSame }
+            addresses.insert(saved, at: 0)
+        }
+    }
+
+    func delete(address: SavedAddress) async {
+        guard let id = address.id else { return }
+        do {
+            try await client.from("addresses").delete().eq("id", value: id).execute()
+            addresses.removeAll { $0.id == id }
+        } catch {
+            lastError = "Couldn't remove that address. Try again."
+        }
     }
 
     /// The customer's rating for an order, if they gave one.

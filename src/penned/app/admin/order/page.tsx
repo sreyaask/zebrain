@@ -148,6 +148,9 @@ function OrderDetail() {
             {getPageSize(order.page_size).label} · {order.ink} ink · {rupees(order.total)}{" "}
             <span className={order.payment_status === "paid" ? "" : "text-danger"}>({order.payment_status})</span>
           </p>
+          {order.delivery_note && (
+            <p className="mt-1 text-sm"><span className="font-medium">Rider note:</span> {order.delivery_note}</p>
+          )}
           {feedback && (
             <p className="mt-1 text-sm">
               <span className="font-medium">Customer rating: {feedback.rating}/5</span>

@@ -68,6 +68,8 @@ export interface DbOrder {
   notebook_barcode?: string | null;
   notebook_spec?: { width_mm?: number; height_mm?: number; line_pitch_mm?: number; margin_mm?: number; ruled?: boolean; name?: string } | null;
   notebook_amount?: number;
+  /** Rider instructions from the customer, e.g. "Call when you arrive". */
+  delivery_note?: string | null;
 }
 
 export interface DbOrderFile {
