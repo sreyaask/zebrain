@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { demoUser } from "@/lib/mock";
 import { isSignedIn, setSignedIn } from "@/lib/store";
-import { currentUser, live, onAuthChange, signOut } from "@/lib/api";
+import { hasSavedSession, live, signOutLive, watchSavedSession } from "@/lib/session";
 import { LinkButton } from "./Button";
 
 const links = [
@@ -35,8 +35,9 @@ export function Navbar() {
 
   useEffect(() => {
     if (live) {
-      currentUser().then((u) => setSigned(!!u));
-      return onAuthChange(setSigned);
+      // Read the saved session directly so this page doesn't need the Supabase library.
+      setSigned(hasSavedSession());
+      return watchSavedSession(setSigned);
     }
     const sync = () => setSigned(isSignedIn());
     sync();
@@ -48,12 +49,15 @@ export function Navbar() {
     };
   }, []);
 
-  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    setOpen(false);
+    if (live) setSigned(hasSavedSession()); // e.g. after logging in and navigating
+  }, [pathname]);
 
   const isActive = (href: string) =>
     href === "/#products" ? pathname.startsWith("/products") : !href.startsWith("/#") && (pathname === href || pathname.startsWith(href + "/"));
   const initials = live ? "Me" : demoUser.name.split(" ").map((p) => p[0]).join("");
-  const logOut = () => (live ? signOut() : setSignedIn(false));
+  const logOut = () => (live ? signOutLive() : setSignedIn(false));
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur supports-[backdrop-filter]:bg-paper/80">

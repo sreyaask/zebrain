@@ -100,3 +100,13 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   through the existing order API as typed text containing the message and the recipient list (no backend changes).
 - Copy rules: never "homework", "assignments", "skip writing" or anything implying cheating. Use "notes", "study notes", "personal notes".
 - Reviews on the homepage are placeholders marked "Sample review — replace before launch". Don't present them as real.
+
+## Performance and motion (added 8 Nov 2026)
+- Marketing pages must not import `lib/api.ts` or `lib/supabase.ts` (they pull in the ~250 KB Supabase client).
+  Use `lib/session.ts` (`live`, `hasSavedSession`, `signOutLive`) and `await import("@/lib/api")` at the moment data is needed.
+- Don't fade in the largest above-the-fold text (it delays LCP). Lighthouse on a simulated phone, 8 Nov 2026:
+  home 89→92, order 71→92 (layout shift 0.872→0), best practices 96→100. Remaining LCP ≈3.2 s is JS start-up on slow 4G.
+- Uploads: `lib/fileProcessing.ts` resizes photos on the device (≤2400 px JPEG) and reads real PDF page counts.
+  `components/ui/Uploader.tsx` has a numbered page grid, move buttons (WCAG 2.5.7) plus drag on desktop, paste, and Undo.
+- Motion: 150–300 ms ease-out, only where it explains something, always off under prefers-reduced-motion
+  (keyframes in `tailwind.config.ts` and `app/globals.css`). "How it works" graphics are in `components/home/StepGraphics.tsx`.

@@ -27,7 +27,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
       {/* Hero */}
       <section className="border-b border-line">
         <Container className="grid items-center gap-10 py-10 sm:py-16 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
-          <div className="animate-slide-up">
+          <div>
             <nav aria-label="Breadcrumb" className="text-sm text-muted">
               <Link href="/#products" className="hover:text-ink">What we write</Link>
               <span aria-hidden="true"> / </span>

@@ -4,7 +4,7 @@ import { Input, Select } from "@/components/ui/Input";
 import { RadioCard } from "@/components/ui/RadioCard";
 import { deliveryAreas, demoUser, timeSlots, type DeliveryArea, type TimeSlotId } from "@/lib/mock";
 import type { DeliveryDetails, OrderDraft } from "./types";
-import { live } from "@/lib/api";
+import { live } from "@/lib/session";
 
 export type DeliveryErrors = Partial<Record<keyof DeliveryDetails, string>>;
 

@@ -4,7 +4,7 @@ import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 const caveat = Caveat({ subsets: ["latin"], variable: "--font-caveat", display: "swap" });
-const serif = Newsreader({ subsets: ["latin"], variable: "--font-serif", display: "swap", weight: ["500"], adjustFontFallback: false });
+const serif = Newsreader({ subsets: ["latin"], variable: "--font-serif", display: "swap", weight: ["500"], adjustFontFallback: false, preload: false }); // wordmark only
 
 export const metadata: Metadata = {
   title: { default: "Penned · Your handwriting, written for you", template: "%s · Penned" },

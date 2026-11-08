@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LinkButton } from "@/components/ui/Button";
 import { Container, SectionHeading } from "@/components/ui/Section";
 import { PenMachineHero } from "@/components/home/PenMachineHero";
+import { HowItWorksSteps } from "@/components/home/StepGraphics";
 import { Faq } from "@/components/home/Faq";
 import { ProductCard } from "@/components/products/ProductCard";
 import { PriceList } from "@/components/products/PriceList";
@@ -47,7 +48,7 @@ export default function HomePage() {
       {/* Hero */}
       <section className="border-b border-line">
         <Container className="grid items-center gap-12 py-12 sm:py-20 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:py-24">
-          <div className="animate-slide-up">
+          <div>
             <h1 className="text-[40px] font-semibold leading-[1.05] tracking-tight text-ink [text-wrap:balance] sm:text-6xl">
               Your handwriting, delivered.
             </h1>
@@ -76,15 +77,7 @@ export default function HomePage() {
       <section aria-labelledby="how-it-works-title" className="scroll-mt-16 py-16 sm:py-24" id="how-it-works">
         <Container>
           <SectionHeading id="how-it-works-title" title="How it works" body="Set up your handwriting once. After that, every order takes a couple of minutes." />
-          <ol className="mt-10 grid gap-10 md:grid-cols-3 md:gap-8">
-            {steps.map((s) => (
-              <li key={s.n} className="border-t border-ink/80 pt-5">
-                <p className="text-sm tabular-nums text-muted">Step {s.n}</p>
-                <h3 className="mt-2 text-lg font-semibold text-ink">{s.title}</h3>
-                <p className="mt-2 text-[15px] leading-relaxed text-muted">{s.body}</p>
-              </li>
-            ))}
-          </ol>
+          <HowItWorksSteps steps={steps} />
         </Container>
       </section>
 

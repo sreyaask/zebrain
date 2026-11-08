@@ -208,7 +208,7 @@ export default function SetupPage() {
               <div className="mt-4 space-y-4">
                 <Uploader
                   label="Upload a photo of your page"
-                  hint="JPG, PNG or HEIC, up to 20 MB"
+                  hint="JPG, PNG or HEIC. Use your camera or a photo you already took."
                   files={files}
                   onAdd={(f) => setFiles(f.slice(0, 1))}
                   onRemove={() => setFiles([])}

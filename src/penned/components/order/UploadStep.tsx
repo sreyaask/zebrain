@@ -35,10 +35,11 @@ export function UploadStep({ draft, update, error }: Props) {
         <div className="animate-fade-in">
           <Uploader
             label="Drop photos or a PDF of the pages to copy"
-            hint="JPG, PNG, HEIC or PDF · up to 40 files, 20 MB each"
+            hint="JPG, PNG, HEIC or PDF · up to 40 files. Photos are resized on your phone so they upload quickly."
             files={draft.files}
             onAdd={(f) => update({ files: [...draft.files, ...f] })}
             onRemove={(id) => update({ files: draft.files.filter((f) => f.id !== id) })}
+            onReorder={(files) => update({ files })}
             camera
           />
         </div>

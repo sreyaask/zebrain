@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Stepper } from "@/components/ui/Stepper";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { demoUser, getProduct, timeSlots, type Order, type ProductSlug } from "@/lib/mock";
 import { rupees } from "@/lib/format";
 import { unitWord } from "@/lib/productPricing";
 import { savePlacedOrder } from "@/lib/store";
-import { live, placeOrder } from "@/lib/api";
+import { live } from "@/lib/session";
 import { ProductStep } from "./ProductStep";
 import { UploadStep } from "./UploadStep";
 import { LayoutStep } from "./LayoutStep";
@@ -42,17 +42,23 @@ function nowTime() {
 const slugs = Object.keys(flows) as ProductSlug[];
 
 export function OrderFlow() {
-  const requested = useSearchParams().get("product");
   const [stepIndex, setStepIndex] = useState(0);
   const [draft, setDraft] = useState<OrderDraft>(() => {
     const base = live ? { ...initialDraft, delivery: { ...initialDraft.delivery, addressMode: "new" as const, name: "", phone: "" } } : initialDraft;
-    const slug = slugs.includes(requested as ProductSlug) ? (requested as ProductSlug) : "notes";
-    return { ...base, ...productDefaults(slug, base) };
+    return { ...base, ...productDefaults("notes", base) };
   });
+
+  // Preselect a product from /order/?product=<slug> (read after first paint so the page renders straight away).
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("product");
+    if (requested && slugs.includes(requested as ProductSlug)) setDraft((d) => ({ ...d, ...productDefaults(requested as ProductSlug, d) }));
+  }, []);
   const [uploadError, setUploadError] = useState<string>();
   const [messageErrors, setMessageErrors] = useState<{ message?: string; recipients?: string }>({});
   const [deliveryErrors, setDeliveryErrors] = useState<DeliveryErrors>({});
   const [placed, setPlaced] = useState<Order | null>(null);
+  // Direction of the last step change, so the next step slides in from the side you're heading to.
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
   const headingRef = useRef<HTMLHeadingElement>(null);
   const first = useRef(true);
 
@@ -77,7 +83,14 @@ export function OrderFlow() {
 
   const goTo = (id: StepId) => {
     const i = flow.indexOf(id);
-    if (i >= 0) setStepIndex(i);
+    if (i >= 0) {
+      setDirection(i < stepIndex ? "back" : "forward");
+      setStepIndex(i);
+    }
+  };
+  const jumpTo = (i: number) => {
+    setDirection(i < stepIndex ? "back" : "forward");
+    setStepIndex(i);
   };
 
   const validate = (): boolean => {
@@ -109,9 +122,13 @@ export function OrderFlow() {
 
   const next = () => {
     if (!validate()) return;
+    setDirection("forward");
     setStepIndex((s) => Math.min(flow.length - 1, s + 1));
   };
-  const back = () => setStepIndex((s) => Math.max(0, s - 1));
+  const back = () => {
+    setDirection("back");
+    setStepIndex((s) => Math.max(0, s - 1));
+  };
 
   const onPaid = async (pay: { declined: boolean }) => {
     const product = getProduct(draft.product)!;
@@ -120,6 +137,8 @@ export function OrderFlow() {
     const title = draft.title.trim() || (isPages ? `${product.name}, ${units} ${units === 1 ? "page" : "pages"}` : `${product.name} ×${units}`);
 
     if (live) {
+      // The Supabase client is loaded only now, when the order is actually placed.
+      const { placeOrder } = await import("@/lib/api");
       // Existing order API: cards, invites and business notes go as typed text with the recipient list.
       const order = await placeOrder(
         {
@@ -195,9 +214,9 @@ export function OrderFlow() {
 
   return (
     <div>
-      <Stepper steps={flow.map((id) => stepLabel(id, draft.product))} current={stepIndex} onStepClick={setStepIndex} />
+      <Stepper steps={flow.map((id) => stepLabel(id, draft.product))} current={stepIndex} onStepClick={jumpTo} />
 
-      <div key={`${draft.product}-${stepId}`} className="mt-10 animate-slide-up">
+      <div key={`${draft.product}-${stepId}`} className={direction === "back" ? "mt-10 animate-step-back" : "mt-10 animate-step-forward"}>
         <h2 ref={headingRef} tabIndex={-1} className="text-xl font-semibold tracking-tight focus:outline-none sm:text-2xl">
           {copy.title}
         </h2>
@@ -224,7 +243,7 @@ export function OrderFlow() {
                 <>
                   <p className="font-medium tabular-nums text-ink">
                     {q.estimate ? "About " : ""}
-                    {rupees(q.total)}
+                    <AnimatedNumber value={q.total} format={rupees} />
                   </p>
                   <p className="truncate text-muted">
                     {getProduct(draft.product)!.name}

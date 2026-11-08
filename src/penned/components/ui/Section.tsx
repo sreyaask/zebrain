@@ -20,7 +20,7 @@ export function SectionHeading({ eyebrow, title, body, id }: { eyebrow?: string;
 export function PageHeader({ title, body, children }: { title: string; body?: string; children?: ReactNode }) {
   return (
     <div className="flex flex-col gap-4 pb-8 pt-10 sm:flex-row sm:items-end sm:justify-between sm:pt-14">
-      <div className="max-w-2xl animate-slide-up">
+      <div className="max-w-2xl">
         <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{title}</h1>
         {body && <p className="mt-3 text-[15px] leading-relaxed text-muted sm:text-base">{body}</p>}
       </div>
