@@ -13,6 +13,7 @@ struct PennedApp: App {
             RootView()
                 .environment(model)
                 .tint(Theme.accent)
+                .fontDesign(.rounded)
                 .task { await model.start() }
         }
     }

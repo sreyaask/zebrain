@@ -1,159 +1,288 @@
 import SwiftUI
 
-/// The app's front door: what's in progress, and the four things you can do.
+/// The app's front door, quick-commerce style: the delivery promise up top, what you can order as big
+/// tiles, and a floating pill that tracks the order being written right now.
 struct HomeView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dynamicTypeSize) private var typeSize
     @Binding var tab: MainTabs.Tab
     @State private var newKind: OrderKind?
     @State private var addingStyle = false
-    @ScaledMetric(relativeTo: .body) private var sampleHeight: CGFloat = 96
+    @ScaledMetric(relativeTo: .body) private var sampleHeight: CGFloat = 88
 
     private var active: [Order] { model.orders.filter { $0.status != .delivered && $0.status != .cancelled } }
     private var readyStyle: HandwritingProfile? { model.styles.first { $0.status == "ready" } }
     private var pendingStyle: HandwritingProfile? { model.styles.first { $0.status != "ready" } }
 
-    private var greeting: String {
-        let h = Calendar.current.component(.hour, from: .now)
-        return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"
-    }
-
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Wordmark()
-                        Text("\(greeting). Handwritten notes, ready to study from.")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.top, 8)
-
-                    if let error = model.lastError {
-                        Label(error, systemImage: "wifi.exclamationmark").font(.footnote).foregroundStyle(.red)
-                    }
-
-                    if model.hasLoaded {
-                        handwritingCard
-                    } else {
-                        ProgressView().frame(maxWidth: .infinity, minHeight: 80)
-                    }
-
-                    if !active.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            SectionLabel("In progress")
-                            ForEach(active.prefix(2)) { order in
-                                NavigationLink(value: order) { ActiveOrderCard(order: order) }
-                                    .buttonStyle(.plain)
-                            }
+                VStack(alignment: .leading, spacing: 0) {
+                    header
+                    VStack(alignment: .leading, spacing: 28) {
+                        if let error = model.lastError {
+                            Label(error, systemImage: "wifi.exclamationmark")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.red)
                         }
-                    }
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        SectionLabel("What do you need?")
-                        LazyVGrid(columns: typeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
-                            ActionTile(title: OrderKind.completeNotes.title, subtitle: OrderKind.completeNotes.subtitle, symbol: OrderKind.completeNotes.symbol) { newKind = .completeNotes }
-                            ActionTile(title: OrderKind.missedNotes.title, subtitle: OrderKind.missedNotes.subtitle, symbol: OrderKind.missedNotes.symbol) { newKind = .missedNotes }
-                            ActionTile(
-                                title: "Your handwriting",
-                                subtitle: readyStyle != nil ? "Personalised and ready for every order" : "Teach us your handwriting once",
-                                symbol: "pencil.and.scribble"
-                            ) { tab = .handwriting }
-                            ActionTile(title: OrderKind.letters.title, subtitle: OrderKind.letters.subtitle, symbol: OrderKind.letters.symbol) { newKind = .letters }
+                        if model.hasLoaded {
+                            handwritingCard
+                        } else {
+                            ProgressView().frame(maxWidth: .infinity, minHeight: 80)
                         }
+                        VStack(alignment: .leading, spacing: 14) {
+                            SectionLabel("Order something")
+                            tiles
+                        }
+                        promises
                     }
-
-                    Text("Written with a real pen and delivered across Hyderabad in 2–3 hours. Free rewrite of any page within 24 hours.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 20)
+                    .padding(.bottom, active.isEmpty ? 24 : 96)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 24)
             }
             .paperBackground()
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: Order.self) { OrderDetailView(order: $0) }
             .refreshable { await model.refresh() }
+            .safeAreaInset(edge: .bottom) {
+                if let order = active.first {
+                    NavigationLink(value: order) { TrackPill(order: order, more: active.count - 1) }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                }
+            }
+            .navigationDestination(for: Order.self) { OrderDetailView(order: $0) }
             .sheet(item: $newKind) { NewOrderView(kind: $0) }
             .sheet(isPresented: $addingStyle) { AddStyleView() }
         }
     }
 
-    /// Your handwriting at a glance: set it up, see it in review, or see a line written with it.
+    // MARK: Header: the delivery promise
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Delivery in")
+                    .font(.subheadline.weight(.bold))
+                    .opacity(0.8)
+                Spacer()
+                Text("Penned")
+                    .font(.system(.headline, design: .serif, weight: .bold))
+            }
+            Text("2–3 hours")
+                .font(.system(.largeTitle, design: .rounded, weight: .black))
+            Label("Hyderabad · Kondapur, Madhapur, Gachibowli & more", systemImage: "mappin.and.ellipse")
+                .font(.footnote.weight(.semibold))
+                .opacity(0.8)
+                .lineLimit(1)
+                .padding(.top, 2)
+        }
+        .foregroundStyle(Theme.paper)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 22)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            UnevenRoundedRectangle(bottomLeadingRadius: 28, bottomTrailingRadius: 28, style: .continuous)
+                .fill(Theme.ink)
+                .ignoresSafeArea(edges: .top)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Delivery in 2 to 3 hours across Hyderabad")
+    }
+
+    // MARK: Handwriting
+
     @ViewBuilder private var handwritingCard: some View {
         if let style = readyStyle, let glyphs = style.glyphSet {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    SectionLabel("Your handwriting")
+                    Text("Your handwriting").font(.headline.weight(.heavy))
                     Spacer()
-                    Text(style.name).font(.caption).foregroundStyle(.secondary)
+                    PillTag(text: "Ready", inverted: true)
                 }
                 HandwritingPage(text: "Revision notes, Chapter 4.\nReady when you are.", glyphs: glyphs, ink: style.ink, ruled: true, lineSpacing: 1.05, margin: 0.06)
                     .frame(height: sampleHeight)
-            }
-            .card()
-        } else if let pending = pendingStyle {
-            Label {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(pending.status == "needs_rescan" ? "Please rescan your handwriting" : "We're checking your handwriting").font(.headline)
-                    Text(pending.status == "needs_rescan" ? (pending.reviewNote ?? "The photo was hard to read.") : "Usually under an hour. You can order now.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            } icon: {
-                Image(systemName: pending.status == "needs_rescan" ? "arrow.clockwise" : "clock").foregroundStyle(.secondary)
+                    .background(Theme.paper, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
             .card()
             .onTapGesture { tab = .handwriting }
             .accessibilityAddTraits(.isButton)
+        } else if let pending = pendingStyle {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: pending.status == "needs_rescan" ? "arrow.clockwise" : "clock.fill")
+                    .font(.title2.weight(.bold))
+                    .frame(width: 44, height: 44)
+                    .background(Theme.fill, in: Circle())
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(pending.status == "needs_rescan" ? "Rescan your handwriting" : "Checking your handwriting")
+                        .font(.headline.weight(.heavy))
+                    Text(pending.status == "needs_rescan" ? (pending.reviewNote ?? "The photo was hard to read.") : "Usually under an hour. You can order now.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .card()
+            .onTapGesture { tab = .handwriting }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
         } else {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Start with your handwriting").font(.headline)
-                Text("Write three short lines and scan them. Every order is then written in your own hand.")
+                PillTag(text: "Step 1", inverted: true)
+                Text("Teach us your handwriting")
+                    .font(.title3.weight(.black))
+                Text("Write three short lines, scan them once, and every order is written in your own hand.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Button { addingStyle = true } label: {
                     Label("Scan my handwriting", systemImage: "doc.viewfinder").frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .buttonStyle(.pennedPrimary)
             }
             .card()
         }
     }
+
+    // MARK: Tiles
+
+    private var tiles: some View {
+        LazyVGrid(columns: typeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.flexible(), spacing: 14), GridItem(.flexible())], spacing: 14) {
+            ActionTile(title: "Complete notes", subtitle: "Your notes as a neat notebook", price: "₹9 / page", symbol: OrderKind.completeNotes.symbol) { newKind = .completeNotes }
+            ActionTile(title: "Missed notes", subtitle: "Catch up on lessons you missed", price: "₹9 / page", symbol: OrderKind.missedNotes.symbol) { newKind = .missedNotes }
+            ActionTile(title: "Letters & cards", subtitle: "Thank-yous, letters, invites", price: "₹15 / card", symbol: OrderKind.letters.symbol) { newKind = .letters }
+            ActionTile(
+                title: "Your handwriting",
+                subtitle: readyStyle != nil ? "Personalised and ready" : "Set it up once",
+                price: readyStyle != nil ? "Ready" : "Free",
+                symbol: "pencil.and.scribble"
+            ) { tab = .handwriting }
+        }
+    }
+
+    // MARK: Promises
+
+    private var promises: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionLabel("Why Penned")
+            VStack(spacing: 0) {
+                PromiseRow(symbol: "pencil.tip", title: "A real pen, real paper", detail: "Written by a pen machine, never printed")
+                Divider().overlay(Theme.line)
+                PromiseRow(symbol: "arrow.uturn.backward.circle", title: "Free rewrite", detail: "Any page, within 24 hours of delivery")
+                Divider().overlay(Theme.line)
+                PromiseRow(symbol: "location.circle", title: "Live tracking", detail: "Follow every page as it's written")
+            }
+            .card(padding: 0)
+        }
+    }
 }
 
-/// A large, tappable tile for one thing you can do.
+/// A big, bordered tile for one thing you can order.
 private struct ActionTile: View {
     let title: String
     let subtitle: String
+    let price: String
     let symbol: String
     let action: () -> Void
-    @ScaledMetric(relativeTo: .body) private var minHeight: CGFloat = 136
+    @ScaledMetric(relativeTo: .body) private var minHeight: CGFloat = 150
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 10) {
-                Image(systemName: symbol)
-                    .font(.title2)
-                    .foregroundStyle(Theme.accent)
-                    .accessibilityHidden(true)
-                Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .top) {
+                    Image(systemName: symbol)
+                        .font(.title2.weight(.bold))
+                        .frame(width: 46, height: 46)
+                        .background(Theme.fill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.ink, lineWidth: 1.5))
+                        .accessibilityHidden(true)
+                    Spacer(minLength: 4)
+                    PillTag(text: price)
+                }
+                Spacer(minLength: 6)
                 Text(title)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
+                    .font(.headline.weight(.heavy))
+                    .foregroundStyle(Theme.ink)
                 Text(subtitle)
-                    .font(.footnote)
+                    .font(.footnote.weight(.medium))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
-            .card()
+            .card(padding: 14)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TilePressStyle())
         .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// Pressing a tile pushes it down onto its shadow, like a physical button.
+private struct TilePressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .offset(y: configuration.isPressed ? 3 : 0)
+            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+    }
+}
+
+private struct PromiseRow: View {
+    let symbol: String
+    let title: String
+    let detail: String
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: symbol)
+                .font(.title3.weight(.bold))
+                .frame(width: 32)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.subheadline.weight(.heavy))
+                Text(detail).font(.footnote).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Floating black pill for the order being written: the quick-commerce "track your order" bar.
+struct TrackPill: View {
+    let order: Order
+    var more: Int = 0
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: order.status.symbol)
+                .font(.headline.weight(.bold))
+                .frame(width: 40, height: 40)
+                .background(Theme.paper.opacity(0.15), in: Circle())
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(order.headline).font(.subheadline.weight(.heavy)).lineLimit(1)
+                Text(more > 0 ? "\(order.code) · \(more) more in progress" : order.code)
+                    .font(.caption.weight(.semibold))
+                    .opacity(0.75)
+            }
+            Spacer(minLength: 8)
+            HStack(spacing: 4) {
+                Text("Track").font(.subheadline.weight(.heavy))
+                Image(systemName: "chevron.right").font(.caption.weight(.heavy))
+            }
+            .accessibilityHidden(true)
+        }
+        .foregroundStyle(Theme.paper)
+        .padding(.leading, 10)
+        .padding(.trailing, 18)
+        .padding(.vertical, 10)
+        .background(Theme.ink, in: Capsule())
+        .shadow(color: .black.opacity(0.25), radius: 12, y: 6)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(order.headline), \(order.code). Track order")
         .accessibilityAddTraits(.isButton)
     }
 }

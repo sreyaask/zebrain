@@ -171,9 +171,11 @@ struct NewOrderView: View {
     private var form: some View {
         Form {
             Section {
-                ProgressView(value: Double(stepIndex + 1), total: Double(steps.count)) {
-                    Text("Step \(stepIndex + 1) of \(steps.count) · \(stepName(step))").font(.footnote)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Step \(stepIndex + 1) of \(steps.count) · \(stepName(step))").font(.subheadline.weight(.heavy))
+                    BoldProgress(value: Double(stepIndex + 1) / Double(steps.count))
                 }
+                .padding(.vertical, 4)
             }
             switch step {
             case .content: contentStep
@@ -222,8 +224,7 @@ struct NewOrderView: View {
                 Spacer(minLength: 0)
                 if stepIndex > 0 {
                     Button("Back") { go(-1) }
-                        .buttonStyle(.bordered)
-                        .controlSize(.large)
+                        .buttonStyle(.pennedSecondary)
                 }
                 if step == .review {
                     Button {
@@ -231,13 +232,11 @@ struct NewOrderView: View {
                     } label: {
                         if placing { ProgressView() } else { Text("Place order") }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
+                    .buttonStyle(.pennedPrimary)
                     .disabled(placing)
                 } else {
                     Button("Continue") { go(1) }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
+                        .buttonStyle(.pennedPrimary)
                 }
             }
         }
@@ -348,7 +347,7 @@ struct NewOrderView: View {
             .aspectRatio(CGFloat(pageSize.mm.w / pageSize.mm.h), contentMode: .fit)
             .frame(maxWidth: 230)
             .background(Theme.surface)
-            .overlay(Rectangle().strokeBorder(Theme.line))
+            .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.5))
             .frame(maxWidth: .infinity)
             .listRowBackground(Color.clear)
         } header: {
@@ -412,7 +411,7 @@ struct NewOrderView: View {
                 .aspectRatio(CGFloat(cardStyle.size.mm.w / cardStyle.size.mm.h), contentMode: .fit)
                 .frame(maxWidth: cardStyle == .letter ? 200 : 240)
                 .background(cardStyle == .kraft ? Color(red: 0.86, green: 0.78, blue: 0.66) : Theme.surface)
-                .overlay(Rectangle().strokeBorder(Theme.line))
+                .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.5))
                 .frame(maxWidth: .infinity)
                 .listRowBackground(Color.clear)
         } header: {
@@ -469,7 +468,7 @@ struct NewOrderView: View {
                 .aspectRatio(CGFloat(cardStyle.size.mm.w / cardStyle.size.mm.h), contentMode: .fit)
                 .frame(maxWidth: 220)
                 .background(Theme.surface)
-                .overlay(Rectangle().strokeBorder(Theme.line))
+                .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.5))
                 .frame(maxWidth: .infinity)
                 .listRowBackground(Color.clear)
         } header: {
@@ -524,7 +523,7 @@ struct NewOrderView: View {
         } description: {
             Text(order.paymentStatus == "paid" ? "\(rupees(order.total)) paid. You can follow every page in Orders." : "Saved. Open it in Orders to pay and follow progress.")
         } actions: {
-            Button("Done") { dismiss() }.buttonStyle(.borderedProminent)
+            Button("Done") { dismiss() }.buttonStyle(.pennedPrimary)
         }
     }
 

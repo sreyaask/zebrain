@@ -21,7 +21,7 @@ struct RootView: View {
                                 .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
                             Button("Try again") { Task { await model.start() } }
-                                .buttonStyle(.bordered)
+                                .buttonStyle(.pennedSecondary)
                         }
                     }
                     .padding()

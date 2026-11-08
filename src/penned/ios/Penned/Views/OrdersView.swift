@@ -40,8 +40,7 @@ struct OrdersView: View {
                         } label: {
                             Label("New order", systemImage: "plus").frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
+                        .buttonStyle(.pennedPrimary)
 
                         if !past.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
@@ -95,11 +94,10 @@ struct ActiveOrderCard: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Text(order.headline)
-                    .font(.title3.weight(.semibold))
+                    .font(.title3.weight(.black))
                     .foregroundStyle(.primary)
             }
-            ProgressView(value: order.journey)
-                .tint(Theme.accent)
+            BoldProgress(value: order.journey)
                 .accessibilityLabel("Order progress")
             HStack {
                 Text("\(order.quantityLabel) · \(order.paper.name)")
@@ -145,10 +143,10 @@ private struct EmptyOrders: View {
         VStack(alignment: .leading, spacing: 20) {
             HandwritingPage(text: "# Physics Ch. 4\nNewton's Second Law: the rate of change of momentum is proportional to the applied force.", ink: .blue, lineSpacing: 1.15)
                 .frame(height: pageHeight)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.radius - Theme.border, style: .continuous))
                 .card(padding: 0)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             VStack(alignment: .leading, spacing: 6) {
-                Text("No orders yet").font(.title3.weight(.semibold))
+                Text("No orders yet").font(.title3.weight(.black))
                 Text("Scan the pages you need written. We'll write them in your handwriting with a real pen and deliver them in 2–3 hours.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -156,8 +154,7 @@ private struct EmptyOrders: View {
             Button(action: start) {
                 Label("Start an order", systemImage: "plus").frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .buttonStyle(.pennedPrimary)
         }
         .padding(.top, 8)
     }

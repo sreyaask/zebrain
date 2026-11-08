@@ -17,10 +17,10 @@ struct HandwritingView: View {
                         VStack(alignment: .leading, spacing: 20) {
                             HandwritingPage(text: sampleSheet.joined(separator: "\n"), ink: .blue, lineSpacing: 1.1, margin: 0.08)
                                 .frame(height: sheetHeight)
+                                .clipShape(RoundedRectangle(cornerRadius: Theme.radius - Theme.border, style: .continuous))
                                 .card(padding: 0)
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("Teach us your handwriting").font(.title3.weight(.semibold))
+                                Text("Teach us your handwriting").font(.title3.weight(.black))
                                 Text("Write three short lines on paper and scan them. We learn every letter, so each order looks like you wrote it.")
                                     .font(.callout)
                                     .foregroundStyle(.secondary)
@@ -28,16 +28,14 @@ struct HandwritingView: View {
                             Button { adding = true } label: {
                                 Label("Scan my handwriting", systemImage: "doc.viewfinder").frame(maxWidth: .infinity)
                             }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.large)
+                            .buttonStyle(.pennedPrimary)
                         }
                     } else {
                         ForEach(model.styles) { StyleCard(style: $0) }
                         Button { adding = true } label: {
                             Label("Add another style", systemImage: "plus").frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.large)
+                        .buttonStyle(.pennedSecondary)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -59,7 +57,7 @@ private struct StyleCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
-                Text(style.name).font(.headline)
+                Text(style.name).font(.headline.weight(.heavy))
                 Spacer()
                 Text(style.statusLabel)
                     .font(.caption.weight(.medium))

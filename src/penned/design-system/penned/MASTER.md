@@ -50,3 +50,13 @@ Web tokens live in `tailwind.config.ts`. iOS tokens live in `ios/Penned/Theme.sw
 ## Avoid
 - Labels above every heading, scroll fade-ins on everything, icon-in-a-box cards, gradients, emoji,
   stock photos, fake reviews or user counts, and Caveat anywhere that isn't a handwriting sample.
+
+## iOS app look (8 Nov 2026)
+The iPhone app uses its own bold, black-and-white system (`ios/Penned/Theme.swift`), inspired by quick-commerce app patterns
+(not their branding):
+- Black and white only for UI; colour appears only in handwriting previews (the customer's pen colour).
+- Cards: white, 2 pt black border, 18 pt continuous corners, solid black 4 pt offset shadow (`.card()`).
+- Buttons: `.pennedPrimary` (solid black, heavy text, 54 pt tall) and `.pennedSecondary` (white, 2 pt black border).
+- Type: SF Rounded everywhere (`.fontDesign(.rounded)`), headings heavy/black; wordmark New York serif bold.
+- Home: black "Delivery in 2–3 hours" header, tiles with price tags, "Why Penned" promises, floating black Track pill.
+- Dark mode swaps black and white; Increase Contrast strengthens hairlines and ruling.

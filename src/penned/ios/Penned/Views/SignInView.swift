@@ -28,12 +28,12 @@ struct SignInView: View {
 
                 HandwritingPage(text: "Your handwriting.\nWritten for you.", ink: .blue, lineSpacing: 1.2)
                     .frame(height: cardHeight)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.radius - Theme.border, style: .continuous))
                     .card(padding: 0)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 16) {
                     Text(creating ? "Create your account" : "Log in")
-                        .font(.title2.weight(.semibold))
+                        .font(.title.weight(.black))
                     LabeledField(label: "Email") {
                         TextField("you@example.com", text: $email)
                             .textContentType(.username)
@@ -64,8 +64,7 @@ struct SignInView: View {
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
+                    .buttonStyle(.pennedPrimary)
                     .disabled(!canSubmit)
 
                     Button {
@@ -107,12 +106,12 @@ struct LabeledField<Field: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label).font(.subheadline.weight(.medium))
+            Text(label).font(.subheadline.weight(.bold))
             field()
                 .padding(.horizontal, 14)
                 .frame(minHeight: 48)
-                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.line, lineWidth: 1))
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.ink, lineWidth: Theme.border))
             if let hint { Text(hint).font(.footnote).foregroundStyle(.secondary) }
         }
     }

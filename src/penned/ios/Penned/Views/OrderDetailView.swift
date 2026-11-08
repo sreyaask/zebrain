@@ -14,7 +14,7 @@ struct OrderDetailView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(order.code).font(.caption.monospaced()).foregroundStyle(.secondary)
                     Text(order.title.isEmpty ? "Untitled order" : order.title)
-                        .font(.title2.weight(.semibold))
+                        .font(.title2.weight(.heavy))
                     Text("\(order.quantityLabel) · \(order.paper.name) · \(order.ink.label) ink")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -24,9 +24,9 @@ struct OrderDetailView: View {
                 // Status and timeline
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(order.headline).font(.title3.weight(.semibold))
+                        Text(order.headline).font(.title2.weight(.black))
                         if order.status != .cancelled {
-                            ProgressView(value: order.journey).tint(Theme.accent)
+                            BoldProgress(value: order.journey)
                                 .accessibilityLabel("Order progress")
                         }
                     }
@@ -37,7 +37,7 @@ struct OrderDetailView: View {
 
                 if order.paymentStatus != "paid" && order.status != .cancelled {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Payment pending").font(.headline)
+                        Text("Payment pending").font(.headline.weight(.heavy))
                         Text("Writing starts as soon as the order is paid.").font(.subheadline).foregroundStyle(.secondary)
                         Button {
                             Task { await pay() }
@@ -45,8 +45,7 @@ struct OrderDetailView: View {
                             Group { if paying { ProgressView() } else { Text("Pay \(rupees(order.total))") } }
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
+                        .buttonStyle(.pennedPrimary)
                         .disabled(paying)
                         Text("Demo checkout. No real payment is made.").font(.caption).foregroundStyle(.secondary)
                     }
@@ -59,10 +58,10 @@ struct OrderDetailView: View {
                             .font(.headline)
                             .frame(width: 44, height: 44)
                             .background(Theme.paper, in: Circle())
-                            .overlay(Circle().strokeBorder(Theme.line))
+                            .overlay(Circle().strokeBorder(Theme.ink, lineWidth: Theme.border))
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(rider).font(.headline)
+                            Text(rider).font(.headline.weight(.heavy))
                             Text(order.eta.map { "Arriving in \($0)" } ?? "On the way").font(.subheadline).foregroundStyle(.secondary)
                         }
                     }
