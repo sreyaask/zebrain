@@ -2,7 +2,7 @@ import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type Selec
 import { cn } from "@/lib/cn";
 
 export const fieldBase =
-  "block w-full rounded-xl border bg-surface px-3.5 text-[15px] text-ink placeholder:text-muted/70 transition-colors " +
+  "block w-full rounded-xl border bg-surface px-3.5 text-[15px] text-ink placeholder:text-muted transition-colors " +
   "focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent disabled:bg-ink/[0.03] disabled:text-muted";
 
 interface FieldProps {

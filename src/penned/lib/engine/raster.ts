@@ -104,10 +104,10 @@ export function crop(bm: Bitmap, comps: Component[]): { bitmap: Bitmap; box: Box
 
 export function merged(boxes: Box[]): Box {
   return {
-    x0: Math.min(...boxes.map((b) => b.x0)),
-    y0: Math.min(...boxes.map((b) => b.y0)),
-    x1: Math.max(...boxes.map((b) => b.x1)),
-    y1: Math.max(...boxes.map((b) => b.y1)),
+    x0: boxes.reduce((m, b) => Math.min(m, b.x0), Infinity),
+    y0: boxes.reduce((m, b) => Math.min(m, b.y0), Infinity),
+    x1: boxes.reduce((m, b) => Math.max(m, b.x1), -Infinity),
+    y1: boxes.reduce((m, b) => Math.max(m, b.y1), -Infinity),
   };
 }
 

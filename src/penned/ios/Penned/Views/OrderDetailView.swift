@@ -58,6 +58,20 @@ struct OrderDetailView: View {
                         .buttonStyle(.pennedConfirm)
                         .disabled(paying)
                         Text("Demo checkout. No real payment is made.").font(.caption).foregroundStyle(.secondary)
+                        if order.status == .received {
+                            Button("Cancel this order", role: .destructive) {
+                                Task {
+                                    do {
+                                        try await model.cancel(order)
+                                        await reload()
+                                    } catch {
+                                        self.error = "Couldn't cancel. It may already be paid or started."
+                                    }
+                                }
+                            }
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                        }
                     }
                     .card()
                 }

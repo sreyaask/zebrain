@@ -128,10 +128,11 @@ export const demoUser: User = {
 
 /* ---------- Pricing ---------- */
 
+/** Matches the database (public.price_order_v2): what the customer sees is what they're charged. */
 export const pricing = {
-  perPage: 6,
-  notebookMinimumPages: 30,
-  perPremiumCard: 49,
+  perPage: 11,
+  notebookFee: 120,
+  perPremiumCard: 15,
   deliveryFee: 49,
   freeDeliveryAbove: 500,
   rewriteWindowHours: 24,
@@ -155,7 +156,6 @@ export const paperOptions: PaperOption[] = [
     unit: "page",
     pricePerUnit: pricing.perPage,
     capacity: 100,
-    minimum: pricing.notebookMinimumPages,
     ruled: false,
   },
   {
@@ -166,7 +166,6 @@ export const paperOptions: PaperOption[] = [
     unit: "page",
     pricePerUnit: pricing.perPage,
     capacity: 100,
-    minimum: pricing.notebookMinimumPages,
     ruled: true,
   },
   {
@@ -374,12 +373,13 @@ export interface Product {
 }
 
 /**
- * Demo prices shown on the website. Note: the live database (public.price_order) still uses the
- * original ₹9/page and ₹15/card rates until it's updated to match these.
+ * Prices shown on the website. Notes and letters & cards match the database (public.price_order_v2).
+ * Invitations, business mail and journals are still demo prices; in live mode the checkout shows the
+ * database total and asks the customer to confirm it before paying if it differs.
  */
 export const productPricing = {
-  notes: { perPage: 6, minimumPages: 30 },
-  lettersCards: { perCard: 49 },
+  notes: { perPage: 11, notebookFee: 120 },
+  lettersCards: { perCard: 15 },
   invitations: { perInvite: 39, tiers: [{ min: 50, price: 35 }, { min: 100, price: 32 }] },
   businessMail: { perNote: 59, tiers: [{ min: 100, price: 49 }, { min: 500, price: 42 }] },
   journals: { base: 299, includedPages: 40, extraPerPage: 6 },
@@ -410,8 +410,8 @@ export const products: Product[] = [
         body: "Teacher handouts or summaries, filed neatly into a student's notebook.",
       },
     ],
-    priceLabel: "₹6 a page",
-    priceNote: "30-page minimum for notebooks. Paper, ink and contents list included.",
+    priceLabel: "₹11 a page",
+    priceNote: "Plus ₹120 for a new notebook. Ink and contents list included.",
     unit: { one: "page", many: "pages" },
     sample: "# Ch. 4 – Laws of Motion\nNewton's Second Law: the rate of change of momentum of a body is directly proportional to the applied force.\nF = ma, where m is mass and a is acceleration.\nThird Law: every action has an equal and opposite reaction.",
     sampleSize: "b5",
@@ -435,7 +435,7 @@ export const products: Product[] = [
     description:
       "Type what you want to say. We write it on premium card or letter paper in your handwriting, address the envelope, and deliver it in Hyderabad in 2–3 hours.",
     uses: ["Thank-you cards", "Greeting and birthday cards", "Personal letters", "Love letters", "Letters to grandparents"],
-    priceLabel: "₹49 a card",
+    priceLabel: "₹15 a card",
     priceNote: "Envelope and addressing included. Longer letters on A4 are priced the same per sheet.",
     unit: { one: "card", many: "cards" },
     sample: "Dear Amma,\nThank you for the mango pickle and the long phone call. I miss home. See you at Diwali.\nWith love, Arjun",

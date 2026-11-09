@@ -27,12 +27,19 @@ interface Props {
 /** Page geometry: the customer's own notebook when they measured it, otherwise the standard size. */
 function specFor(order: DbOrder): PageSpec {
   const n = order.notebook_spec;
-  if (order.notebook_source === "own" && n && n.width_mm && n.height_mm) {
-    const pitch = Number(n.line_pitch_mm) || 7.2 * Number(order.line_spacing);
+  const num = (v: unknown, lo: number, hi: number) => {
+    const x = Number(v);
+    return Number.isFinite(x) && x >= lo && x <= hi ? x : null;
+  };
+  const w = num(n?.width_mm, 50, 400), h = num(n?.height_mm, 50, 500);
+  // Only plausible measurements (the database checks these too); anything else uses the standard page.
+  if (order.notebook_source === "own" && w && h) {
+    const pitch = num(n?.line_pitch_mm, 3, 20) ?? 7.2 * Number(order.line_spacing);
+    const margin = Math.min(num(n?.margin_mm, 0, 60) ?? Number(order.margin_mm), w - 40);
     return {
-      widthMm: Number(n.width_mm),
-      heightMm: Number(n.height_mm),
-      marginLeftMm: Number(n.margin_mm ?? order.margin_mm),
+      widthMm: w,
+      heightMm: h,
+      marginLeftMm: Math.max(0, margin),
       marginRightMm: 8,
       topMm: pitch * 2,
       bottomMm: 10,
@@ -80,13 +87,19 @@ export function PlotterPanel({ order, text, glyphSet, files, onSaved }: Props) {
     if (!glyphSet) return;
     const diagrams = await loadDiagrams();
     setPreparing(null);
-    // Cards: the same text on every card.
-    const r = layoutHandwriting(text, glyphSet, spec, { headingStyle: order.heading_style, seed: order.code, diagrams });
-    if (order.paper === "premium-card" && order.copies > 1) {
-      const one = r.pages;
-      r.pages = Array.from({ length: order.copies }, (_, c) =>
-        layoutHandwriting(text, glyphSet, spec, { headingStyle: order.heading_style, seed: `${order.code}-${c}`, diagrams }).pages[0] ?? one[0],
-      );
+    let r: LayoutResult;
+    try {
+      // Cards: the same text on every card.
+      r = layoutHandwriting(text, glyphSet, spec, { headingStyle: order.heading_style, seed: order.code, diagrams });
+      if (order.paper === "premium-card" && order.copies > 1) {
+        const one = r.pages;
+        r.pages = Array.from({ length: order.copies }, (_, c) =>
+          layoutHandwriting(text, glyphSet, spec, { headingStyle: order.heading_style, seed: `${order.code}-${c}`, diagrams }).pages[0] ?? one[0],
+        );
+      }
+    } catch (e) {
+      setMessage({ tone: "error", text: e instanceof Error ? e.message : "Couldn't lay out these pages." });
+      return;
     }
     setResult(r);
     setPageIdx(0);

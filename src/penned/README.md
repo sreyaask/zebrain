@@ -67,7 +67,7 @@ Payments are a demo: `demo_mark_paid()` marks an order paid. Swap in a payment g
 ```
 app/                  routes (App Router), plus the global loading, error and not-found screens
 components/ui/        reusable pieces: Button, Input/Select/Textarea, Card, Stepper, Uploader,
-                      PagePreview, StatusPill, Navbar, Footer, Segmented, RadioCard, Alert, Reveal
+                      PagePreview, StatusPill, Navbar, Footer, Segmented, RadioCard, Alert
 components/order/     the order flow, with one file per step and the shared draft types
 components/home/      home-page sections (notebook hero, FAQ, early list)
 lib/mock.ts           all demo data, fully typed: user, pricing, paper, areas, slots, orders, FAQ

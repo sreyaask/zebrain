@@ -7,9 +7,10 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/engine.test.mts && node tests/extract.e2e.mjs",
+    "test": "node --test tests/engine.test.mts tests/pricing.test.mts tests/db.test.mjs",
     "predev": "node scripts/copy-static-assets.mjs",
-    "prebuild": "node scripts/copy-static-assets.mjs"
+    "prebuild": "node scripts/copy-static-assets.mjs",
+    "test:e2e": "node tests/extract.e2e.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.3",
@@ -21,6 +22,7 @@
     "tesseract.js": "5.1.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.2.17",
     "@types/node": "20.16.11",
     "@types/react": "18.3.11",
     "@types/react-dom": "18.3.1",

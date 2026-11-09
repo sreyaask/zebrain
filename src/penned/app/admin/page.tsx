@@ -13,9 +13,10 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 
-type Filter = "open" | DbOrderStatus | "all";
+type Filter = "open" | "unpaid" | DbOrderStatus | "all";
 const filters: { id: Filter; label: string }[] = [
   { id: "open", label: "Open" },
+  { id: "unpaid", label: "Unpaid" },
   { id: "received", label: "Received" },
   { id: "writing", label: "Writing" },
   { id: "quality_check", label: "QC" },
@@ -24,7 +25,11 @@ const filters: { id: Filter; label: string }[] = [
   { id: "all", label: "All" },
 ];
 
-const isOpen = (s: DbOrderStatus) => s !== "delivered" && s !== "cancelled";
+const LIMIT = 500;
+/** Work to do: paid orders that aren't finished. Unpaid ones wait in their own tab. */
+const isOpen = (o: DbOrder) => o.status !== "delivered" && o.status !== "cancelled" && o.payment_status === "paid";
+const isUnpaid = (o: DbOrder) => o.status !== "cancelled" && o.payment_status !== "paid";
+const matches = (o: DbOrder, f: Filter) => (f === "all" ? true : f === "open" ? isOpen(o) : f === "unpaid" ? isUnpaid(o) : o.status === f);
 
 export default function OrdersQueue() {
   const [orders, setOrders] = useState<DbOrder[] | null>(null);
@@ -34,19 +39,25 @@ export default function OrdersQueue() {
 
   const load = useCallback(async () => {
     setError(null);
-    const { data, error } = await supabase().from("orders").select("*").order("created_at", { ascending: false }).limit(500);
+    const { data, error } = await supabase().from("orders").select("*").order("created_at", { ascending: false }).limit(LIMIT);
     if (error) setError(error.message);
     else setOrders(data as DbOrder[]);
   }, []);
 
   useEffect(() => {
     load();
-    // Live updates: new orders and status changes appear without refreshing.
+    // Live updates: new orders and status changes appear without refreshing. Bursts (pages-written saves)
+    // are collapsed into one reload.
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const ch = supabase()
       .channel("admin-orders")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        clearTimeout(timer);
+        timer = setTimeout(load, 1000);
+      })
       .subscribe();
     return () => {
+      clearTimeout(timer);
       supabase().removeChannel(ch);
     };
   }, [load]);
@@ -55,12 +66,12 @@ export default function OrdersQueue() {
     const term = q.trim().toLowerCase();
     return (orders ?? []).filter(
       (o) =>
-        (filter === "all" || (filter === "open" ? isOpen(o.status) : o.status === filter)) &&
+        matches(o, filter) &&
         (!term || [o.code, o.title, o.receiver_name, o.receiver_phone, o.area].some((v) => v?.toLowerCase().includes(term))),
     );
   }, [orders, filter, q]);
 
-  const count = (f: Filter) => (orders ?? []).filter((o) => (f === "all" ? true : f === "open" ? isOpen(o.status) : o.status === f)).length;
+  const count = (f: Filter) => (orders ?? []).filter((o) => matches(o, f)).length;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -95,6 +106,9 @@ export default function OrdersQueue() {
           </button>
         ))}
       </div>
+      {orders?.length === LIMIT && (
+        <p className="mt-3 text-sm text-muted">Showing the newest {LIMIT} orders. Search by code to find older ones.</p>
+      )}
 
       {error ? (
         <div className="mt-6 space-y-3">

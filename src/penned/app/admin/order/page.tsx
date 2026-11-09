@@ -47,6 +47,7 @@ function OrderDetail() {
   const [ocr, setOcr] = useState<{ fraction: number; label: string } | null>(null);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [fulfil, setFulfil] = useState({ pages_written: 0, rider_name: "", eta: "", admin_note: "" });
+  const [noteSaved, setNoteSaved] = useState(false);
   const [updating, setUpdating] = useState(false);
 
   const load = useCallback(async () => {
@@ -68,7 +69,9 @@ function OrderDetail() {
     setData({ order: o, files: (files.data ?? []) as DbOrderFile[], events: (events.data ?? []) as DbOrderEvent[], jobs: (jobs.data ?? []) as DbPlotterJob[], styles: (styles.data ?? []) as DbHandwriting[] });
     setText((t) => t || o.source_text);
     setStyleId((s) => s || o.handwriting_profile_id || (styles.data ?? []).find((x: DbHandwriting) => x.status === "ready")?.id || "");
-    setFulfil({ pages_written: o.pages_written, rider_name: o.rider_name ?? "", eta: o.eta ?? "", admin_note: o.admin_note ?? "" });
+    // Internal notes live in an admin-only table (customers can read their own order rows).
+    const { data: noteRow } = await sb.from("order_notes").select("note").eq("order_id", id).maybeSingle();
+    setFulfil({ pages_written: o.pages_written, rider_name: o.rider_name ?? "", eta: o.eta ?? "", admin_note: noteRow?.note ?? "" });
   }, [id]);
 
   useEffect(() => {
@@ -120,7 +123,14 @@ function OrderDetail() {
         blobs.push({ blob, kind: f.kind });
       }
       const out = await extractText(blobs, (fraction, label) => setOcr({ fraction, label }));
-      setText((t) => (t.trim() ? `${t.trim()}\n${out}` : out));
+      // Orders from the iPhone app already carry the text read on the phone: replace it rather than
+      // appending, so the same pages aren't written twice.
+      setText((t) => {
+        if (!t.trim()) return out;
+        return window.confirm("This order already has text (the iPhone app reads it on the phone). Replace it with the text read now? Cancel adds it to the end instead.")
+          ? out
+          : `${t.trim()}\n${out}`;
+      });
     } catch (e) {
       setOcrError(e instanceof Error ? e.message : "Text extraction failed.");
     } finally {
@@ -255,11 +265,13 @@ function OrderDetail() {
           <div>
             <h2 className="text-sm font-semibold">Status</h2>
             <div className="mt-3 space-y-3">
-              {next && (
+              {next && order.payment_status !== "paid" && order.status !== "cancelled" ? (
+                <p className="text-sm text-danger">Waiting for payment. Writing starts once the order is paid.</p>
+              ) : next ? (
                 <Button fullWidth onClick={() => update({ status: next, ...(next === "quality_check" ? { pages_written: units } : {}) })} loading={updating}>
                   Mark as {statusLabel[next].toLowerCase()}
                 </Button>
-              )}
+              ) : null}
               {order.status === "writing" && (
                 <div className="flex items-end gap-2">
                   <Input
@@ -323,7 +335,20 @@ function OrderDetail() {
           <div>
             <label htmlFor="note" className="text-sm font-semibold">Internal note</label>
             <textarea id="note" rows={3} value={fulfil.admin_note} onChange={(e) => setFulfil({ ...fulfil, admin_note: e.target.value })} className="mt-2 block w-full rounded-xl border border-line bg-surface p-3 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25" />
-            <Button size="sm" variant="secondary" className="mt-2" onClick={() => update({ admin_note: fulfil.admin_note || null })}>Save note</Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="mt-2"
+              onClick={async () => {
+                setNoteSaved(false);
+                const { error } = await supabase().from("order_notes").upsert({ order_id: order.id, note: fulfil.admin_note, updated_at: new Date().toISOString() });
+                if (error) setError(error.message);
+                else setNoteSaved(true);
+              }}
+            >
+              Save note
+            </Button>
+            {noteSaved && <p className="mt-1 text-xs text-muted">Saved. Only the team can see this note.</p>}
           </div>
         </aside>
       </div>

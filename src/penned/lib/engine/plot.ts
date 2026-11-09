@@ -36,7 +36,7 @@ export function pageToSvg(page: PlotPage, ink: "blue" | "black" = "blue", opts: 
   const paths = page.strokes.filter((s) => s.length > 1).map((s) => `<path d="${pathData(s)}"/>`).join("");
   // Ruling is drawn on a separate, non-plotting layer for preview only.
   let rules = "";
-  if (opts.ruled && opts.pitchMm && opts.topMm !== undefined) {
+  if (opts.ruled && opts.pitchMm && opts.pitchMm > 0 && opts.topMm !== undefined) {
     const ys: number[] = [];
     for (let y = opts.topMm; y < page.heightMm - 5; y += opts.pitchMm) ys.push(y);
     rules = `<g id="preview-ruling" stroke="#CBD5E8" stroke-width="0.2">${ys.map((y) => `<line x1="0" x2="${page.widthMm}" y1="${y.toFixed(2)}" y2="${y.toFixed(2)}"/>`).join("")}</g>`;

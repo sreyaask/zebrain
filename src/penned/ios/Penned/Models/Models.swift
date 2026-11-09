@@ -112,7 +112,7 @@ struct Order: Codable, Identifiable, Hashable {
     let code: String
     let title: String
     let status: OrderStatus
-    let paymentStatus: String
+    var paymentStatus: String
     let paper: PaperID
     let ink: Ink
     let copies: Int
@@ -248,7 +248,22 @@ struct NotebookSpec: Codable, Hashable {
     var isValid: Bool {
         (50...400).contains(widthMm) && (50...500).contains(heightMm)
             && (!ruled || (linePitchMm.map { (3...20).contains($0) } ?? false))
-            && (marginMm.map { (0...60).contains($0) } ?? true)
+            && (marginMm.map { (0...60).contains($0) && widthMm - $0 >= 40 } ?? true)
+    }
+}
+
+extension NotebookSpec {
+    /// Lenient: a spec with missing fields (e.g. typed in by hand on the server) decodes as invalid instead of
+    /// failing the whole order list.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name = try? c.decodeIfPresent(String.self, forKey: .name)
+        widthMm = (try? c.decodeIfPresent(Double.self, forKey: .widthMm)) ?? 0
+        heightMm = (try? c.decodeIfPresent(Double.self, forKey: .heightMm)) ?? 0
+        linePitchMm = try? c.decodeIfPresent(Double.self, forKey: .linePitchMm)
+        marginMm = try? c.decodeIfPresent(Double.self, forKey: .marginMm)
+        ruled = (try? c.decodeIfPresent(Bool.self, forKey: .ruled)) ?? true
+        pages = try? c.decodeIfPresent(Int.self, forKey: .pages)
     }
 }
 
@@ -279,6 +294,8 @@ struct CatalogNotebook: Decodable {
 // MARK: - Inserts
 
 struct NewOrder: Encodable {
+    /// Made on the phone so a retry reuses the same order instead of creating a second one.
+    var id = UUID()
     var title: String
     var sourceMode: String
     var sourceText: String
@@ -304,7 +321,7 @@ struct NewOrder: Encodable {
     var deliveryNote: String?
 
     enum CodingKeys: String, CodingKey {
-        case title, paper, ink, copies, area, pincode, landmark
+        case id, title, paper, ink, copies, area, pincode, landmark
         case notebookSource = "notebook_source"
         case notebookBarcode = "notebook_barcode"
         case notebookSpec = "notebook_spec"
@@ -428,13 +445,3 @@ enum CardPaper: String, CaseIterable, Identifiable {
     var size: PageSize { self == .letter ? .a4 : .a6 }
 }
 
-/// Puts a numbered contents list of the headings (lines starting with "# ") in front of the notes.
-func withContents(_ text: String) -> String {
-    let headings = text.components(separatedBy: "\n")
-        .filter { $0.hasPrefix("# ") }
-        .map { String($0.dropFirst(2)).trimmingCharacters(in: .whitespaces) }
-        .filter { !$0.isEmpty }
-    guard !headings.isEmpty else { return text }
-    let list = headings.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
-    return "# Contents\n\(list)\n\n\(text)"
-}

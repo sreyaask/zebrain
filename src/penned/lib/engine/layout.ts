@@ -131,6 +131,10 @@ export function layoutHandwriting(text: string, set: GlyphSet, spec: PageSpec, o
   const glyphs = resolver(set);
   const missing = new Set<string>();
   const usable = spec.widthMm - spec.marginLeftMm - spec.marginRightMm;
+  // A page with no room to write, or no line spacing, would loop forever below.
+  if (!(usable >= spec.xHeightMm * 2) || !(spec.linePitchMm > 0) || !(spec.xHeightMm > 0)) {
+    throw new Error(`Page too narrow to write on: ${round(usable)} mm between margins, ${spec.linePitchMm} mm line spacing`);
+  }
   const linesPerPage = Math.max(1, Math.floor((spec.heightMm - spec.topMm - spec.bottomMm) / spec.linePitchMm) + 1);
 
   // 1) Break the text into visual lines.
@@ -163,12 +167,14 @@ export function layoutHandwriting(text: string, set: GlyphSet, spec: PageSpec, o
       while (measure(word, scale) > usable) {
         let cut = word.length - 1;
         while (cut > 1 && measure(word.slice(0, cut), scale) > usable) cut--;
+        cut = Math.max(1, cut); // always make progress, even for one very wide character
         if (cur.length) vlines.push({ words: cur, scale, heading });
         vlines.push({ words: [word.slice(0, cut)], scale, heading });
         cur = [];
         width = 0;
         word = word.slice(cut);
       }
+      if (!word) continue;
       const w = measure(word, scale);
       if (cur.length && width + space + w > usable) {
         vlines.push({ words: cur, scale, heading });

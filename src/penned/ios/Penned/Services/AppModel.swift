@@ -40,6 +40,8 @@ final class AppModel {
             print("[Penned] auth event: \(event)")
             if let session {
                 auth = .signedIn(userID: session.user.id, email: session.user.email)
+                // A draft saved by someone else on this phone is never offered to this account.
+                if let d = draft, d.userID != session.user.id.uuidString { clearDraft() }
                 await refresh()
             } else {
                 auth = .signedOut
@@ -50,6 +52,7 @@ final class AppModel {
                 ratedOrderIDs = []
                 pollTask?.cancel()
                 pollTask = nil
+                clearDraft() // drafts hold the customer's pages and address
             }
         }
     }
@@ -87,17 +90,31 @@ final class AppModel {
 
     // MARK: Data
 
-    func refresh() async {
+    /// Every column `Order` decodes, and nothing else (source_text can be very large).
+    static let orderColumns = "id, code, title, status, payment_status, paper, ink, copies, page_count, billable_units, unit_price, writing_amount, delivery_amount, total, address_line1, area, pincode, time_slot, pages_written, rider_name, eta, created_at, notebook_source, notebook_amount, delivered_at, receiver_name, receiver_phone, landmark, delivery_note, notebook_barcode, notebook_spec"
+    @ObservationIgnored private var refreshing = false
+
+    /// Loads everything. A poll (`light`) only re-reads orders, which is all that changes while one is written.
+    func refresh(light: Bool = false) async {
+        // One refresh at a time, so "what changed" is always measured against the last completed load.
+        guard !refreshing, let uid = userID else { return }
+        refreshing = true
+        defer { refreshing = false }
         do {
-            async let o: [Order] = client.from("orders").select().order("created_at", ascending: false).execute().value
-            async let s: [HandwritingProfile] = client.from("handwriting_profiles").select().order("created_at", ascending: false).execute().value
             let before = Dictionary(orders.map { ($0.id, $0.status) }, uniquingKeysWith: { a, _ in a })
-            (orders, styles) = try await (o, s)
+            async let o: [Order] = client.from("orders").select(Self.orderColumns).order("created_at", ascending: false).execute().value
+            async let s: [HandwritingProfile]? = light ? nil : client.from("handwriting_profiles").select().order("created_at", ascending: false).execute().value
+            async let r: [RatedRow]? = light ? nil : try? client.from("order_feedback").select("order_id").execute().value
+            async let a: [SavedAddress]? = light ? nil : try? client.from("addresses")
+                .select("id, label, line1, area, pincode, landmark, receiver_name, receiver_phone").order("created_at", ascending: false).execute().value
+            let (newOrders, newStyles, rated, saved) = try await (o, s, r, a)
+            // Signed out (or switched account) while loading: drop the result.
+            guard userID == uid else { return }
+            orders = newOrders
+            if let newStyles { styles = newStyles }
+            if let rated { ratedOrderIDs = Set(rated.map(\.orderId)) }
+            if let saved { addresses = saved }
             announceChanges(since: before)
-            let rated: [RatedRow] = (try? await client.from("order_feedback").select("order_id").execute().value) ?? []
-            ratedOrderIDs = Set(rated.map(\.orderId))
-            addresses = (try? await client.from("addresses").select("id, label, line1, area, pincode, landmark, receiver_name, receiver_phone")
-                .order("created_at", ascending: false).execute().value) ?? []
             lastError = nil
             hasLoaded = true
             print("[Penned] loaded \(orders.count) orders, \(styles.count) handwriting styles")
@@ -111,7 +128,10 @@ final class AppModel {
 
     // MARK: Live updates
 
-    var activeOrders: [Order] { orders.filter { $0.status != .delivered && $0.status != .cancelled } }
+    /// Orders being worked on. An unpaid order isn't moving, so it doesn't keep the app polling.
+    var activeOrders: [Order] {
+        orders.filter { $0.status != .delivered && $0.status != .cancelled && $0.paymentStatus == "paid" }
+    }
 
     /// While an order is moving, check every 20 seconds so Home, Orders and the banner stay current.
     private func keepLiveIfNeeded() {
@@ -120,8 +140,8 @@ final class AppModel {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(20))
                 guard let self, !Task.isCancelled else { return }
-                if self.activeOrders.isEmpty { break }
-                await self.refresh()
+                if self.activeOrders.isEmpty || self.userID == nil { break }
+                await self.refresh(light: true)
             }
             self?.pollTask = nil
         }
@@ -154,9 +174,14 @@ final class AppModel {
 
     // MARK: Drafts
 
-    func saveDraft(_ d: OrderDraft, files: [ScannedFile]) {
-        DraftStore.save(d, files: files)
-        draft = d
+    /// Saves the draft for the signed-in customer. False if some pages couldn't be written to the phone.
+    @discardableResult
+    func saveDraft(_ d: OrderDraft, files: [ScannedFile]) -> Bool {
+        var mine = d
+        mine.userID = userID?.uuidString
+        let complete = DraftStore.save(mine, files: files)
+        draft = mine
+        return complete
     }
 
     func clearDraft() {
@@ -185,31 +210,56 @@ final class AppModel {
     // MARK: Orders
 
     /// Inserts the order (the server sets the code and price), then uploads the pages.
-    func place(_ draft: NewOrder, files: [ScannedFile]) async throws -> Order {
+    /// Creates the order (the server sets code and price) and uploads its pages. Safe to retry with the same
+    /// `draft.id`: an existing order is reused and uploads overwrite. If an earlier attempt left an unpaid order
+    /// with a different price (the customer edited it since), that one is cancelled and a fresh one is made.
+    func place(_ draft: NewOrder, files: [ScannedFile], expectedTotal: Int) async throws -> Order {
         guard let uid = userID else { throw AppError.signedOut }
-        let order: Order = try await client.from("orders").insert(draft).select().single().execute().value
+        var draft = draft
+        let existing: [Order] = try await client.from("orders").select(Self.orderColumns).eq("id", value: draft.id).limit(1).execute().value
+        var order: Order
+        if let found = existing.first, found.paymentStatus == "paid" || found.total == expectedTotal {
+            order = found
+        } else {
+            if let stale = existing.first {
+                _ = try? await client.rpc("cancel_my_order", params: ["p_order_id": stale.id.uuidString]).execute()
+                draft.id = UUID()
+            }
+            order = try await client.from("orders").insert(draft).select(Self.orderColumns).single().execute().value
+        }
         for (i, file) in files.enumerated() {
             // Diagrams keep their names (diagram-<id>.png): the text refers to them by id.
             let name = file.uploadName ?? "\(i + 1).\(file.kind == "pdf" ? "pdf" : "jpg")"
             let path = "\(uid.uuidString.lowercased())/\(order.id.uuidString.lowercased())/\(name)"
             let type = file.kind == "pdf" ? "application/pdf" : (name.hasSuffix(".png") ? "image/png" : "image/jpeg")
-            try await client.storage.from("uploads").upload(path, data: file.data, options: FileOptions(contentType: type))
-            try await client.from("order_files").insert(NewOrderFile(orderId: order.id, path: path, kind: file.kind, pages: file.pages)).execute()
+            try await client.storage.from("uploads").upload(path, data: file.data, options: FileOptions(contentType: type, upsert: true))
+            try await client.from("order_files")
+                .upsert(NewOrderFile(orderId: order.id, path: path, kind: file.kind, pages: file.pages), onConflict: "order_id,path", ignoreDuplicates: true)
+                .execute()
         }
+        if order.paymentStatus != "paid" && order.total != expectedTotal { throw AppError.priceChanged(order.total) }
         return order
     }
 
     // MARK: Addresses
 
     func save(address: SavedAddress) async {
-        // One address per label: saving "Home" again replaces the old Home.
-        if let old = addresses.first(where: { $0.label.caseInsensitiveCompare(address.label) == .orderedSame }), let id = old.id {
-            _ = try? await client.from("addresses").delete().eq("id", value: id).execute()
-        }
-        if let saved: SavedAddress = try? await client.from("addresses").insert(address)
-            .select("id, label, line1, area, pincode, landmark, receiver_name, receiver_phone").single().execute().value {
+        // One address per label: saving "Home" again updates the old Home in place (never delete-then-insert,
+        // which loses the address if the insert fails).
+        let columns = "id, label, line1, area, pincode, landmark, receiver_name, receiver_phone"
+        do {
+            let saved: SavedAddress
+            if let old = addresses.first(where: { $0.label.caseInsensitiveCompare(address.label) == .orderedSame }), let id = old.id {
+                var changed = address
+                changed.id = nil
+                saved = try await client.from("addresses").update(changed).eq("id", value: id).select(columns).single().execute().value
+            } else {
+                saved = try await client.from("addresses").insert(address).select(columns).single().execute().value
+            }
             addresses.removeAll { $0.label.caseInsensitiveCompare(address.label) == .orderedSame }
             addresses.insert(saved, at: 0)
+        } catch {
+            lastError = "Couldn't save the address. Your order is placed; you can add it next time."
         }
     }
 
@@ -243,6 +293,12 @@ final class AppModel {
     }
 
     /// Demo payment. Replace with a payment gateway (and its webhook) before launch.
+    /// Cancels the customer's own order while it's unpaid and not started (e.g. after a failed checkout).
+    func cancel(_ order: Order) async throws {
+        try await client.rpc("cancel_my_order", params: ["p_order_id": order.id.uuidString]).execute()
+        await refresh()
+    }
+
     func demoPay(_ order: Order) async throws {
         try await client.rpc("demo_mark_paid", params: ["p_order_id": order.id.uuidString]).execute()
         await refresh()
@@ -252,9 +308,12 @@ final class AppModel {
 enum AppError: LocalizedError {
     case signedOut
     case confirmEmailOn
+    /// The server priced the order differently from what was shown; nothing was charged.
+    case priceChanged(Int)
     var errorDescription: String? {
         switch self {
         case .signedOut: "Please sign in again."
+        case let .priceChanged(total): "The final price for this order is \(rupees(total)). Nothing was charged. Tap Place order again to pay \(rupees(total))."
         case .confirmEmailOn: "This account isn't confirmed yet. In Supabase, turn off \"Confirm email\" (Authentication → Sign In / Providers → Email)."
         }
     }
@@ -297,6 +356,8 @@ struct OrderDraft: Codable, Equatable {
         let uploadName: String?
     }
     var kind: String
+    /// The account that saved it; drafts are never shown to another account on the same phone.
+    var userID: String? = nil
     var savedAt = Date()
     var title = ""
     var text = ""
@@ -333,7 +394,9 @@ enum DraftStore {
         return base.appendingPathComponent("Draft", isDirectory: true)
     }
 
-    static func save(_ draft: OrderDraft, files: [ScannedFile]) {
+    /// Returns false if any page or the draft itself couldn't be written (e.g. the phone is full).
+    @discardableResult
+    static func save(_ draft: OrderDraft, files: [ScannedFile]) -> Bool {
         clear()
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         var d = draft
@@ -342,9 +405,9 @@ enum DraftStore {
             guard (try? f.data.write(to: folder.appendingPathComponent(name), options: .completeFileProtection)) != nil else { return nil }
             return .init(stored: name, kind: f.kind, pages: f.pages, name: f.name, uploadName: f.uploadName)
         }
-        if let json = try? JSONEncoder().encode(d) {
-            try? json.write(to: folder.appendingPathComponent("draft.json"), options: .completeFileProtection)
-        }
+        guard let json = try? JSONEncoder().encode(d),
+              (try? json.write(to: folder.appendingPathComponent("draft.json"), options: .completeFileProtection)) != nil else { return false }
+        return d.files.count == files.count
     }
 
     static func load() -> (draft: OrderDraft, files: [ScannedFile])? {

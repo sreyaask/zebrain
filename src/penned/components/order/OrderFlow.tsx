@@ -57,6 +57,16 @@ export function OrderFlow() {
   const [messageErrors, setMessageErrors] = useState<{ message?: string; recipients?: string }>({});
   const [deliveryErrors, setDeliveryErrors] = useState<DeliveryErrors>({});
   const [placed, setPlaced] = useState<Order | null>(null);
+  /** One id per checkout, so retrying payment never creates a second order. */
+  const checkoutId = useRef<string>(typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}`);
+  /** The database's total, once the customer has been told it (see PriceChangedError). */
+  const [confirmedTotal, setConfirmedTotal] = useState<number | null>(null);
+  // Editing the order after a failed attempt starts a fresh checkout (the old unpaid order is left for the
+  // customer to cancel; it never reaches the writing queue because it isn't paid).
+  useEffect(() => {
+    checkoutId.current = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}`;
+    setConfirmedTotal(null);
+  }, [draft]);
   // Direction of the last step change, so the next step slides in from the side you're heading to.
   const [direction, setDirection] = useState<"forward" | "back">("forward");
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -140,10 +150,14 @@ export function OrderFlow() {
 
     if (live) {
       // The Supabase client is loaded only now, when the order is actually placed.
-      const { placeOrder } = await import("@/lib/api");
+      const { placeOrder, PriceChangedError } = await import("@/lib/api");
       // Existing order API: cards, invites and business notes go as typed text with the recipient list.
-      const order = await placeOrder(
+      let order;
+      try {
+        order = await placeOrder(
         {
+          orderId: checkoutId.current,
+          expectedTotal: confirmedTotal ?? draftQuote(draft).total,
           title,
           mode: isPages ? draft.mode : "text",
           text: orderText(draft),
@@ -155,7 +169,14 @@ export function OrderFlow() {
           delivery: { ...draft.delivery, useSaved: draft.delivery.addressMode === "saved", slot: draft.delivery.slot || "within-3h" },
         },
         pay,
-      );
+        );
+      } catch (err) {
+        if (err instanceof PriceChangedError) {
+          setConfirmedTotal(err.total);
+          throw new Error(`${err.message} Nothing was charged. Press Pay again to pay ₹${err.total}.`);
+        }
+        throw err;
+      }
       setPlaced(order);
       return;
     }

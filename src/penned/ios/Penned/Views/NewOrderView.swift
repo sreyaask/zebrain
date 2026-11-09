@@ -78,6 +78,10 @@ struct NewOrderView: View {
     @State private var saveAddress = true
     @State private var addressLabel = "Home"
     @State private var didPrefill = false
+    /// One id per checkout: retrying "Place order" reuses the same order instead of creating another.
+    @State private var checkoutID = UUID()
+    /// The server's total, once the customer has been shown it (if it differed from the quote).
+    @State private var confirmedTotal: Int?
     // Submit
     @State private var placing = false
     @State private var placed: Order?
@@ -179,8 +183,10 @@ struct NewOrderView: View {
                     Button(placed == nil ? "Cancel" : "Close") { if hasWork { confirmDiscard = true } else { dismiss() } }
                         .confirmationDialog("Leave this order?", isPresented: $confirmDiscard, titleVisibility: .visible) {
                             Button("Save as draft") {
-                                model.saveDraft(makeDraft(), files: files)
-                                model.show(Toast(symbol: "tray.and.arrow.down", title: "Draft saved", detail: "Pick it up from Home any time."))
+                                let complete = model.saveDraft(makeDraft(), files: files)
+                                model.show(Toast(symbol: complete ? "tray.and.arrow.down" : "exclamationmark.triangle",
+                                                 title: complete ? "Draft saved" : "Draft saved without some pages",
+                                                 detail: complete ? "Pick it up from Home any time." : "Your phone is low on space. Add those pages again when you resume."))
                                 dismiss()
                             }
                             Button("Discard order", role: .destructive) {
@@ -234,6 +240,11 @@ struct NewOrderView: View {
                     pageSize = cardStyle.size
                 }
             }
+            // Changing the order after a failed attempt starts a fresh checkout.
+            .onChange(of: quote.total) { _, _ in
+                checkoutID = UUID()
+                confirmedTotal = nil
+            }
             .sensoryFeedback(.success, trigger: placed?.id)
             .sensoryFeedback(.error, trigger: error)
         }
@@ -284,7 +295,7 @@ struct NewOrderView: View {
             AdaptiveStack {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
-                        Text(quote.total > 0 ? rupees(quote.total) : "—").font(.headline.weight(.black).monospacedDigit())
+                        Text(quote.total > 0 ? rupees(confirmedTotal ?? quote.total) : "—").font(.headline.weight(.black).monospacedDigit())
                             .contentTransition(.numericText(value: Double(quote.total)))
                             .animation(.snappy, value: quote.total)
                         if quote.total > 0 { Text("TOTAL").font(.caption2.weight(.heavy)).foregroundStyle(.secondary) }
@@ -910,6 +921,7 @@ struct NewOrderView: View {
         defer { placing = false }
         let count = recipientNames.count
         let draft = NewOrder(
+            id: checkoutID,
             title: orderTitle,
             sourceMode: isNotes && !files.isEmpty ? "files" : "text",
             sourceText: orderText,
@@ -935,19 +947,25 @@ struct NewOrderView: View {
             deliveryNote: deliveryNote
         )
         do {
-            var order = try await model.place(draft, files: isNotes ? files : [])
-            if resumeDraft || model.draft?.kind == kind.rawValue { model.clearDraft() }
+            var order = try await model.place(draft, files: isNotes ? files : [], expectedTotal: confirmedTotal ?? quote.total)
             if saveAddress && !matchesSaved {
                 await model.save(address: SavedAddress(
                     id: nil, label: addressLabel, line1: draft.addressLine1, area: area, pincode: pincode,
                     landmark: draft.landmark, receiverName: draft.receiverName, receiverPhone: draft.receiverPhone))
             }
-            try await model.demoPay(order)
-            order = try await model.order(id: order.id)
+            if order.paymentStatus != "paid" { try await model.demoPay(order) }
+            // Paid: the draft is done. (Cleared only now, so a failed payment keeps it.)
+            if resumeDraft || model.draft?.kind == kind.rawValue { model.clearDraft() }
+            // If re-reading the order fails, it is still paid: show it as paid rather than an error.
+            if let fresh = try? await model.order(id: order.id) { order = fresh } else { order.paymentStatus = "paid" }
             placed = order
             Sounds.shared.play(.success)
+        } catch let AppError.priceChanged(total) {
+            confirmedTotal = total
+            self.error = AppError.priceChanged(total).errorDescription
+            Sounds.shared.play(.error)
         } catch {
-            self.error = "Couldn't place the order. Check your connection and try again."
+            self.error = "Couldn't place the order. Nothing extra was charged; tap Place order to try again."
             Sounds.shared.play(.error)
         }
     }

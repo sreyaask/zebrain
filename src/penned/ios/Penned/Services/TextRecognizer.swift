@@ -158,6 +158,10 @@ enum TextRecognizer {
         var items: [Item] = []
         var kept = lines
         for band in bands {
+            // A "diagram" covering most of the page, or swallowing a big share of the text, is almost certainly
+            // the page itself (shadows, ruling): keep the text and skip it.
+            let swallowed = kept.filter { band.contains(CGPoint(x: $0.rect.midX, y: $0.rect.midY)) }.count
+            if band.height > 0.6 || (kept.count >= 4 && swallowed * 10 > kept.count * 3) { continue }
             // Labels inside a diagram are part of the drawing, not the text.
             kept.removeAll { band.contains(CGPoint(x: $0.rect.midX, y: $0.rect.midY)) }
             guard let png = crop(image, band) else { continue }
@@ -236,6 +240,15 @@ enum TextRecognizer {
             let y0 = max(0, Int((l.rect.minY - pad * 0.6) * CGFloat(h))), y1 = min(h, Int(ceil((l.rect.maxY + pad) * CGFloat(h))))
             guard x0 < x1, y0 < y1 else { continue }
             for y in y0..<y1 { for x in x0..<x1 { ink[y * w + x] = false } }
+        }
+
+        // Notebook ruling and margin lines are long straight runs, not drawings: clear any row or column
+        // that is mostly ink, so a ruled page doesn't turn into one page-sized "diagram".
+        for y in 0..<h where (0..<w).reduce(0, { $0 + (ink[y * w + $1] ? 1 : 0) }) > w * 6 / 10 {
+            for x in 0..<w { ink[y * w + x] = false }
+        }
+        for x in 0..<w where (0..<h).reduce(0, { $0 + (ink[$1 * w + x] ? 1 : 0) }) > h * 6 / 10 {
+            for y in 0..<h { ink[y * w + x] = false }
         }
 
         // Rows with leftover ink, grouped into bands across small gaps.

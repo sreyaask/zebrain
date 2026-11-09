@@ -9,8 +9,10 @@ create table if not exists public.order_feedback (
 );
 alter table public.order_feedback enable row level security;
 
+drop policy if exists "order_feedback: owner reads" on public.order_feedback;
 create policy "order_feedback: owner reads" on public.order_feedback
   for select to authenticated using (user_id = (select auth.uid()) or (select public.is_admin()));
+drop policy if exists "order_feedback: owner rates a delivered order" on public.order_feedback;
 create policy "order_feedback: owner rates a delivered order" on public.order_feedback
   for insert to authenticated with check (
     user_id = (select auth.uid())

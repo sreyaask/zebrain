@@ -20,12 +20,6 @@ export async function currentUser(): Promise<{ id: string; email: string | null 
   return data.session ? { id: data.session.user.id, email: data.session.user.email ?? null } : null;
 }
 
-export function onAuthChange(cb: (signedIn: boolean) => void): () => void {
-  if (!live) return () => {};
-  const { data } = supabase().auth.onAuthStateChange((_e, s) => cb(!!s));
-  return () => data.subscription.unsubscribe();
-}
-
 /** Turns Supabase auth errors into something a customer can act on. */
 export function authMessage(err: { message?: string; code?: string; status?: number } | null | undefined): string {
   const code = err?.code ?? "";
@@ -133,6 +127,10 @@ export function watchOrder(code: string, cb: () => void): () => void {
 }
 
 export interface PlaceOrderInput {
+  /** Made once per checkout: retries reuse it, so a retry never creates a second order. */
+  orderId: string;
+  /** The total the customer was shown. If the database prices it differently, nothing is charged. */
+  expectedTotal: number;
   title: string;
   mode: "files" | "text";
   text: string;
@@ -153,7 +151,19 @@ export interface PlaceOrderInput {
   };
 }
 
-/** Creates the order (the database sets code and price), uploads the pages, then runs the demo payment. */
+/** Thrown when the database's price differs from the one shown; the order stays unpaid. */
+export class PriceChangedError extends Error {
+  constructor(readonly total: number) {
+    super(`The final price for this order is ₹${total}.`);
+  }
+}
+
+const mimeByExt: Record<string, string> = { pdf: "application/pdf", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", heic: "image/heic", webp: "image/webp" };
+
+/**
+ * Creates the order (the database sets code and price), uploads the pages, then runs the demo payment.
+ * Safe to retry with the same input.orderId: an existing order is reused and uploads overwrite.
+ */
 export async function placeOrder(input: PlaceOrderInput, pay: { declined: boolean }): Promise<Order> {
   const sb = supabase();
   const user = await currentUser();
@@ -162,10 +172,12 @@ export async function placeOrder(input: PlaceOrderInput, pay: { declined: boolea
   const saved = demoUser.savedAddress;
   const { data: style } = await sb.from("handwriting_profiles").select("id").eq("status", "ready").order("created_at", { ascending: false }).limit(1).maybeSingle();
 
-  const { data, error } = await sb
+  const existing = await sb.from("orders").select("*").eq("id", input.orderId).maybeSingle();
+  const { data, error } = existing.data ? { data: existing.data, error: null } : await sb
     .from("orders")
     .insert({
-      title: input.title.trim(),
+      id: input.orderId,
+      title: input.title.trim().slice(0, 120),
       source_mode: input.mode,
       source_text: input.mode === "text" ? input.text : "",
       paper: input.paper,
@@ -195,12 +207,15 @@ export async function placeOrder(input: PlaceOrderInput, pay: { declined: boolea
     if (!f.file) continue;
     const ext = f.kind === "pdf" ? "pdf" : (f.name.split(".").pop() || "jpg").toLowerCase();
     const path = `${user.id}/${order.id}/${String(i + 1).padStart(2, "0")}.${ext}`;
-    const up = await sb.storage.from("uploads").upload(path, f.file, { contentType: f.file.type || undefined });
+    const contentType = f.file.type || mimeByExt[ext] || "application/octet-stream";
+    const up = await sb.storage.from("uploads").upload(path, f.file, { contentType, upsert: true });
     if (up.error) throw new Error(`Upload failed for ${f.name}: ${up.error.message}`);
-    const row = await sb.from("order_files").insert({ order_id: order.id, path, kind: f.kind, pages: f.pages });
+    const row = await sb.from("order_files").upsert({ order_id: order.id, path, kind: f.kind, pages: f.pages }, { onConflict: "order_id,path", ignoreDuplicates: true });
     if (row.error) throw new Error(row.error.message);
   }
 
+  if (order.payment_status === "paid") return toUiOrder(order);
+  if (order.total !== input.expectedTotal) throw new PriceChangedError(order.total);
   if (pay.declined) throw new Error("PAYMENT_DECLINED");
   const paid = await sb.rpc("demo_mark_paid", { p_order_id: order.id });
   if (paid.error) throw new Error(paid.error.message);

@@ -92,6 +92,9 @@ struct StoryViewer: View {
     let onSeen: (String) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var drag: CGFloat = 0
+    /// Slides don't move on by themselves for VoiceOver users, or while a finger is held down.
+    @State private var paused = false
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
 
     init(startAt: Int, onSeen: @escaping (String) -> Void) {
         _storyIndex = State(initialValue: startAt)
@@ -168,12 +171,19 @@ struct StoryViewer: View {
         .gesture(DragGesture().onChanged { drag = $0.translation.height }.onEnded { v in
             if v.translation.height > 120 { dismiss() } else { withAnimation(.spring) { drag = 0 } }
         })
-        .task(id: "\(storyIndex)-\(slideIndex)") {
+        .onLongPressGesture(minimumDuration: 0.25, maximumDistance: 30, perform: {}, onPressingChanged: { paused = $0 })
+        .task(id: "\(storyIndex)-\(slideIndex)-\(paused)-\(voiceOver)") {
             onSeen(story.id)
-            progress = 0
-            withAnimation(.linear(duration: seconds)) { progress = 1 }
-            try? await Task.sleep(for: .seconds(seconds))
-            if !Task.isCancelled { next() }
+            if voiceOver {
+                progress = 1
+                return
+            }
+            if paused { return }
+            // Resume from where the bar was, so holding to read doesn't restart the slide.
+            let remaining = seconds * Double(max(0, 1 - progress))
+            withAnimation(.linear(duration: remaining)) { progress = 1 }
+            try? await Task.sleep(for: .seconds(remaining))
+            if !Task.isCancelled && !paused { next() }
         }
         .accessibilityAction(named: "Next") { next() }
         .accessibilityAction(named: "Back") { back() }
@@ -181,6 +191,7 @@ struct StoryViewer: View {
     }
 
     private func next() {
+        progress = 0
         withAnimation(.easeOut(duration: 0.2)) {
             if slideIndex < story.slides.count - 1 {
                 slideIndex += 1
@@ -194,6 +205,7 @@ struct StoryViewer: View {
     }
 
     private func back() {
+        progress = 0
         withAnimation(.easeOut(duration: 0.2)) {
             if slideIndex > 0 {
                 slideIndex -= 1

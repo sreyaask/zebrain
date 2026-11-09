@@ -55,12 +55,16 @@ function Review() {
   const approve = async () => {
     if (!row || !result) return;
     setBusy("approve");
-    const { error } = await supabase()
+    const { data, error } = await supabase()
       .from("handwriting_profiles")
       .update({ status: "ready", glyph_set: result.glyphSet, missing_chars: result.missing.join(""), review_note: null })
-      .eq("id", row.id);
+      .eq("id", row.id)
+      // Only the status this page was opened with: a stale tab can't overwrite a newer decision.
+      .eq("status", row.status)
+      .select("id");
     setBusy(null);
     if (error) setError(error.message);
+    else if (!data?.length) setError("This handwriting was changed by someone else. Reload to see its current status.");
     else {
       setDone("Approved. The customer can now order in this style.");
       load();
@@ -71,9 +75,15 @@ function Review() {
     if (!row) return;
     if (!note.trim()) return setError("Tell the customer what to fix, so they can rescan.");
     setBusy("reject");
-    const { error } = await supabase().from("handwriting_profiles").update({ status: "needs_rescan", review_note: note.trim() }).eq("id", row.id);
+    const { data, error } = await supabase()
+      .from("handwriting_profiles")
+      .update({ status: "needs_rescan", review_note: note.trim() })
+      .eq("id", row.id)
+      .eq("status", row.status)
+      .select("id");
     setBusy(null);
     if (error) setError(error.message);
+    else if (!data?.length) setError("This handwriting was changed by someone else. Reload to see its current status.");
     else {
       setDone("Rescan requested. The customer sees your note in the app.");
       load();
@@ -172,7 +182,7 @@ function Review() {
             <h2 id="decide-h" className="text-base font-semibold">Decision</h2>
             <div className="mt-4 grid gap-6 md:grid-cols-2">
               <div>
-                <Button onClick={approve} loading={busy === "approve"} disabled={result.missing.length > 10}>Approve this style</Button>
+                <Button onClick={approve} loading={busy === "approve"} disabled={result.missing.length > 10 || row.status === "needs_rescan"}>Approve this style</Button>
                 {result.missing.length > 10 && <p className="mt-2 text-sm text-muted">Too many characters are missing to approve. Ask for a rescan.</p>}
               </div>
               <div className="space-y-2">

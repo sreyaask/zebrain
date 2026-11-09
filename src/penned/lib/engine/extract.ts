@@ -97,9 +97,17 @@ function splitWidest(bm: Bitmap, marks: Mark[]): boolean {
   const left: number[] = [], right: number[] = [];
   for (const c of m.comps) for (const p of c.pixels) ((p % bm.width) < cx ? left : right).push(p);
   if (!left.length || !right.length) return false;
+  // A loop, not Math.min(...spread): large marks have more pixels than the engine allows function arguments.
   const boxOf = (px: number[]): Box => {
-    const xs = px.map((p) => p % bm.width), ys = px.map((p) => (p / bm.width) | 0);
-    return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const p of px) {
+      const x = p % bm.width, y = (p / bm.width) | 0;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+    return { x0, x1, y0, y1 };
   };
   const a: Component = { pixels: left, box: boxOf(left) }, b: Component = { pixels: right, box: boxOf(right) };
   marks.splice(idx, 1, { comps: [a], box: a.box }, { comps: [b], box: b.box });
@@ -133,13 +141,17 @@ function markToGlyph(bm: Bitmap, mark: Mark, char: string, baseline: number, xh:
       y: (baseline - (p.y - 1 + box.y0)) / xh,
     })),
   );
-  const ys = strokes.flat().map((p) => p.y);
+  let top = -Infinity, bottom = Infinity;
+  for (const s of strokes) for (const p of s) {
+    if (p.y > top) top = p.y;
+    if (p.y < bottom) bottom = p.y;
+  }
   return {
     char,
     strokes,
     width: (box.x1 - box.x0 + 1) / xh,
-    top: Math.max(...ys),
-    bottom: Math.min(...ys),
+    top,
+    bottom,
   };
 }
 

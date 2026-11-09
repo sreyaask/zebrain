@@ -39,6 +39,12 @@ export function PriceCalculator() {
               </dt>
               <dd className="tabular-nums">{rupees(q.writing)}</dd>
             </div>
+            {q.notebook > 0 && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">New notebook</dt>
+                <dd className="tabular-nums">{rupees(q.notebook)}</dd>
+              </div>
+            )}
             {q.note && <p className="text-xs text-muted">{q.note}</p>}
             <div className="flex justify-between">
               <dt className="text-muted">Delivery</dt>

@@ -21,8 +21,10 @@ create table if not exists public.notebook_catalog (
   created_at timestamptz not null default now()
 );
 alter table public.notebook_catalog enable row level security;
+drop policy if exists "notebook_catalog: signed-in users read" on public.notebook_catalog;
 create policy "notebook_catalog: signed-in users read" on public.notebook_catalog
   for select to authenticated using (true);
+drop policy if exists "notebook_catalog: admins write" on public.notebook_catalog;
 create policy "notebook_catalog: admins write" on public.notebook_catalog
   for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
 

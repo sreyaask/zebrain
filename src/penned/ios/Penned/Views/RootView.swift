@@ -45,6 +45,7 @@ struct RootView: View {
 struct MainTabs: View {
     @Environment(AppModel.self) private var model
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     enum Tab: Hashable { case home, orders, scan, handwriting, account }
     @State private var tab: Tab = .home
     @State private var lastTab: Tab = .home
@@ -77,11 +78,11 @@ struct MainTabs: View {
                     if toast.orderID != nil { tab = .orders }
                 }
                 .padding(.horizontal, 12)
-                .transition(.move(edge: .top).combined(with: .opacity))
+                .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                 .zIndex(1)
             }
         }
-        .animation(.spring(duration: 0.35), value: model.toast)
+        .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(duration: 0.35), value: model.toast)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await model.refresh() } }
         }

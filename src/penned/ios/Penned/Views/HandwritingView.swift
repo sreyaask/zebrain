@@ -63,8 +63,8 @@ private struct StyleCard: View {
                     .font(.caption.weight(.medium))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .foregroundStyle(style.status == "ready" ? Color.green : style.status == "needs_rescan" ? .red : .secondary)
-                    .background(.quaternary.opacity(0.6), in: Capsule())
+                    .foregroundStyle(style.status == "ready" ? Theme.success : style.status == "needs_rescan" ? Color.red : Theme.ink)
+                    .background(style.status == "ready" ? Theme.successFill : Theme.fill, in: Capsule())
             }
             if let glyphs = style.glyphSet, style.status == "ready" {
                 HandwritingPage(text: "The quick brown fox jumps over the lazy dog.\nThank you for everything.", glyphs: glyphs, ink: style.ink, lineSpacing: 1.1)

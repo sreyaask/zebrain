@@ -1,35 +1,4 @@
-import { getPageSize, getPaper, pricing, type PageSizeId, type PaperId } from "./mock";
-
-export interface Quote {
-  units: number;
-  billableUnits: number;
-  unitPrice: number;
-  unitLabel: "page" | "card";
-  minimumApplied: boolean;
-  writing: number;
-  delivery: number;
-  total: number;
-  notebooks?: number;
-}
-
-export function quote(paperId: PaperId, units: number): Quote {
-  const paper = getPaper(paperId);
-  const safeUnits = Math.max(0, Math.round(units));
-  const billableUnits = paper.minimum ? Math.max(paper.minimum, safeUnits) : safeUnits;
-  const writing = billableUnits * paper.pricePerUnit;
-  const delivery = writing === 0 || writing > pricing.freeDeliveryAbove ? 0 : pricing.deliveryFee;
-  return {
-    units: safeUnits,
-    billableUnits,
-    unitPrice: paper.pricePerUnit,
-    unitLabel: paper.unit,
-    minimumApplied: billableUnits > safeUnits && safeUnits > 0,
-    writing,
-    delivery,
-    total: writing + delivery,
-    notebooks: paper.capacity ? Math.max(1, Math.ceil(billableUnits / paper.capacity)) : undefined,
-  };
-}
+import { getPageSize, type PageSizeId } from "./mock";
 
 export interface LayoutSettings {
   marginMm: number; // left/right margin

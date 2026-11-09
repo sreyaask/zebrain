@@ -179,3 +179,16 @@ test("a diagram that doesn't fit starts a new page; a missing one is reported", 
   assert.equal(r.pages.length, 2, "diagram moved to page 2");
   assert.deepEqual(r.missingDiagrams, ["gone"]);
 });
+
+test("layout refuses a page with no room to write instead of looping forever", () => {
+  const set = { glyphs: { a: [{ char: "a", strokes: [[{ x: 0, y: 0 }, { x: 0.5, y: 1 }]], width: 0.6, top: 1, bottom: 0 }] } };
+  const narrow = { ...pageSpecFor({ widthMm: 50, heightMm: 200 }, 30, 1), marginRightMm: 30 };
+  assert.throws(() => layoutHandwriting("a", set as never, narrow, { headingStyle: "plain", seed: "x" }), /too narrow/);
+});
+
+test("a single character wider than the line still makes progress", () => {
+  const set = { glyphs: { W: [{ char: "W", strokes: [[{ x: 0, y: 0 }, { x: 9, y: 1 }]], width: 9, top: 1, bottom: 0 }] } };
+  const spec = pageSpecFor({ widthMm: 60, heightMm: 200 }, 10, 1);
+  const r = layoutHandwriting("W W", set as never, spec, { headingStyle: "plain", seed: "x" });
+  assert.ok(r.pages.length >= 1);
+});

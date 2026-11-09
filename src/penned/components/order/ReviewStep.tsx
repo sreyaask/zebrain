@@ -181,17 +181,24 @@ export function ReviewStep({
               <dd className="tabular-nums text-ink">{rupees(q.writing)}</dd>
             </div>
             {q.note && <p className="text-xs text-muted">{q.note}</p>}
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted">Paper and ink</dt>
-              <dd className="text-ink">Included</dd>
-            </div>
+            {q.notebook > 0 ? (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">New notebook</dt>
+                <dd className="tabular-nums text-ink">{rupees(q.notebook)}</dd>
+              </div>
+            ) : (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">Paper and ink</dt>
+                <dd className="text-ink">Included</dd>
+              </div>
+            )}
             <div className="flex justify-between gap-4">
               <dt className="text-muted">Delivery</dt>
               <dd className="tabular-nums text-ink">{q.delivery === 0 ? "Free" : rupees(q.delivery)}</dd>
             </div>
             {q.delivery > 0 && (
               <p className="text-xs text-muted">
-                Add {rupees(productPricing.freeDeliveryAbove + 1 - q.writing)} more for free delivery.
+                Add {rupees(productPricing.freeDeliveryAbove + 1 - q.writing - q.notebook)} more for free delivery.
               </p>
             )}
             <div className="flex justify-between gap-4 border-t border-line pt-3 font-semibold">
