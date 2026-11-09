@@ -6,7 +6,13 @@ import Supabase
 @MainActor
 @Observable
 final class AppModel {
-    let client = SupabaseClient(supabaseURL: Config.supabaseURL, supabaseKey: Config.supabaseKey)
+    // emitLocalSessionAsInitialSession: Supabase's newer startup behaviour (it reports the saved login straight
+    // away, possibly expired, and refreshes it right after). Opting in silences its runtime warning.
+    let client = SupabaseClient(
+        supabaseURL: Config.supabaseURL,
+        supabaseKey: Config.supabaseKey,
+        options: SupabaseClientOptions(auth: .init(emitLocalSessionAsInitialSession: true))
+    )
 
     enum AuthState { case loading, signedOut, signedIn(userID: UUID, email: String?) }
     var auth: AuthState = .loading
@@ -40,6 +46,9 @@ final class AppModel {
             print("[Penned] auth event: \(event)")
             if let session {
                 auth = .signedIn(userID: session.user.id, email: session.user.email)
+                // A saved login can arrive expired at launch; Supabase refreshes it and sends another event,
+                // so load data then instead of failing with an expired token now.
+                if session.isExpired { continue }
                 // A draft saved by someone else on this phone is never offered to this account.
                 if let d = draft, d.userID != session.user.id.uuidString { clearDraft() }
                 await refresh()
