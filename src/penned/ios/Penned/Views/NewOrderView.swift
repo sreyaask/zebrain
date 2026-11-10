@@ -42,6 +42,7 @@ struct NewOrderView: View {
     /// Pages read so far while Gemini works through a batch.
     @State private var readDone = 0
     @State private var readTotal = 0
+    @State private var redrawing = false
     @State private var scanning = false
     @State private var photos: [PhotosPickerItem] = []
     @State private var importingPDF = false
@@ -130,6 +131,19 @@ struct NewOrderView: View {
     }
 
     private var notebookSource: NotebookSource { notebook == .own ? .own : .new }
+
+    /// The notebook the preview is drawn for: the one chosen, at the measurements the pen plotter will use.
+    private var previewNotebook: PreviewNotebook {
+        switch notebook {
+        case .ruled: return .long(ruled: true)
+        case .plain: return .long(ruled: false)
+        case .own:
+            guard let spec = ownSpec else { return .long(ruled: ownRuled) }
+            let margin = min(spec.marginMm ?? margin, spec.widthMm - 40)
+            return PreviewNotebook(width_mm: spec.widthMm, height_mm: spec.heightMm, line_pitch_mm: spec.linePitchMm ?? 7.2 * spacing,
+                                   margin_mm: max(0, margin), margin_right_mm: 8, ruled: spec.ruled)
+        }
+    }
 
     private var diagramCount: Int { Set(files.compactMap(\.diagramID)).count }
 
@@ -274,6 +288,8 @@ struct NewOrderView: View {
                 checkoutID = UUID()
                 confirmedTotal = nil
             }
+            // Picking another notebook redraws the preview at its measurements.
+            .task(id: previewNotebook) { await redrawPreviews(for: previewNotebook) }
             .sensoryFeedback(.success, trigger: placed?.id)
             .sensoryFeedback(.error, trigger: error)
         }
@@ -437,22 +453,7 @@ struct NewOrderView: View {
         } footer: {
             Text("Gemini reads every word and redraws each diagram in seconds. Check the preview below before you pay.")
         }
-        if !previews.isEmpty {
-            // What we'll write, page by page in the order of the photos: swipe; flip to the photo to compare.
-            Section {
-                NotePagesCarousel(pages: previews, current: $previewIndex, showOriginal: $previewShowsOriginal)
-                    .frame(height: 520)
-                    .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 10, trailing: 0))
-                Button("Open full screen", systemImage: "arrow.up.left.and.arrow.down.right") {
-                    Sounds.shared.play(.tap)
-                    showingFormatted = true
-                }
-            } header: {
-                Text("Preview · \(previewSlides(previews).count) \(previewSlides(previews).count == 1 ? "page" : "pages")")
-            } footer: {
-                Text("Swipe through every page. Switch to Your photo to compare it with the original.")
-            }
-        }
+        if !previews.isEmpty { previewSection(title: "Preview") }
         Section {
             if previews.isEmpty || editingText {
                 TextEditor(text: $text).frame(minHeight: 180).font(.body)
@@ -471,6 +472,51 @@ struct NewOrderView: View {
         }
         pagesSection
         handwritingSection
+    }
+
+    /// What we'll write, page by page in the order of the photos, drawn at the chosen notebook's measurements: swipe;
+    /// flip to the photo to compare.
+    private func previewSection(title: String) -> some View {
+        let count = previewSlides(previews).count
+        return Section {
+            NotePagesCarousel(pages: previews, current: $previewIndex, showOriginal: $previewShowsOriginal)
+                .frame(height: 520)
+                .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 10, trailing: 0))
+                .overlay(alignment: .topTrailing) {
+                    if redrawing { ProgressView().padding(.trailing, 20).padding(.top, 52) }
+                }
+            Button("Open full screen", systemImage: "arrow.up.left.and.arrow.down.right") {
+                Sounds.shared.play(.tap)
+                showingFormatted = true
+            }
+        } header: {
+            Text("\(title) · \(count) \(count == 1 ? "page" : "pages")")
+        } footer: {
+            Text("Drawn to the size of \(notebookName): the same lines, margins and words per line the pen will write. Switch to Your photo to compare.")
+        }
+    }
+
+    private var notebookName: String {
+        switch notebook {
+        case .ruled: "the long ruled notebook"
+        case .plain: "the long plain notebook"
+        case .own: ownSpec == nil ? "a long notebook (scan your barcode for your own)" : "your notebook"
+        }
+    }
+
+    /// Redraws the preview for the notebook just chosen (no new reading, takes a moment).
+    private func redrawPreviews(for nb: PreviewNotebook) async {
+        let stale = previews.filter { !$0.read.isEmpty && $0.drawnFor != nb }
+        guard !stale.isEmpty else { return }
+        redrawing = true
+        defer { redrawing = false }
+        for p in stale {
+            guard let svgs = await model.recompose(p.read, notebook: nb), !svgs.isEmpty, !Task.isCancelled else { continue }
+            if let i = previews.firstIndex(where: { $0.id == p.id }) {
+                previews[i].formatted = svgs
+                previews[i].drawnFor = nb
+            }
+        }
     }
 
     @ViewBuilder private var handwritingSection: some View {
@@ -523,6 +569,7 @@ struct NewOrderView: View {
         .listRowSeparator(.hidden)
 
         if notebook == .own { ownNotebookSections }
+        if !previews.isEmpty { previewSection(title: "How it'll look in this notebook") }
     }
 
     @ViewBuilder private var ownNotebookSections: some View {
@@ -957,11 +1004,12 @@ struct NewOrderView: View {
         }
         // Every photo is read on its own (three at a time); a page Gemini can't read is read on the phone instead.
         readTotal = added.count
-        let ai = await model.aiRead(each: added.map(\.image)) { done in readDone = done }
+        let nb = previewNotebook
+        let ai = await model.aiRead(each: added.map(\.image), notebook: nb) { done in readDone = done }
         for (i, page) in added.enumerated() {
             let e: Extraction
             if let read = ai[i] { e = read } else { e = await TextRecognizer.read(image: page.image) }
-            add(e, fileID: page.file.id, label: page.file.name, original: page.image)
+            add(e, fileID: page.file.id, label: page.file.name, original: page.image, drawnWith: nb)
         }
     }
 
@@ -985,20 +1033,21 @@ struct NewOrderView: View {
             files.append(file)
             readDone = 0
             readTotal = images.count
-            let ai = await model.aiRead(each: images) { done in readDone = done }
+            let nb = previewNotebook
+            let ai = await model.aiRead(each: images, notebook: nb) { done in readDone = done }
             var found = false
             for (i, image) in images.enumerated() {
                 let e: Extraction
                 if let read = ai[i] { e = read } else { e = await TextRecognizer.read(image: image) }
                 found = found || !e.text.isEmpty || !e.diagrams.isEmpty
-                add(e, fileID: file.id, label: "\(url.lastPathComponent) · page \(i + 1)", original: image)
+                add(e, fileID: file.id, label: "\(url.lastPathComponent) · page \(i + 1)", original: image, drawnWith: nb)
             }
             if !found { error = "We couldn't find any notes in \(url.lastPathComponent). Type them below instead." }
         }
     }
 
     /// Adds what was read from one page: its text, its diagrams as separate uploads, and its preview.
-    private func add(_ e: Extraction, fileID: UUID, label: String, original: UIImage?) {
+    private func add(_ e: Extraction, fileID: UUID, label: String, original: UIImage?, drawnWith: PreviewNotebook? = nil) {
         let t = e.text.trimmingCharacters(in: .whitespacesAndNewlines)
         if !t.isEmpty { text += (text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : "\n\n") + t }
         for d in e.diagrams {
@@ -1010,7 +1059,8 @@ struct NewOrderView: View {
                 files.append(ScannedFile(data: data, kind: "image", pages: 1, name: "Diagram drawing", uploadName: "diagram-\(d.id).svg"))
             }
         }
-        previews.append(NotePagePreview(fileID: fileID, label: label, original: original, formatted: e.formatted, text: t))
+        previews.append(NotePagePreview(fileID: fileID, label: label, original: original, formatted: e.formatted, read: e.read,
+                                        drawnFor: e.read.isEmpty ? nil : drawnWith, text: t))
         readByAI = previews.contains { !$0.formatted.isEmpty }
         if !t.isEmpty || !e.diagrams.isEmpty { error = nil }
     }

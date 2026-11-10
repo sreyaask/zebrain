@@ -20,6 +20,8 @@ struct Extraction {
     var formatted: [String] = []
     /// True when Gemini read these pages (false: read on the phone).
     var byAI = false
+    /// Gemini's reading block by block, kept so the preview can be redrawn for another notebook.
+    var read: [ReadPage] = []
 
     mutating func append(_ other: Extraction) {
         let t = other.text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -28,6 +30,39 @@ struct Extraction {
         diagrams += other.diagrams
         formatted += other.formatted
         byAI = byAI || other.byAI
+        read += other.read
+    }
+}
+
+/// One page as Gemini read it (the extract-notes function's "pages"): blocks in reading order.
+struct ReadPage: Codable, Sendable {
+    var page: Int
+    var blocks: [ReadBlock]
+}
+
+struct ReadBlock: Codable, Sendable {
+    var kind: String
+    var text: String
+    var level: Int
+    var description: String
+    var box: ReadBox
+    var svg: String
+}
+
+struct ReadBox: Codable, Sendable { var x: Double; var y: Double; var width: Double; var height: Double }
+
+/// The notebook a preview is laid out for, in millimetres (what the pen plotter uses too).
+struct PreviewNotebook: Encodable, Hashable, Sendable {
+    var width_mm: Double
+    var height_mm: Double
+    var line_pitch_mm: Double
+    var margin_mm: Double
+    var margin_right_mm: Double
+    var ruled: Bool
+
+    /// Penned's new long notebook (17.5 × 27.5 cm), ruled or plain, with the house margins and line spacing.
+    static func long(ruled: Bool) -> PreviewNotebook {
+        PreviewNotebook(width_mm: 175, height_mm: 275, line_pitch_mm: 9.36, margin_mm: 18, margin_right_mm: 18, ruled: ruled)
     }
 }
 

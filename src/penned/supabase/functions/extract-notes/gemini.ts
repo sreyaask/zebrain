@@ -32,6 +32,10 @@ const PROMPT = `These are pages of a student's class notes (photos or scans; han
 Copy out EVERYTHING on each page exactly as written, in reading order (top to bottom; left column before right column).
 - Keep the exact wording, spelling, capitalisation, numbering, symbols and units. Do not summarise, correct, translate or add anything.
 - Each heading, paragraph, list item, equation and table is its own block. Headings get level 1-3; everything else level 0.
+- Keep the writer's structure: each numbered question or point ("Q1.", "1.", "(a)", "(ii)", "-") starts its own block, with its number
+  or bullet exactly as written. Inside a block, start a new line ("\\n") only where the writer deliberately started one (steps of working,
+  given/find/solution lines, separate points, lines of a poem or address). Join lines that only wrapped because the page edge was reached.
+- Keep underlined or boxed titles as headings; "Ans:", "Given:", "Solution:" and similar labels stay in the text exactly as written.
 - Equations in plain text with Unicode symbols (e.g. F = m × a, v² = u² + 2as, ∫, √, π, Δ, →).
 - Tables: one row per line, cells separated by " | ".
 - Drawings, graphs, labelled figures, circuits, flow charts, maps, chemical structures: a "diagram" block. Put its labels in text,

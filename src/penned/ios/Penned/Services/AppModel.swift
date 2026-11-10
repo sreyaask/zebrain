@@ -307,10 +307,12 @@ final class AppModel {
     // MARK: AI reading with Gemini (the extract-notes function); the phone's own reading is the fallback
 
     private struct AIPage: Encodable { let media_type: String; let data: String }
-    private struct AIRequest: Encodable { let pages: [AIPage] }
+    private struct AIRequest: Encodable { let pages: [AIPage]; let notebook: PreviewNotebook }
+    private struct AIComposeRequest: Encodable { let compose: [ReadPage]; let notebook: PreviewNotebook }
+    private struct AIComposeResponse: Decodable { let formatted: [String] }
     private struct AIBox: Decodable { let x: Double; let y: Double; let width: Double; let height: Double }
     private struct AIDiagram: Decodable { let id: String; let page: Int; let box: AIBox; let svg: String? }
-    private struct AIResponse: Decodable { let text: String; let diagrams: [AIDiagram]; let formatted: [String]? }
+    private struct AIResponse: Decodable { let text: String; let diagrams: [AIDiagram]; let formatted: [String]?; let pages: [ReadPage]? }
     private struct AIErrorBody: Decodable { let error: String? }
 
     /// Why the last AI reading didn't happen (switched off, busy, offline), so the screen can say so instead of
@@ -320,13 +322,13 @@ final class AppModel {
     /// Reads each photo with Gemini in its own request, three at a time, so one busy or slow page never sinks the
     /// others. One result per photo, in the same order; nil where Gemini couldn't read that page (read it on the phone).
     /// `progress` gets the number of pages finished so far.
-    func aiRead(each images: [UIImage], progress: @escaping @MainActor (Int) -> Void = { _ in }) async -> [Extraction?] {
+    func aiRead(each images: [UIImage], notebook: PreviewNotebook, progress: @escaping @MainActor (Int) -> Void = { _ in }) async -> [Extraction?] {
         guard Config.aiReading, !images.isEmpty else { return images.map { _ in nil } }
         var results = [Extraction?](repeating: nil, count: images.count)
         var finished = 0
         await withTaskGroup(of: (Int, Extraction?).self) { group in
             let limit = min(3, images.count)
-            for i in 0..<limit { group.addTask { (i, await self.aiRead(image: images[i])) } }
+            for i in 0..<limit { group.addTask { (i, await self.aiRead(image: images[i], notebook: notebook)) } }
             var next = limit
             for await (i, result) in group {
                 results[i] = result
@@ -334,7 +336,7 @@ final class AppModel {
                 progress(finished)
                 if next < images.count {
                     let j = next
-                    group.addTask { (j, await self.aiRead(image: images[j])) }
+                    group.addTask { (j, await self.aiRead(image: images[j], notebook: notebook)) }
                     next += 1
                 }
             }
@@ -349,11 +351,11 @@ final class AppModel {
     }
 
     /// One page. Retries twice when Gemini is busy or the connection drops.
-    private func aiRead(image: UIImage) async -> Extraction? {
+    private func aiRead(image: UIImage, notebook: PreviewNotebook) async -> Extraction? {
         guard let jpeg = image.jpegForUpload(maxEdge: 1800) else { return nil }
         let page = AIPage(media_type: "image/jpeg", data: jpeg.base64EncodedString())
         for attempt in 0..<3 {
-            switch await aiRead(pages: [page], pageCount: 1, pageImage: { _ in image }) {
+            switch await aiRead(pages: [page], notebook: notebook, pageCount: 1, pageImage: { _ in image }) {
             case let .success(e): return e
             case .failure(.final): return nil
             case .failure(.retry):
@@ -365,11 +367,19 @@ final class AppModel {
 
     private enum AIFailure: Error { case retry, final }
 
-    private func aiRead(pages: [AIPage], pageCount: Int, pageImage: (Int) -> UIImage?) async -> Result<Extraction, AIFailure> {
+    /// Redraws pages Gemini already read at another notebook's measurements (no new reading). nil if it couldn't.
+    func recompose(_ read: [ReadPage], notebook: PreviewNotebook) async -> [String]? {
+        guard Config.aiReading, !read.isEmpty else { return nil }
+        let response: AIComposeResponse? = try? await client.functions.invoke(
+            "extract-notes", options: FunctionInvokeOptions(body: AIComposeRequest(compose: read, notebook: notebook)))
+        return response?.formatted
+    }
+
+    private func aiRead(pages: [AIPage], notebook: PreviewNotebook, pageCount: Int, pageImage: (Int) -> UIImage?) async -> Result<Extraction, AIFailure> {
         do {
             let response: AIResponse = try await client.functions.invoke(
-                "extract-notes", options: FunctionInvokeOptions(body: AIRequest(pages: pages)))
-            var out = Extraction(text: response.text, pages: pageCount, formatted: response.formatted ?? [], byAI: true)
+                "extract-notes", options: FunctionInvokeOptions(body: AIRequest(pages: pages, notebook: notebook)))
+            var out = Extraction(text: response.text, pages: pageCount, formatted: response.formatted ?? [], byAI: true, read: response.pages ?? [])
             for d in response.diagrams where (1...pageCount).contains(d.page) {
                 let box = CGRect(x: d.box.x, y: d.box.y, width: d.box.width, height: d.box.height)
                 let png = pageImage(d.page - 1).flatMap { TextRecognizer.cropDiagram($0, box: box) }

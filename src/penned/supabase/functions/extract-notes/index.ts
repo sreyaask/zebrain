@@ -7,7 +7,10 @@
 //
 // Request  (POST, signed-in customer's JWT in Authorization):
 //   { "pages": [ { "media_type": "image/jpeg" | "image/png" | "application/pdf", "data": "<base64>" } ] }
-//   Up to 10 images, or one PDF. Send pages in order.
+//   Up to 10 images, or one PDF. Send pages in order. Optional "notebook": { width_mm, height_mm, line_pitch_mm, margin_mm,
+//   ruled } lays the formatted pages out at that notebook's measurements (default: Penned's long ruled notebook).
+// Redraw only (no Gemini call; for when the customer picks another notebook):
+//   { "compose": [ { page, blocks } ], "notebook": { … } }  →  { "formatted": ["<svg>…", …] }
 // Response: { "text": "<Penned order text>", "diagrams": [ { id, page, box, description, svg } ], "pages": [ { page, blocks } ],
 //             "formatted": ["<svg>…", …], "formatted_paths": ["<uid>/formatted/<batch>/page-1.svg", …] }
 //   "formatted" are clean typeset pages (text + Gemini's diagram drawings) for the phone preview; they're also saved to the
@@ -16,8 +19,8 @@
 //   and "[[diagram:<id>]]" where each diagram goes. Boxes are 0-1 of the page, top-left origin.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { extractFast, extractPages, GeminiError, toOrder, type Page } from "./gemini.ts";
-import { composeLayout, imageSize } from "./compose.ts";
+import { type Block, cleanSvg, type Extraction, extractFast, extractPages, GeminiError, toOrder, type Page } from "./gemini.ts";
+import { composeLayout, notebookFrom } from "./compose.ts";
 
 const MAX_IMAGES = 10;
 
@@ -41,7 +44,33 @@ Deno.serve(async (req) => {
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (flag?.value !== true || !apiKey) return json(503, { error: "AI reading is switched off.", code: "ai_extraction_off" });
 
-  const body = await req.json().catch(() => null) as { pages?: Page[] } | null;
+  const body = await req.json().catch(() => null) as { pages?: Page[]; compose?: unknown; notebook?: unknown } | null;
+  const notebook = notebookFrom(body?.notebook);
+
+  // Redraw what was already read at another notebook's measurements. Blocks come from the app, so they're re-checked.
+  if (body && Array.isArray(body.compose)) {
+    const kinds = new Set(["heading", "paragraph", "list_item", "equation", "table", "diagram"]);
+    const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
+    const pagesIn = (body.compose as { page?: unknown; blocks?: unknown }[]).slice(0, 60);
+    const x: Extraction = {
+      pages: pagesIn.map((p, i) => ({
+        page: i + 1,
+        blocks: (Array.isArray(p?.blocks) ? p.blocks : []).slice(0, 400).flatMap((raw: Record<string, unknown>): Block[] => {
+          const kind = str(raw?.kind, 20) as Block["kind"];
+          if (!kinds.has(kind)) return [];
+          const box = (raw?.box ?? {}) as Record<string, unknown>;
+          const n = (v: unknown) => Math.min(1, Math.max(0, Number(v) || 0));
+          return [{
+            kind, text: str(raw.text, 20_000), level: Math.min(3, Math.max(0, Number(raw.level) || 0)), description: str(raw.description, 500),
+            box: { x: n(box.x), y: n(box.y), width: n(box.width), height: n(box.height) },
+            svg: kind === "diagram" ? cleanSvg(str(raw.svg, 200_000)) : "",
+          }];
+        }),
+      })),
+    };
+    return json(200, { formatted: composeLayout(x, notebook) });
+  }
+
   const pages = body?.pages ?? [];
   const images = pages.filter((p) => p.media_type === "image/jpeg" || p.media_type === "image/png");
   const pdfs = pages.filter((p) => p.media_type === "application/pdf");
@@ -56,8 +85,8 @@ Deno.serve(async (req) => {
     const order = toOrder(result);
     const svgByBlock = result.pages.flatMap((p) => p.blocks.filter((b) => b.kind === "diagram").map((b) => b.svg));
     const diagrams = order.diagrams.map((d, i) => ({ ...d, svg: svgByBlock[i] ?? "" }));
-    // Formatted pages keep the original layout: each block where it was, at the size it was written.
-    const formatted = composeLayout(result, images.length ? images.map((p) => imageSize(p.data)) : result.pages.map(() => null));
+    // Formatted pages at the notebook's measurements: what the pen will write, line for line.
+    const formatted = composeLayout(result, notebook);
 
     // Save the formatted pages next to the customer's uploads (best effort: the preview doesn't depend on it).
     const batch = crypto.randomUUID();

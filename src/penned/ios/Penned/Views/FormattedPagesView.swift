@@ -50,8 +50,12 @@ struct NotePagePreview: Identifiable {
     /// "Photo 2", "Physics.pdf · page 3".
     let label: String
     let original: UIImage?
-    /// Formatted pages for this photo (usually one; long pages continue onto a second).
-    let formatted: [String]
+    /// Formatted pages for this photo, at the chosen notebook's measurements (long pages continue onto a second).
+    var formatted: [String]
+    /// Gemini's reading of this page, so the preview can be redrawn when the notebook changes.
+    var read: [ReadPage] = []
+    /// The notebook `formatted` was drawn for.
+    var drawnFor: PreviewNotebook? = nil
     /// What was read from this page, for pages without a formatted version (read on the phone).
     let text: String
 }
