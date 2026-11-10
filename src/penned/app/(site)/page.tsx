@@ -68,7 +68,7 @@ export default function HomePage() {
                 See what we write
               </LinkButton>
             </div>
-            <p className="mt-5 text-sm text-muted">Notes from ₹11 a page. Free rewrite of any page within 24 hours.</p>
+            <p className="mt-5 text-sm text-muted">Notes from ₹12 a page. Free rewrite of any page within 24 hours.</p>
           </div>
           <PenMachineHero />
         </Container>

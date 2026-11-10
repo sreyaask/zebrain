@@ -20,19 +20,19 @@ struct Story: Identifiable {
     static let all: [Story] = [
         Story(id: "how", title: "How it works", symbol: "sparkles", slides: [
             Slide(symbol: "doc.viewfinder", title: "Scan your notes", body: "Photos, PDFs or the camera. Text and diagrams are read on your phone."),
-            Slide(symbol: "book.closed", title: "Pick a notebook", body: "Ruled or plain, or we continue in your own notebook."),
+            Slide(symbol: "book.closed", title: "Pick a notebook", body: "A new long notebook, ruled or plain, or sheets that match your own notebook."),
             Slide(symbol: "pencil.tip", title: "We write it with a real pen", body: "In your handwriting, page by page. Never printed.",
                   sample: "Laws of Motion\nForce = mass × acceleration"),
             Slide(symbol: "scooter", title: "Delivered in 2–3 hours", body: "Follow every page live, right up to your door."),
         ]),
         Story(id: "price", title: "Prices", symbol: "indianrupeesign", slides: [
             Slide(symbol: "indianrupeesign.circle", title: "\(rupees(Quote.pagePrice)) a page",
-                  body: "A new notebook is \(rupees(Quote.notebookPrice)). Your own notebook is free. Delivery \(rupees(49)), free above \(rupees(500))."),
+                  body: "A new long notebook is \(rupees(Quote.notebookPrice)). Sheets for your own notebook cost only the pages. Delivery \(rupees(49)), free above \(rupees(500))."),
             Slide(symbol: "checkmark.seal", title: "No hidden charges", body: "You see the full bill before you pay. Nothing is added later."),
         ]),
         Story(id: "own", title: "Your notebook", symbol: "barcode.viewfinder", slides: [
             Slide(symbol: "barcode.viewfinder", title: "Scan its barcode", body: "We know many notebooks already. If not, measure it once with a ruler."),
-            Slide(symbol: "arrow.left.arrow.right", title: "We pick it up and bring it back", body: "Our rider collects it, we continue after your last page, and return it with your order."),
+            Slide(symbol: "scissors", title: "Cut and stick", body: "We send A4 sheets ruled exactly like your notebook, with cut lines. Cut them out and stick them in after your last page."),
         ]),
         Story(id: "promise", title: "Our promise", symbol: "hand.thumbsup", slides: [
             Slide(symbol: "arrow.uturn.backward.circle", title: "Free rewrite", body: "Not happy with a page? We rewrite it free within 24 hours."),

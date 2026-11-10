@@ -2,11 +2,12 @@ import Foundation
 
 /// Mirrors public.price_order_v2() in the database. The server price is the one charged;
 /// this is only for showing the total before the order is placed.
-/// Notes: pages × ₹11, plus ₹120 when we supply the notebook. Cards: ₹15 each. Delivery ₹49, free above ₹500.
+/// Mirrors public.price_order_v3. Notes: pages × ₹12, plus ₹55 for a new long notebook. Sheets for your own notebook: pages only.
+/// Cards: ₹15 each. Delivery ₹49, free above ₹500.
 struct Quote {
-    static let pagePrice = 11
+    static let pagePrice = 12
     static let cardPrice = 15
-    static let notebookPrice = 120
+    static let notebookPrice = 55
 
     let billableUnits: Int
     let unitPrice: Int

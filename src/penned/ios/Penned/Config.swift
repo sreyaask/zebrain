@@ -13,5 +13,10 @@ enum Config {
     static let supportPhone = ""
     static let supportEmail = ""
 
+    /// AI reading of notes (text + diagrams) through the `extract-notes` Supabase function. Off: pages are read on the
+    /// phone. To turn on: deploy the function, set its ANTHROPIC_API_KEY secret, set app_settings.ai_extraction to true,
+    /// then set this to true. If the server says it's off, the app quietly falls back to reading on the phone.
+    static let aiReading = false
+
     static var isConfigured: Bool { !supabaseKey.hasPrefix("YOUR-") }
 }

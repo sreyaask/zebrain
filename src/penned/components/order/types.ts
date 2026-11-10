@@ -72,7 +72,7 @@ export const initialDraft: OrderDraft = {
 export function productDefaults(slug: ProductSlug, d: OrderDraft): Partial<OrderDraft> {
   const product = getProduct(slug)!;
   const style = product.styles?.[0];
-  if (!style) return { product: slug, styleId: "", paper: "ruled-notebook", layout: { ...d.layout, pageSize: "b5", marginMm: 18 } };
+  if (!style) return { product: slug, styleId: "", paper: "ruled-notebook", layout: { ...d.layout, pageSize: "long", marginMm: 18 } };
   const card = style.size === "a6";
   return {
     product: slug,

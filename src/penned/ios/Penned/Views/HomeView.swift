@@ -175,8 +175,8 @@ struct HomeView: View {
 
     private var tiles: some View {
         LazyVGrid(columns: typeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.flexible(), spacing: 14), GridItem(.flexible())], spacing: 14) {
-            ActionTile(title: "Complete notes", subtitle: "Your notes as a neat notebook", price: "₹11 / page", symbol: OrderKind.completeNotes.symbol) { Sounds.shared.play(.tap); newKind = .completeNotes }
-            ActionTile(title: "Missed notes", subtitle: "Catch up on lessons you missed", price: "₹11 / page", symbol: OrderKind.missedNotes.symbol) { Sounds.shared.play(.tap); newKind = .missedNotes }
+            ActionTile(title: "Complete notes", subtitle: "Your notes as a neat notebook", price: "₹12 / page", symbol: OrderKind.completeNotes.symbol) { Sounds.shared.play(.tap); newKind = .completeNotes }
+            ActionTile(title: "Missed notes", subtitle: "Catch up on lessons you missed", price: "₹12 / page", symbol: OrderKind.missedNotes.symbol) { Sounds.shared.play(.tap); newKind = .missedNotes }
             ActionTile(title: "Letters & cards", subtitle: "Thank-yous, letters, invites", price: "₹15 / card", symbol: OrderKind.letters.symbol) { Sounds.shared.play(.tap); newKind = .letters }
             ActionTile(
                 title: "Your handwriting",

@@ -154,3 +154,16 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   (`DraftStore`, Application Support/Draft, file protection on) via "Save as draft" when leaving the order flow; Home shows "Finish your
   … order" with Resume. Home also shows a one-tap star rating for the latest unrated delivery (`ratedOrderIDs` from order_feedback) and a
   "Get started" checklist (handwriting, first order, saved address) until the first order. Orders is searchable by name, ID or area.
+
+## Pricing v3, long notebook, sheets for your notebook, AI reading (added 10 Nov 2026)
+- Pricing v3 (migrations 20261109000002/3, applied live): ₹12 a page, a new **long notebook** (17.5 × 27.5 cm, page_size `long`)
+  ruled or plain is ₹55 (costs Penned ₹35), cards ₹15, delivery ₹49 free above ₹500. Existing orders keep their prices.
+  Website (`lib/mock.ts` pricing/productPricing) and iOS (`Quote`) match; `tests/pricing.test.mts` and `tests/db.test.mjs` pin it.
+- No more notebook pickup. `notebook_source = 'own'` now means **Sheets for my notebook**: the customer scans the barcode (or measures
+  once); we write on A4 sheets ruled like their notebook, with cut lines, to cut and stick in. Pages only, one-way delivery.
+- Barcode: live scanner on a real iPhone (VisionKit DataScanner), plus "Read the barcode from a photo" (VNDetectBarcodesRequest) that also
+  works in the Simulator. The page scanner and barcode scanner need the camera: they can't run in the Simulator.
+- AI reading (built, OFF): `supabase/functions/extract-notes` sends pages to Claude (claude-opus-5-5, structured output) and returns
+  blocks in reading order plus diagram boxes; the app crops diagrams from them. To turn on: deploy the function, set its ANTHROPIC_API_KEY
+  secret, set app_settings.ai_extraction = true, and set `Config.aiReading = true` in the iOS app. Until then pages are read on the phone.
+  `supabase/functions` is excluded from the Next.js tsconfig (Deno imports); check it with `deno check`.

@@ -63,7 +63,7 @@ export interface DbOrder {
   created_at: string;
   updated_at: string;
   delivered_at: string | null;
-  /** 'new' = Penned supplies the notebook (₹120); 'own' = we write in the customer's notebook. */
+  /** 'new' = a new long notebook from Penned (₹55); 'own' = ruled A4 sheets in the customer's notebook format, to cut and stick in. */
   notebook_source?: "new" | "own";
   notebook_barcode?: string | null;
   notebook_spec?: { width_mm?: number; height_mm?: number; line_pitch_mm?: number; margin_mm?: number; ruled?: boolean; name?: string } | null;

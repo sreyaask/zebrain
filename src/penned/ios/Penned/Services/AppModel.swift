@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 import Supabase
 
 /// App-wide state and every call to Supabase.
@@ -302,6 +303,39 @@ final class AppModel {
     }
 
     /// Demo payment. Replace with a payment gateway (and its webhook) before launch.
+    // MARK: AI reading (off unless Config.aiReading and the server switch are on)
+
+    private struct AIPage: Encodable { let media_type: String; let data: String }
+    private struct AIRequest: Encodable { let pages: [AIPage] }
+    private struct AIBox: Decodable { let x: Double; let y: Double; let width: Double; let height: Double }
+    private struct AIDiagram: Decodable { let id: String; let page: Int; let box: AIBox }
+    private struct AIResponse: Decodable { let text: String; let diagrams: [AIDiagram] }
+
+    /// Reads photos of notes with AI: every word in order, plus diagrams cropped from the photos. nil when AI reading
+    /// is off or fails, so the caller reads on the phone instead.
+    func aiRead(images: [UIImage]) async -> Extraction? {
+        guard Config.aiReading, !images.isEmpty else { return nil }
+        let pages = images.compactMap { $0.jpegForUpload(maxEdge: 2000) }.map { AIPage(media_type: "image/jpeg", data: $0.base64EncodedString()) }
+        guard pages.count == images.count else { return nil }
+        do {
+            let response: AIResponse = try await client.functions.invoke(
+                "extract-notes", options: FunctionInvokeOptions(body: AIRequest(pages: pages)))
+            var out = Extraction(text: response.text, pages: images.count)
+            for d in response.diagrams where (1...images.count).contains(d.page) {
+                let box = CGRect(x: d.box.x, y: d.box.y, width: d.box.width, height: d.box.height)
+                if let png = TextRecognizer.cropDiagram(images[d.page - 1], box: box) {
+                    out.diagrams.append(ExtractedDiagram(id: d.id, png: png))
+                } else {
+                    out.text = out.text.replacingOccurrences(of: "[[diagram:\(d.id)]]", with: "")
+                }
+            }
+            return out
+        } catch {
+            print("[Penned] AI reading unavailable, reading on the phone: \(error)")
+            return nil
+        }
+    }
+
     /// Cancels the customer's own order while it's unpaid and not started (e.g. after a failed checkout).
     func cancel(_ order: Order) async throws {
         try await client.rpc("cancel_my_order", params: ["p_order_id": order.id.uuidString]).execute()

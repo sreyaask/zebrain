@@ -13,7 +13,7 @@ export const defaultLayout: LayoutSettings = {
   lineSpacing: 1.3,
   headingStyle: "underline",
   ink: "blue",
-  pageSize: "b5",
+  pageSize: "long",
 };
 
 /** Rough estimate of handwritten pages for a block of typed text. */

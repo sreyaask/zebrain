@@ -174,8 +174,8 @@ extension Quote {
         var lines = [BillLine(symbol: "pencil.line", label: "Handwriting", note: "\(billableUnits) \(unitName) × \(rupees(unitPrice))", amount: writing)]
         if isNotes {
             lines.append(ownNotebook
-                ? BillLine(symbol: "book.closed", label: "Notebook", note: "We write in yours", amount: 0, freeInsteadOf: Quote.notebookPrice)
-                : BillLine(symbol: "book.closed", label: "Notebook", note: "New, included in the order", amount: notebook))
+                ? BillLine(symbol: "book.closed", label: "Notebook", note: "Sheets for your notebook", amount: 0, freeInsteadOf: Quote.notebookPrice)
+                : BillLine(symbol: "book.closed", label: "Notebook", note: "New long notebook", amount: notebook))
         }
         lines.append(BillLine(symbol: "scooter", label: "Delivery", note: "Free above \(rupees(500))",
                               amount: delivery, freeInsteadOf: delivery == 0 && writing > 0 ? 49 : nil))
@@ -191,7 +191,7 @@ extension Order {
         let own = notebookSource == .own
         // Older orders (before notebook pricing) included the paper, so show the line only when it applies.
         if (paper == .plainNotebook || paper == .ruledNotebook) && (own || (notebookAmount ?? 0) > 0) {
-            lines.append(BillLine(symbol: "book.closed", label: "Notebook", note: own ? "We write in yours" : "New, included in the order",
+            lines.append(BillLine(symbol: "book.closed", label: "Notebook", note: own ? "Sheets for your notebook" : "New long notebook",
                                   amount: notebookAmount ?? 0, freeInsteadOf: own ? Quote.notebookPrice : nil))
         }
         lines.append(BillLine(symbol: "scooter", label: "Delivery", amount: deliveryAmount, freeInsteadOf: deliveryAmount == 0 ? 49 : nil))
@@ -290,10 +290,11 @@ struct HelpCenterView: View {
 
     private static let faqs: [(String, String)] = [
         ("How does it work?", "You send your notes from your phone. We write them in your handwriting with a real pen, a person checks every page, and our rider brings them to you, usually in 2–3 hours."),
-        ("What will I pay?", "\(rupees(Quote.pagePrice)) a page, plus \(rupees(Quote.notebookPrice)) if we supply a new notebook. Writing in your own notebook adds nothing. Delivery is \(rupees(49)), free above \(rupees(500)). The bill is shown before you pay, and that is the total."),
+        ("What will I pay?", "\(rupees(Quote.pagePrice)) a page, plus \(rupees(Quote.notebookPrice)) for a new long notebook (ruled or plain). Sheets for your own notebook cost only the pages. Delivery is \(rupees(49)), free above \(rupees(500)). The bill is shown before you pay, and that is the total."),
         ("What if a page isn't right?", "Tell us within 24 hours of delivery and we rewrite that page free."),
         ("Who can see my notes?", "Only you and the Penned team. Your files are stored privately and are used only to write your order."),
-        ("How do you write in my own notebook?", "Our rider collects your notebook, we continue after your last written page using its measurements, and the rider brings it back with the order."),
+        ("How do I continue my own notebook?", "Scan the barcode on its back cover (or measure it once). We write on A4 sheets ruled exactly like your notebook, with cut lines. Cut along the lines and stick them in after your last page."),
+        ("What notebook do I get?", "A new long notebook, 17.5 × 27.5 cm. You choose ruled (with a margin) or plain before you pay."),
         ("Where do you deliver?", deliveryAreas.joined(separator: ", ") + ", in Hyderabad."),
         ("Can I track my order?", "Yes. Orders shows each step live, including the page being written and when the rider is on the way."),
     ]
@@ -355,9 +356,9 @@ struct OrderPlacedView: View {
 
     private var steps: [(String, String, String)] {
         var s: [(String, String, String)] = []
-        if ownNotebook { s.append(("scooter", "We collect your notebook", "Our rider picks it up from \(order.area).")) }
         s += [
-            ("pencil.line", "Written in your handwriting", "With a real pen, page by page. You'll see each page in Orders."),
+            ("pencil.line", ownNotebook ? "Written on sheets ruled like your notebook" : "Written in your handwriting",
+             ownNotebook ? "In your handwriting, with cut lines so they fit your notebook." : "With a real pen, page by page. You'll see each page in Orders."),
             ("checkmark.seal", "Checked by a person", "Every page, before it leaves us."),
             ("house", "Delivered to your door", "\(order.timeSlot.label) · \(order.area)"),
         ]

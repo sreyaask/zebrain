@@ -58,9 +58,10 @@ export function UploadStep({ draft, update, error }: Props) {
       {draft.product === "notes" && (
         <Segmented
           label="Notebook size"
-          value={draft.layout.pageSize === "a4" || draft.layout.pageSize === "a5" ? draft.layout.pageSize : "b5"}
+          value={draft.layout.pageSize === "a4" || draft.layout.pageSize === "a5" || draft.layout.pageSize === "b5" ? draft.layout.pageSize : "long"}
           onChange={(pageSize) => update({ layout: { ...draft.layout, pageSize } })}
           options={[
+            { value: "long", label: "Long notebook" },
             { value: "b5", label: "Regular (B5)" },
             { value: "a5", label: "Small (A5)" },
             { value: "a4", label: "Large (A4)" },

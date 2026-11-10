@@ -281,6 +281,14 @@ enum TextRecognizer {
         }
     }
 
+    /// Crops a region (0…1, top-left origin) of a photo to a PNG, for diagrams found by AI reading.
+    static func cropDiagram(_ image: UIImage, box: CGRect) -> Data? {
+        guard let page = upright(image) else { return nil }
+        let r = box.insetBy(dx: -0.01, dy: -0.01).intersection(CGRect(x: 0, y: 0, width: 1, height: 1))
+        guard r.width > 0.02, r.height > 0.02 else { return nil }
+        return crop(page, r)
+    }
+
     private static func crop(_ image: CGImage, _ rect: CGRect) -> Data? {
         let r = CGRect(x: rect.minX * CGFloat(image.width), y: rect.minY * CGFloat(image.height),
                        width: rect.width * CGFloat(image.width), height: rect.height * CGFloat(image.height)).integral

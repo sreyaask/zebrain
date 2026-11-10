@@ -169,7 +169,7 @@ function OrderDetail() {
           )}
           {order.notebook_source === "own" && (
             <p className="mt-1 text-sm">
-              <span className="font-medium">Customer's own notebook</span> — rider collects it first.
+              <span className="font-medium">Sheets for the customer's notebook</span> — write on A4 ruled to this format, with cut lines; no pickup.
               {order.notebook_barcode ? ` Barcode ${order.notebook_barcode}.` : ""}
               {order.notebook_spec?.width_mm ? ` ${order.notebook_spec.width_mm}×${order.notebook_spec.height_mm} mm, lines ${order.notebook_spec.line_pitch_mm ?? "?"} mm, margin ${order.notebook_spec.margin_mm ?? "?"} mm${order.notebook_spec.ruled === false ? ", plain" : ""}.` : ""}
             </p>

@@ -16,23 +16,23 @@ enum PaperID: String, Codable, CaseIterable, Identifiable {
 
     var name: String {
         switch self {
-        case .plainNotebook: "Plain notebook"
-        case .ruledNotebook: "Ruled notebook"
+        case .plainNotebook: "Long plain notebook"
+        case .ruledNotebook: "Long ruled notebook"
         case .looseA4: "Loose A4 sheets"
         case .premiumCard: "Premium card (A6)"
         }
     }
     var detail: String {
         switch self {
-        case .plainNotebook: "A new unruled notebook."
-        case .ruledNotebook: "A new ruled notebook with a margin."
+        case .plainNotebook: "New long notebook, 17.5 × 27.5 cm, unruled."
+        case .ruledNotebook: "New long notebook, 17.5 × 27.5 cm, ruled with a margin."
         case .looseA4: "80 gsm sheets for letters."
         case .premiumCard: "300 gsm card with envelope."
         }
     }
     var pageSize: PageSize {
         switch self {
-        case .plainNotebook, .ruledNotebook: .b5
+        case .plainNotebook, .ruledNotebook: .long
         case .looseA4: .a4
         case .premiumCard: .a6
         }
@@ -41,10 +41,11 @@ enum PaperID: String, Codable, CaseIterable, Identifiable {
 }
 
 enum PageSize: String, Codable, CaseIterable, Identifiable {
-    case b5, a4, a5, a6
+    case long, b5, a4, a5, a6
     var id: String { rawValue }
     var label: String {
         switch self {
+        case .long: "Long notebook"
         case .b5: "Notebook (B5)"
         case .a4: "A4"
         case .a5: "A5"
@@ -53,6 +54,7 @@ enum PageSize: String, Codable, CaseIterable, Identifiable {
     }
     var mm: (w: Double, h: Double) {
         switch self {
+        case .long: (175, 275)
         case .b5: (176, 250)
         case .a4: (210, 297)
         case .a5: (148, 210)
@@ -221,12 +223,12 @@ struct GlyphSet: Codable, Hashable {
 
 // MARK: - Notebooks
 
-/// Who supplies the notebook: a new one from us (₹120), or the customer's own (collected by the rider, no charge).
+/// `new`: a new long notebook from us (₹55). `own`: ruled A4 sheets in the customer's notebook format, to cut and stick in (no charge, no pickup).
 enum NotebookSource: String, Codable {
     case new, own
 }
 
-/// A notebook's page and ruling, in millimetres. Stored on the order so we can write into the customer's own notebook.
+/// A notebook's page and ruling, in millimetres. Stored on the order so the sheets we send match the customer's notebook.
 struct NotebookSpec: Codable, Hashable {
     var name: String?
     var widthMm: Double

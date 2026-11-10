@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import Vision
 import VisionKit
 
@@ -30,6 +31,21 @@ struct BarcodeScanner: UIViewControllerRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator(onFound: onFound) }
 
+    /// Reads a barcode from a still photo (works on every device and in the Simulator, where the live scanner can't run).
+    static func read(from image: UIImage) async -> String? {
+        guard let cg = image.cgImage else { return nil }
+        let request = VNDetectBarcodesRequest()
+        request.symbologies = [.ean13, .ean8, .upce, .code128, .code39, .qr]
+        let orientation = CGImagePropertyOrientation(rawValue: UInt32(image.imageOrientation.exifValue)) ?? .up
+        do {
+            try VNImageRequestHandler(cgImage: cg, orientation: orientation).perform([request])
+        } catch {
+            return nil
+        }
+        let values = (request.results ?? []).compactMap(\.payloadStringValue)
+        return values.lazy.compactMap { Coordinator.clean($0) }.first
+    }
+
     final class Coordinator: NSObject, DataScannerViewControllerDelegate {
         let onFound: (String) -> Void
         private var done = false
@@ -51,6 +67,23 @@ struct BarcodeScanner: UIViewControllerRepresentable {
         static func clean(_ s: String) -> String? {
             let kept = String(s.filter { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") }.prefix(64))
             return kept.count >= 4 ? kept : nil
+        }
+    }
+}
+
+private extension UIImage.Orientation {
+    /// EXIF orientation number for Vision.
+    var exifValue: Int {
+        switch self {
+        case .up: 1
+        case .upMirrored: 2
+        case .down: 3
+        case .downMirrored: 4
+        case .leftMirrored: 5
+        case .right: 6
+        case .rightMirrored: 7
+        case .left: 8
+        @unknown default: 1
         }
     }
 }

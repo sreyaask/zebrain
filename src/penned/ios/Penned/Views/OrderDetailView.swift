@@ -124,7 +124,7 @@ struct OrderDetailView: View {
                     }
                     DetailRow(label: "Time") { Text(order.timeSlot.label) }
                     if order.notebookSource == .own {
-                        DetailRow(label: "Notebook") { Text("Yours, collected by our rider") }
+                        DetailRow(label: "Notebook") { Text("A4 sheets ruled like yours") }
                     }
                     ShareLink(item: order.receipt, subject: Text("Penned receipt \(order.code)")) {
                         Label("Share receipt", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity)

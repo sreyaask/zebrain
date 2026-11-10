@@ -67,9 +67,11 @@ test("status changes never reprice an order placed under older prices", async ()
   assert.equal(after.status, "writing");
 });
 
-test("prices come from the server: 10 ruled pages with a new notebook = 110 + 120 + 49", async () => {
+test("prices come from the server: 10 ruled pages with a new notebook = 120 + 55 + 49", async () => {
   const [o] = await as(CUSTOMER, orderSql("ruled-notebook", 10, 1, { total: 1, notebook_amount: 0 }));
-  assert.equal(o.total, 279);
+  assert.equal(o.total, 224);
+  const [own] = await as(CUSTOMER, orderSql("ruled-notebook", 10, 1, { notebook_source: "'own'", page_size: "'long'" }));
+  assert.equal(own.total, 120 + 49);
 });
 
 test("an order needs at least one page, and notebooks are one copy", async () => {

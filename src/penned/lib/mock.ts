@@ -9,7 +9,7 @@ export type InkColour = "blue" | "black";
 export type PenType = "gel" | "ballpoint";
 
 export type PaperId = "plain-notebook" | "ruled-notebook" | "loose-a4" | "premium-card";
-export type PageSizeId = "b5" | "a4" | "a5" | "a6";
+export type PageSizeId = "long" | "b5" | "a4" | "a5" | "a6";
 
 export type OrderStatus = "received" | "writing" | "quality_check" | "out_for_delivery" | "delivered";
 
@@ -130,8 +130,8 @@ export const demoUser: User = {
 
 /** Matches the database (public.price_order_v2): what the customer sees is what they're charged. */
 export const pricing = {
-  perPage: 11,
-  notebookFee: 120,
+  perPage: 12,
+  notebookFee: 55,
   perPremiumCard: 15,
   deliveryFee: 49,
   freeDeliveryAbove: 500,
@@ -141,6 +141,7 @@ export const pricing = {
 /* ---------- Paper & page sizes ---------- */
 
 export const pageSizes: PageSize[] = [
+  { id: "long", label: "Long notebook (17.5 × 27.5 cm)", widthMm: 175, heightMm: 275 },
   { id: "b5", label: "Notebook (B5)", widthMm: 176, heightMm: 250 },
   { id: "a4", label: "A4", widthMm: 210, heightMm: 297 },
   { id: "a5", label: "A5", widthMm: 148, heightMm: 210 },
@@ -150,9 +151,9 @@ export const pageSizes: PageSize[] = [
 export const paperOptions: PaperOption[] = [
   {
     id: "plain-notebook",
-    name: "Plain notebook",
-    description: "100 pages, unruled, 70 gsm. Good for diagrams and free-form notes.",
-    size: "b5",
+    name: "Long plain notebook",
+    description: "New long notebook (17.5 × 27.5 cm), unruled. ₹55. Good for diagrams and free-form notes.",
+    size: "long",
     unit: "page",
     pricePerUnit: pricing.perPage,
     capacity: 100,
@@ -160,9 +161,9 @@ export const paperOptions: PaperOption[] = [
   },
   {
     id: "ruled-notebook",
-    name: "Ruled notebook",
-    description: "100 pages, single-ruled with margin, 70 gsm. The classic for class notes.",
-    size: "b5",
+    name: "Long ruled notebook",
+    description: "New long notebook (17.5 × 27.5 cm), single-ruled with margin. ₹55. The classic for class notes.",
+    size: "long",
     unit: "page",
     pricePerUnit: pricing.perPage,
     capacity: 100,
@@ -378,7 +379,7 @@ export interface Product {
  * database total and asks the customer to confirm it before paying if it differs.
  */
 export const productPricing = {
-  notes: { perPage: 11, notebookFee: 120 },
+  notes: { perPage: 12, notebookFee: 55 },
   lettersCards: { perCard: 15 },
   invitations: { perInvite: 39, tiers: [{ min: 50, price: 35 }, { min: 100, price: 32 }] },
   businessMail: { perNote: 59, tiers: [{ min: 100, price: 49 }, { min: 500, price: 42 }] },
@@ -410,11 +411,11 @@ export const products: Product[] = [
         body: "Teacher handouts or summaries, filed neatly into a student's notebook.",
       },
     ],
-    priceLabel: "₹11 a page",
-    priceNote: "Plus ₹120 for a new notebook. Ink and contents list included.",
+    priceLabel: "₹12 a page",
+    priceNote: "Plus ₹55 for a new long notebook, ruled or plain. Ink and contents list included.",
     unit: { one: "page", many: "pages" },
     sample: "# Ch. 4 – Laws of Motion\nNewton's Second Law: the rate of change of momentum of a body is directly proportional to the applied force.\nF = ma, where m is mass and a is acceleration.\nThird Law: every action has an equal and opposite reaction.",
-    sampleSize: "b5",
+    sampleSize: "long",
     samplePaper: "ruled-notebook",
     steps: [
       { title: "Upload your notes", body: "Photos of your notebook, a handout or summary as a PDF, or typed text. We read the text for you." },

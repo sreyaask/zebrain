@@ -48,7 +48,7 @@ struct NewOrderView: View {
     @State private var recipients = ""
     // Layout: Penned's house style for notes (the customer doesn't choose it).
     @State private var ink: Ink = .blue
-    @State private var pageSize: PageSize = .b5
+    @State private var pageSize: PageSize = .long
     private var margin: Double { 18 }
     private var spacing: Double { 1.3 }
     private var heading: HeadingStyle { .underline }
@@ -65,6 +65,8 @@ struct NewOrderView: View {
     @State private var ownPitch: Double?
     @State private var ownMargin: Double?
     @State private var ownRuled = true
+    @State private var barcodePhoto: PhotosPickerItem?
+    @State private var barcodeMessage: String?
     // Delivery
     @State private var receiver = ""
     @State private var phone = ""
@@ -203,6 +205,21 @@ struct NewOrderView: View {
             .fullScreenCover(isPresented: $scanning) {
                 DocumentScanner(onFinish: { imgs in scanning = false; Task { await addImages(imgs) } }, onCancel: { scanning = false })
                     .ignoresSafeArea()
+            }
+            .onChange(of: barcodePhoto) { _, item in
+                guard let item else { return }
+                Task {
+                    barcodePhoto = nil
+                    guard let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) else { return }
+                    if let code = await BarcodeScanner.read(from: image) {
+                        barcodeMessage = nil
+                        barcode = code
+                        await lookUp()
+                    } else {
+                        barcodeMessage = "No barcode found in that photo. Try a closer, sharper photo of the back cover, or type the number."
+                        Sounds.shared.play(.error)
+                    }
+                }
             }
             .sheet(isPresented: $scanningBarcode) {
                 NavigationStack {
@@ -356,7 +373,13 @@ struct NewOrderView: View {
             }
         }
         Section {
-            if DocumentScanner.isAvailable { Button("Scan pages", systemImage: "doc.viewfinder") { scanning = true } }
+            if DocumentScanner.isAvailable {
+                Button("Scan pages", systemImage: "doc.viewfinder") { scanning = true }
+            } else {
+                Label("The page scanner needs the iPhone camera (it can't run in the Simulator). Choose photos or import a PDF instead.", systemImage: "camera.metering.unknown")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
             PhotosPicker(selection: $photos, maxSelectionCount: 40, matching: .images) { Label("Choose photos", systemImage: "photo.on.rectangle") }
             Button("Import PDF", systemImage: "doc.richtext") { importingPDF = true }
             ForEach(files.filter { !$0.isDiagram }) { f in
@@ -436,16 +459,16 @@ struct NewOrderView: View {
 
     @ViewBuilder private var paperStep: some View {
         Section {
-            NotebookOption(title: "Ruled notebook", detail: "A new ruled notebook with a margin.", price: rupees(Quote.notebookPrice),
-                           thumb: .ruled, selected: notebook == .ruled) { choose(.ruled) }
-            NotebookOption(title: "Plain notebook", detail: "A new unruled notebook.", price: rupees(Quote.notebookPrice),
-                           thumb: .plain, selected: notebook == .plain) { choose(.plain) }
-            NotebookOption(title: "Continue in my notebook", detail: "Our rider collects it, we write in it and bring it back.", price: "Free",
-                           thumb: .own, selected: notebook == .own) { choose(.own) }
+            NotebookOption(title: "New long notebook · Ruled", detail: "17.5 × 27.5 cm, single-ruled with a margin. The classic for class notes.",
+                           price: rupees(Quote.notebookPrice), thumb: .ruled, selected: notebook == .ruled) { choose(.ruled) }
+            NotebookOption(title: "New long notebook · Plain", detail: "17.5 × 27.5 cm, no lines. Good for diagrams.",
+                           price: rupees(Quote.notebookPrice), thumb: .plain, selected: notebook == .plain) { choose(.plain) }
+            NotebookOption(title: "Sheets for my notebook", detail: "Scan your notebook's barcode. We send A4 sheets ruled like your notebook, with cut lines: cut and stick them in.",
+                           price: "Free", thumb: .own, selected: notebook == .own) { choose(.own) }
         } header: {
             Text("Notebook")
         } footer: {
-            Text("\(rupees(Quote.pagePrice)) a page. A new notebook is \(rupees(Quote.notebookPrice)); writing in yours is free. We take care of the layout, ink and neatness.")
+            Text("\(rupees(Quote.pagePrice)) a page. A new long notebook (ruled or plain) is \(rupees(Quote.notebookPrice)). Sheets for your own notebook cost only the pages. We take care of the layout, ink and neatness.")
         }
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
@@ -470,6 +493,13 @@ struct NewOrderView: View {
             if BarcodeScanner.isAvailable {
                 Button("Scan the barcode", systemImage: "barcode.viewfinder") { scanningBarcode = true }
             }
+            // Works everywhere, including the Simulator and phones without the live scanner.
+            PhotosPicker(selection: $barcodePhoto, matching: .images) {
+                Label("Read the barcode from a photo", systemImage: "photo")
+            }
+            if let barcodeMessage {
+                Text(barcodeMessage).font(.footnote).foregroundStyle(.secondary)
+            }
             if !barcode.isEmpty && catalogHit == nil && !lookupMissed && !lookingUp {
                 Button("Look up this notebook", systemImage: "magnifyingglass") { Task { await lookUp() } }
             }
@@ -484,7 +514,9 @@ struct NewOrderView: View {
         } header: {
             Text("Your notebook")
         } footer: {
-            Text(catalogHit != nil ? "We know this notebook, so no measuring needed." : "The barcode is on the back cover. We'll continue after your last written page.")
+            Text(catalogHit != nil
+                 ? "We know this notebook: your sheets will match its size, lines and margin."
+                 : "The barcode is on the back cover. If we don't know your notebook yet, measure it once below.")
         }
 
         if catalogHit == nil {
@@ -741,7 +773,7 @@ struct NewOrderView: View {
                 let pageFiles = files.filter { !$0.isDiagram }.count
                 LabeledContent("Content", value: pageFiles == 0 ? "Typed text" : "\(pageFiles) \(pageFiles == 1 ? "file" : "files")" + (diagramCount > 0 ? " · \(diagramCount) \(diagramCount == 1 ? "diagram" : "diagrams")" : ""))
                 LabeledContent("Pages", value: "\(pages)")
-                LabeledContent("Notebook", value: notebook == .own ? "Your own (\(paper == .ruledNotebook ? "ruled" : "plain")), collected first" : paper.name)
+                LabeledContent("Notebook", value: notebook == .own ? "A4 sheets ruled like your notebook (\(paper == .ruledNotebook ? "ruled" : "plain"))" : paper.name)
             } else {
                 LabeledContent("Card", value: "\(cardStyle.name) · \(ink.label) ink")
                 LabeledContent("Recipients", value: "\(recipientNames.count)")
@@ -858,8 +890,13 @@ struct NewOrderView: View {
         for img in images {
             guard let jpeg = img.jpegForUpload() else { continue }
             files.append(ScannedFile(data: jpeg, kind: "image", pages: 1, name: "Page \(files.filter { !$0.isDiagram }.count + 1)"))
-            add(await TextRecognizer.read(image: img))
         }
+        // AI reading when it's switched on (whole batch at once, up to 10 pages), otherwise page by page on the phone.
+        if images.count <= 10, let ai = await model.aiRead(images: images) {
+            add(ai)
+            return
+        }
+        for img in images { add(await TextRecognizer.read(image: img)) }
     }
 
     private func addPDFs(_ urls: [URL]) async {
