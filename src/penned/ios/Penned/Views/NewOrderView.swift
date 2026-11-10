@@ -1,3 +1,4 @@
+import PDFKit
 import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
@@ -31,11 +32,16 @@ struct NewOrderView: View {
     @State private var files: [ScannedFile] = []
     @State private var text = ""
     @State private var reading = false
-    /// Formatted pages from Gemini (SVG), and whether the last reading came from Gemini or the phone.
-    @State private var formattedPages: [String] = []
-    @State private var formattedPage = 0
+    /// Each page the customer added with Gemini's formatted version of it, and whether Gemini read them.
+    @State private var previews: [NotePagePreview] = []
+    @State private var previewIndex = 0
+    @State private var previewShowsOriginal = false
     @State private var showingFormatted = false
+    @State private var editingText = false
     @State private var readByAI = false
+    /// Pages read so far while Gemini works through a batch.
+    @State private var readDone = 0
+    @State private var readTotal = 0
     @State private var scanning = false
     @State private var photos: [PhotosPickerItem] = []
     @State private var importingPDF = false
@@ -226,7 +232,7 @@ struct NewOrderView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingFormatted) { FormattedPagesView(pages: formattedPages) }
+            .sheet(isPresented: $showingFormatted) { FormattedPagesView(pages: previews, current: $previewIndex, showOriginal: $previewShowsOriginal) }
             .sheet(isPresented: $scanningBarcode) {
                 NavigationStack {
                     BarcodeScanner { code in
@@ -411,8 +417,11 @@ struct NewOrderView: View {
             if reading {
                 HStack(spacing: 12) {
                     ProgressView()
-                    Text(Config.aiReading ? "Gemini is reading and formatting your pages" : "Reading the text on your pages")
+                    Text(Config.aiReading
+                         ? (readTotal > 1 ? "Gemini is reading page \(min(readDone + 1, readTotal)) of \(readTotal)" : "Gemini is reading and formatting your page")
+                         : "Reading the text on your pages")
                         .foregroundStyle(.secondary)
+                        .monospacedDigit()
                 }
             } else if readByAI {
                 Label("Read and formatted by Gemini", systemImage: "checkmark.seal.fill")
@@ -423,35 +432,42 @@ struct NewOrderView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-            if !formattedPages.isEmpty {
-                // The formatted pages themselves, right here: swipe through them; tap to open full screen.
-                VStack(spacing: 6) {
-                    FormattedPagesCarousel(pages: formattedPages, current: $formattedPage)
-                        .frame(height: 460)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            Sounds.shared.play(.tap)
-                            showingFormatted = true
-                        }
-                    Text("Formatted page \(min(formattedPage + 1, formattedPages.count)) of \(formattedPages.count) · swipe · tap to enlarge")
-                        .font(.caption.weight(.heavy))
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                        .frame(maxWidth: .infinity)
-                }
-                .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 10, trailing: 0))
-            }
         } header: {
             Text(kind == .missedNotes ? "Class notes or handouts" : "Your notes")
         } footer: {
-            Text("Gemini reads every word and redraws each diagram in seconds. Check the text below before you pay.")
+            Text("Gemini reads every word and redraws each diagram in seconds. Check the preview below before you pay.")
+        }
+        if !previews.isEmpty {
+            // What we'll write, page by page in the order of the photos: swipe; flip to the photo to compare.
+            Section {
+                NotePagesCarousel(pages: previews, current: $previewIndex, showOriginal: $previewShowsOriginal)
+                    .frame(height: 520)
+                    .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 10, trailing: 0))
+                Button("Open full screen", systemImage: "arrow.up.left.and.arrow.down.right") {
+                    Sounds.shared.play(.tap)
+                    showingFormatted = true
+                }
+            } header: {
+                Text("Preview · \(previewSlides(previews).count) \(previewSlides(previews).count == 1 ? "page" : "pages")")
+            } footer: {
+                Text("Swipe through every page. Switch to Your photo to compare it with the original.")
+            }
         }
         Section {
-            TextEditor(text: $text).frame(minHeight: 180).font(.body)
+            if previews.isEmpty || editingText {
+                TextEditor(text: $text).frame(minHeight: 180).font(.body)
+            }
+            if !previews.isEmpty {
+                Button(editingText ? "Done editing" : "Fix a word or line", systemImage: editingText ? "checkmark" : "pencil") {
+                    withAnimation { editingText.toggle() }
+                }
+            }
         } header: {
-            Text("Text to write")
+            Text(previews.isEmpty ? "Text to write" : "Edit the text")
         } footer: {
-            Text("Lines starting with # are headings. [[diagram:…]] lines mark where a diagram is drawn.")
+            Text(previews.isEmpty
+                 ? "Add photos or a PDF and we'll fill this in. Lines starting with # are headings; [[diagram:…]] lines mark where a diagram is drawn."
+                 : "The preview shows what Gemini read. Edits here change what we write; the preview doesn't redraw.")
         }
         pagesSection
         handwritingSection
@@ -927,44 +943,62 @@ struct NewOrderView: View {
     private func addImages(_ images: [UIImage]) async {
         guard !images.isEmpty else { return }
         reading = true
-        defer { reading = false }
+        defer { reading = false; readDone = 0; readTotal = 0 }
+        var added: [(image: UIImage, file: ScannedFile)] = []
         for img in images {
             guard let jpeg = img.jpegForUpload() else { continue }
-            files.append(ScannedFile(data: jpeg, kind: "image", pages: 1, name: "Page \(files.filter { !$0.isDiagram }.count + 1)"))
+            let f = ScannedFile(data: jpeg, kind: "image", pages: 1, name: "Page \(files.filter { !$0.isDiagram }.count + 1)")
+            files.append(f)
+            added.append((img, f))
         }
-        // AI reading when it's switched on (whole batch at once, up to 10 pages), otherwise page by page on the phone.
-        if images.count <= 10, let ai = await model.aiRead(images: images) {
-            add(ai)
+        guard !added.isEmpty else {
+            if !images.isEmpty { error = "Those photos couldn't be opened. Try choosing them again." }
             return
         }
-        for img in images { add(await TextRecognizer.read(image: img)) }
+        // Every photo is read on its own (three at a time); a page Gemini can't read is read on the phone instead.
+        readTotal = added.count
+        let ai = await model.aiRead(each: added.map(\.image)) { done in readDone = done }
+        for (i, page) in added.enumerated() {
+            let e: Extraction
+            if let read = ai[i] { e = read } else { e = await TextRecognizer.read(image: page.image) }
+            add(e, fileID: page.file.id, label: page.file.name, original: page.image)
+        }
     }
 
     private func addPDFs(_ urls: [URL]) async {
         reading = true
-        defer { reading = false }
+        defer { reading = false; readDone = 0; readTotal = 0 }
         for url in urls {
             let ok = url.startAccessingSecurityScopedResource()
             defer { if ok { url.stopAccessingSecurityScopedResource() } }
-            guard let data = try? Data(contentsOf: url) else {
-                error = "Couldn't open \(url.lastPathComponent)."
-                continue
-            }
-            var result = await TextRecognizer.read(pdf: data)
-            // Gemini reads the exact text and finds the diagrams; the phone's reading is the fallback.
-            if result.pages > 0, let ai = await model.aiRead(pdf: data, pageCount: result.pages) { result = ai }
-            if result.pages == 0 {
+            guard let data = try? Data(contentsOf: url), let count = PDFDocument(data: data)?.pageCount, count > 0 else {
                 error = "\(url.lastPathComponent) isn't a readable PDF."
                 continue
             }
-            files.append(ScannedFile(data: data, kind: "pdf", pages: result.pages, name: url.lastPathComponent))
-            add(result)
-            if result.text.isEmpty && result.diagrams.isEmpty { error = "We couldn't find any notes in \(url.lastPathComponent). Type them below instead." }
+            // Each page is rendered and read like a photo, so the preview matches the PDF page by page.
+            let images = (0..<min(count, 60)).compactMap { TextRecognizer.pageImage(pdf: data, index: $0) }
+            guard !images.isEmpty else {
+                error = "\(url.lastPathComponent) isn't a readable PDF."
+                continue
+            }
+            let file = ScannedFile(data: data, kind: "pdf", pages: count, name: url.lastPathComponent)
+            files.append(file)
+            readDone = 0
+            readTotal = images.count
+            let ai = await model.aiRead(each: images) { done in readDone = done }
+            var found = false
+            for (i, image) in images.enumerated() {
+                let e: Extraction
+                if let read = ai[i] { e = read } else { e = await TextRecognizer.read(image: image) }
+                found = found || !e.text.isEmpty || !e.diagrams.isEmpty
+                add(e, fileID: file.id, label: "\(url.lastPathComponent) · page \(i + 1)", original: image)
+            }
+            if !found { error = "We couldn't find any notes in \(url.lastPathComponent). Type them below instead." }
         }
     }
 
-    /// Adds what was read from a file: its text, and its diagrams as separate uploads.
-    private func add(_ e: Extraction) {
+    /// Adds what was read from one page: its text, its diagrams as separate uploads, and its preview.
+    private func add(_ e: Extraction, fileID: UUID, label: String, original: UIImage?) {
         let t = e.text.trimmingCharacters(in: .whitespacesAndNewlines)
         if !t.isEmpty { text += (text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : "\n\n") + t }
         for d in e.diagrams {
@@ -976,19 +1010,23 @@ struct NewOrderView: View {
                 files.append(ScannedFile(data: data, kind: "image", pages: 1, name: "Diagram drawing", uploadName: "diagram-\(d.id).svg"))
             }
         }
-        formattedPages += e.formatted
-        readByAI = e.byAI
+        previews.append(NotePagePreview(fileID: fileID, label: label, original: original, formatted: e.formatted, text: t))
+        readByAI = previews.contains { !$0.formatted.isEmpty }
         if !t.isEmpty || !e.diagrams.isEmpty { error = nil }
     }
 
     /// Removing a page also drops the diagrams that are no longer in the text.
     private func removeFile(_ f: ScannedFile) {
         files.removeAll { $0.id == f.id }
-        files.removeAll { d in d.diagramID.map { !text.contains("[[diagram:\($0)]]") } ?? false }
-        if !files.contains(where: { !$0.isDiagram }) {
-            formattedPages = []
-            formattedPage = 0
+        // Take that page's text out too (unless the customer has since edited it), then any diagrams it had.
+        for p in previews where p.fileID == f.id && !p.text.isEmpty {
+            if let r = text.range(of: p.text) { text.removeSubrange(r) }
         }
+        text = text.replacingOccurrences(of: "\n{3,}", with: "\n\n", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        files.removeAll { d in d.diagramID.map { !text.contains("[[diagram:\($0)]]") } ?? false }
+        previews.removeAll { $0.fileID == f.id }
+        readByAI = previews.contains { !$0.formatted.isEmpty }
     }
 
     private func choose(_ n: NotebookChoice) {

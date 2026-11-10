@@ -317,43 +317,55 @@ final class AppModel {
     /// silently using the phone's reading.
     var aiProblem: String?
 
-    /// Reads photos of notes with Gemini: exact text in order, each diagram as a clean drawing (and cropped from the
-    /// photo), and formatted pages. Up to 10 pages per request; bigger batches go in parallel. nil = read on the phone.
-    func aiRead(images: [UIImage]) async -> Extraction? {
-        guard Config.aiReading, !images.isEmpty else { return nil }
-        let pages = images.compactMap { $0.jpegForUpload(maxEdge: 2000) }.map { AIPage(media_type: "image/jpeg", data: $0.base64EncodedString()) }
-        guard pages.count == images.count else { return nil }
-        // Batches of 10 (the function's limit), all at the same time; results are put back in page order.
-        let batches = stride(from: 0, to: pages.count, by: 10).map { Array(pages[$0..<min($0 + 10, pages.count)]) }
-        let results: [(Int, Extraction?)] = await withTaskGroup(of: (Int, Extraction?).self) { group in
-            for (b, batch) in batches.enumerated() {
-                let first = b * 10
-                group.addTask { [self] in
-                    (b, await self.aiRead(pages: batch, pageCount: batch.count) { images[first + $0] })
+    /// Reads each photo with Gemini in its own request, three at a time, so one busy or slow page never sinks the
+    /// others. One result per photo, in the same order; nil where Gemini couldn't read that page (read it on the phone).
+    /// `progress` gets the number of pages finished so far.
+    func aiRead(each images: [UIImage], progress: @escaping @MainActor (Int) -> Void = { _ in }) async -> [Extraction?] {
+        guard Config.aiReading, !images.isEmpty else { return images.map { _ in nil } }
+        var results = [Extraction?](repeating: nil, count: images.count)
+        var finished = 0
+        await withTaskGroup(of: (Int, Extraction?).self) { group in
+            let limit = min(3, images.count)
+            for i in 0..<limit { group.addTask { (i, await self.aiRead(image: images[i])) } }
+            var next = limit
+            for await (i, result) in group {
+                results[i] = result
+                finished += 1
+                progress(finished)
+                if next < images.count {
+                    let j = next
+                    group.addTask { (j, await self.aiRead(image: images[j])) }
+                    next += 1
                 }
             }
-            var out: [(Int, Extraction?)] = []
-            for await r in group { out.append(r) }
-            return out.sorted { $0.0 < $1.0 }
         }
-        guard results.allSatisfy({ $0.1 != nil }) else { return nil }
-        var all = Extraction()
-        for case let (_, e?) in results { all.append(e) }
-        return all
+        let failed = results.filter { $0 == nil }.count
+        if failed > 0 && failed < images.count {
+            aiProblem = "Gemini couldn't read \(failed) of \(images.count) pages, so \(failed == 1 ? "that page was" : "those pages were") read on the phone. Check them below."
+        } else if failed == 0 {
+            aiProblem = nil
+        }
+        return results
     }
 
-    /// Reads a PDF with Gemini page by page: each page is rendered on the phone and sent as an image, so all pages
-    /// are read at the same time and diagrams can be cropped from the same picture.
-    func aiRead(pdf data: Data, pageCount: Int) async -> Extraction? {
-        guard Config.aiReading, pageCount > 0 else { return nil }
-        let images = (0..<min(pageCount, 60)).compactMap { TextRecognizer.pageImage(pdf: data, index: $0) }
-        guard images.count == min(pageCount, 60) else { return nil }
-        var result = await aiRead(images: images)
-        result?.pages = pageCount
-        return result
+    /// One page. Retries twice when Gemini is busy or the connection drops.
+    private func aiRead(image: UIImage) async -> Extraction? {
+        guard let jpeg = image.jpegForUpload(maxEdge: 1800) else { return nil }
+        let page = AIPage(media_type: "image/jpeg", data: jpeg.base64EncodedString())
+        for attempt in 0..<3 {
+            switch await aiRead(pages: [page], pageCount: 1, pageImage: { _ in image }) {
+            case let .success(e): return e
+            case .failure(.final): return nil
+            case .failure(.retry):
+                if attempt < 2 { try? await Task.sleep(for: .seconds(2 + attempt * 3)) }
+            }
+        }
+        return nil
     }
 
-    private func aiRead(pages: [AIPage], pageCount: Int, pageImage: (Int) -> UIImage?) async -> Extraction? {
+    private enum AIFailure: Error { case retry, final }
+
+    private func aiRead(pages: [AIPage], pageCount: Int, pageImage: (Int) -> UIImage?) async -> Result<Extraction, AIFailure> {
         do {
             let response: AIResponse = try await client.functions.invoke(
                 "extract-notes", options: FunctionInvokeOptions(body: AIRequest(pages: pages)))
@@ -368,19 +380,20 @@ final class AppModel {
                     out.text = out.text.replacingOccurrences(of: "[[diagram:\(d.id)]]", with: "")
                 }
             }
-            aiProblem = nil
-            return out
+            return .success(out)
         } catch let FunctionsError.httpError(code, data) {
             let message = (try? JSONDecoder().decode(AIErrorBody.self, from: data))?.error
-            aiProblem = code == 503 && message?.contains("switched off") == true
-                ? "Gemini isn't set up yet, so the pages were read on the phone."
-                : (message ?? "Gemini couldn't read these pages (\(code)), so they were read on the phone.")
             print("[Penned] AI reading failed (\(code)): \(message ?? "")")
-            return nil
+            if code == 503 && message?.contains("switched off") == true {
+                aiProblem = "Gemini isn't set up yet, so the pages were read on the phone."
+                return .failure(.final)
+            }
+            aiProblem = message ?? "Gemini couldn't read these pages (\(code)), so they were read on the phone."
+            return .failure([429, 502, 503, 504, 546].contains(code) ? .retry : .final)
         } catch {
             aiProblem = "Couldn't reach Gemini, so the pages were read on the phone."
-            print("[Penned] AI reading unavailable, reading on the phone: \(error)")
-            return nil
+            print("[Penned] AI reading unavailable: \(error)")
+            return .failure(.retry)
         }
     }
 
