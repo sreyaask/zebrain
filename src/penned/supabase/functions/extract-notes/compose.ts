@@ -90,3 +90,70 @@ export function composePages(x: Extraction): string[] {
     `<g font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#111">${body.join("")}</g></svg>`
   );
 }
+
+/** Width and height of a JPEG or PNG from its base64 bytes (no decoding). */
+export function imageSize(base64: string): { w: number; h: number } | null {
+  const bin = atob(base64.slice(0, 200_000));
+  const at = (i: number) => bin.charCodeAt(i);
+  if (at(0) === 0x89 && bin.slice(1, 4) === "PNG") {
+    const be = (i: number) => (at(i) << 24 | at(i + 1) << 16 | at(i + 2) << 8 | at(i + 3)) >>> 0;
+    return { w: be(16), h: be(20) };
+  }
+  if (at(0) !== 0xff || at(1) !== 0xd8) return null;
+  let i = 2;
+  while (i + 9 < bin.length) {
+    if (at(i) !== 0xff) { i++; continue; }
+    const marker = at(i + 1);
+    const len = at(i + 2) << 8 | at(i + 3);
+    // SOF0-SOF15 except DHT (C4), JPG (C8), DAC (CC) carry the frame size.
+    if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
+      return { h: at(i + 5) << 8 | at(i + 6), w: at(i + 7) << 8 | at(i + 8) };
+    }
+    i += 2 + len;
+  }
+  return null;
+}
+
+/**
+ * Same layout as the original page: every block sits where it was, at the size it was written. Text size comes from the
+ * block's height and how many lines it needs; diagrams are Gemini's drawing fitted into their original box.
+ * One SVG per source page; `sizes[i]` is that page's pixel size (A4 proportions when unknown).
+ */
+export function composeLayout(x: Extraction, sizes: ({ w: number; h: number } | null)[]): string[] {
+  return x.pages.map((p, i) => {
+    const s = sizes[i];
+    const pageH = s && s.w > 0 ? Math.round((W * s.h) / s.w) : H;
+    const parts: string[] = [];
+    for (const b of p.blocks) {
+      const bx = b.box.x * W, by = b.box.y * pageH, bw = Math.max(40, b.box.width * W), bh = Math.max(20, b.box.height * pageH);
+      if (b.kind === "diagram") {
+        if (!b.svg) continue;
+        const { w, h, inner } = viewBox(b.svg);
+        parts.push(`<svg x="${bx}" y="${by}" width="${bw}" height="${bh}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">${inner}</svg>`);
+        continue;
+      }
+      const raw = b.kind === "list_item" && !/^([-•*]|\d+[.)]|[a-z][.)])\s/i.test(b.text.trim()) ? `• ${b.text.trim()}` : b.text.trim();
+      if (!raw) continue;
+      // Find the font size at which the text, wrapped to the box width, fills the box height (like the original).
+      let lines = raw.split("\n");
+      let size = bh / (lines.length * 1.25);
+      for (let k = 0; k < 4; k++) {
+        lines = b.kind === "table" ? raw.split("\n") : wrap(raw, size, bw);
+        size = Math.min(bh / (lines.length * 1.25), (bw / Math.max(...lines.map((l) => l.length), 1)) / 0.5);
+      }
+      size = Math.max(12, Math.min(72, size));
+      const lh = size * 1.25;
+      const weight = b.kind === "heading" ? ' font-weight="700"' : "";
+      lines.forEach((line, n) => {
+        parts.push(`<text x="${bx}" y="${by + lh * n + size}" font-size="${size.toFixed(1)}"${weight}>${esc(line)}</text>`);
+      });
+      if (b.kind === "heading") {
+        const y = by + lh * (lines.length - 1) + size * 1.15;
+        parts.push(`<line x1="${bx}" y1="${y}" x2="${bx + Math.min(bw, lines[lines.length - 1].length * size * 0.52)}" y2="${y}" stroke="#111" stroke-width="${Math.max(1.5, size / 16)}"/>`);
+      }
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${pageH}" width="${W}" height="${pageH}">` +
+      `<rect width="${W}" height="${pageH}" fill="white"/>` +
+      `<g font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#111">${parts.join("")}</g></svg>`;
+  });
+}

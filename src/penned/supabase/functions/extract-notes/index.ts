@@ -17,7 +17,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { extractFast, extractPages, GeminiError, toOrder, type Page } from "./gemini.ts";
-import { composePages } from "./compose.ts";
+import { composeLayout, imageSize } from "./compose.ts";
 
 const MAX_IMAGES = 10;
 
@@ -56,7 +56,8 @@ Deno.serve(async (req) => {
     const order = toOrder(result);
     const svgByBlock = result.pages.flatMap((p) => p.blocks.filter((b) => b.kind === "diagram").map((b) => b.svg));
     const diagrams = order.diagrams.map((d, i) => ({ ...d, svg: svgByBlock[i] ?? "" }));
-    const formatted = composePages(result);
+    // Formatted pages keep the original layout: each block where it was, at the size it was written.
+    const formatted = composeLayout(result, images.length ? images.map((p) => imageSize(p.data)) : result.pages.map(() => null));
 
     // Save the formatted pages next to the customer's uploads (best effort: the preview doesn't depend on it).
     const batch = crypto.randomUUID();

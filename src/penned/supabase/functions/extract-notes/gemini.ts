@@ -79,10 +79,12 @@ const SCHEMA = {
 };
 
 /** Calls Gemini once. Throws GeminiError with the HTTP status on failure. */
-async function call(pages: Page[], apiKey: string, model: string): Promise<Extraction> {
+export type Thinking = "minimal" | "low" | "medium" | "high";
+
+async function call(pages: Page[], apiKey: string, model: string, thinking: Thinking = "low", timeoutMs = 25_000): Promise<Extraction> {
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
-    signal: AbortSignal.timeout(25_000), // never hang the customer: a slow model is skipped for the next one
+    signal: AbortSignal.timeout(timeoutMs), // never hang the customer: a slow model is skipped for the next one
     headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
     body: JSON.stringify({
       contents: [{
@@ -95,7 +97,7 @@ async function call(pages: Page[], apiKey: string, model: string): Promise<Extra
       generationConfig: {
         temperature: 0,
         // Low thinking: ~3 s a page instead of 20+, with the same accuracy on copying text.
-        thinkingConfig: { thinkingLevel: "low" },
+        thinkingConfig: { thinkingLevel: thinking },
         responseMimeType: "application/json",
         responseSchema: SCHEMA,
         maxOutputTokens: 65536,
@@ -145,13 +147,13 @@ function toBox(b: number[] | undefined): Box {
 export const MODELS = ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.7-flash"];
 
 /** Reads the pages with the first model that answers, retrying briefly when Gemini is busy. */
-export async function extract(pages: Page[], apiKey: string, models = MODELS): Promise<Extraction> {
+export async function extract(pages: Page[], apiKey: string, models = MODELS, thinking: Thinking = "low", timeoutMs = 25_000): Promise<Extraction> {
   let last: unknown;
   for (const model of models) {
     // One try per model; the next model (or the Flash-Lite race in extractFast) covers a busy one.
     for (let attempt = 0; attempt < 1; attempt++) {
       try {
-        return await call(pages, apiKey, model);
+        return await call(pages, apiKey, model, thinking, timeoutMs);
       } catch (e) {
         last = e;
         // Only capacity/availability problems are worth retrying; bad input won't improve.
