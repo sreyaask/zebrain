@@ -33,6 +33,40 @@ struct SVGView: UIViewRepresentable {
     final class Coordinator { var loaded: String? }
 }
 
+/// Width ÷ height of an SVG page from its viewBox (formatted pages follow the shape of the photographed page).
+func svgAspect(_ svg: String) -> CGFloat {
+    if let m = svg.firstMatch(of: #/viewBox\s*=\s*"\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)/#),
+       let w = Double(m.1), let h = Double(m.2), w > 0, h > 0 {
+        return CGFloat(w / h)
+    }
+    return 1000.0 / 1414.0
+}
+
+/// Swipeable formatted pages, one page at a time.
+struct FormattedPagesCarousel: View {
+    let pages: [String]
+    @Binding var current: Int
+
+    var body: some View {
+        TabView(selection: $current) {
+            ForEach(Array(pages.enumerated()), id: \.offset) { i, svg in
+                SVGView(svg: svg)
+                    .aspectRatio(svgAspect(svg), contentMode: .fit)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.ink, lineWidth: 1.5))
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 28) // room for the page dots
+                    .tag(i)
+                    .accessibilityLabel("Formatted page \(i + 1) of \(pages.count)")
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: pages.count > 1 ? .always : .never))
+        .indexViewStyle(.page(backgroundDisplayMode: .always))
+        .onChange(of: pages.count) { _, n in if current >= n { current = max(0, n - 1) } }
+    }
+}
+
 /// Every page as Gemini formatted it: exact text in order, with its redrawn diagrams. Swipe between pages.
 struct FormattedPagesView: View {
     let pages: [String]
@@ -42,20 +76,7 @@ struct FormattedPagesView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 12) {
-                TabView(selection: $current) {
-                    ForEach(Array(pages.enumerated()), id: \.offset) { i, svg in
-                        SVGView(svg: svg)
-                            .aspectRatio(1000.0 / 1414.0, contentMode: .fit)
-                            .background(Color.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.ink, lineWidth: 1.5))
-                            .padding(.horizontal, 16)
-                            .tag(i)
-                            .accessibilityLabel("Formatted page \(i + 1) of \(pages.count)")
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .always))
-                .indexViewStyle(.page(backgroundDisplayMode: .always))
+                FormattedPagesCarousel(pages: pages, current: $current)
                 Text("Page \(current + 1) of \(pages.count) · swipe for more")
                     .font(.caption.weight(.heavy))
                     .foregroundStyle(.secondary)

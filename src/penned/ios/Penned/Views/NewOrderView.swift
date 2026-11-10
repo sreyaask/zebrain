@@ -33,6 +33,7 @@ struct NewOrderView: View {
     @State private var reading = false
     /// Formatted pages from Gemini (SVG), and whether the last reading came from Gemini or the phone.
     @State private var formattedPages: [String] = []
+    @State private var formattedPage = 0
     @State private var showingFormatted = false
     @State private var readByAI = false
     @State private var scanning = false
@@ -423,12 +424,22 @@ struct NewOrderView: View {
                     .foregroundStyle(.secondary)
             }
             if !formattedPages.isEmpty {
-                Button {
-                    Sounds.shared.play(.tap)
-                    showingFormatted = true
-                } label: {
-                    Label("See formatted pages (\(formattedPages.count))", systemImage: "doc.richtext")
+                // The formatted pages themselves, right here: swipe through them; tap to open full screen.
+                VStack(spacing: 6) {
+                    FormattedPagesCarousel(pages: formattedPages, current: $formattedPage)
+                        .frame(height: 460)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            Sounds.shared.play(.tap)
+                            showingFormatted = true
+                        }
+                    Text("Formatted page \(min(formattedPage + 1, formattedPages.count)) of \(formattedPages.count) · swipe · tap to enlarge")
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .frame(maxWidth: .infinity)
                 }
+                .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 10, trailing: 0))
             }
         } header: {
             Text(kind == .missedNotes ? "Class notes or handouts" : "Your notes")
@@ -974,6 +985,10 @@ struct NewOrderView: View {
     private func removeFile(_ f: ScannedFile) {
         files.removeAll { $0.id == f.id }
         files.removeAll { d in d.diagramID.map { !text.contains("[[diagram:\($0)]]") } ?? false }
+        if !files.contains(where: { !$0.isDiagram }) {
+            formattedPages = []
+            formattedPage = 0
+        }
     }
 
     private func choose(_ n: NotebookChoice) {

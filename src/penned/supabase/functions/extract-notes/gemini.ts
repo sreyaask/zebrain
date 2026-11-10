@@ -132,7 +132,44 @@ export function cleanSvg(svg: string): string {
     .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*')/gi, "")
     .replace(/\s(href|xlink:href)\s*=\s*("[^"]*"|'[^']*')/gi, "");
   if (!/xmlns=/.test(s)) s = s.replace(/<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"');
-  return s;
+  return tighten(s);
+}
+
+/**
+ * Gemini often draws in a corner of its 1000-wide canvas (or past its edge). Re-fits the viewBox to what is actually drawn,
+ * with a small margin, so the diagram is shown and plotted at the right size and nothing is cut off.
+ */
+export function tighten(svg: string): string {
+  const xs: number[] = [], ys: number[] = [];
+  const add = (x: number, y: number) => { if (Number.isFinite(x) && Number.isFinite(y)) { xs.push(x); ys.push(y); } };
+  const at = (tag: string, k: string) => parseFloat(tag.match(new RegExp(`\\s${k}\\s*=\\s*["']([^"']*)`))?.[1] ?? "NaN");
+  for (const m of svg.matchAll(/<(line|polyline|polygon|rect|circle|ellipse|path|text)\b[^>]*>([^<]*)/gi)) {
+    const tag = m[0], kind = m[1].toLowerCase();
+    if (kind === "line") { add(at(tag, "x1"), at(tag, "y1")); add(at(tag, "x2"), at(tag, "y2")); }
+    else if (kind === "rect") { const x = at(tag, "x") || 0, y = at(tag, "y") || 0; add(x, y); add(x + at(tag, "width"), y + at(tag, "height")); }
+    else if (kind === "circle" || kind === "ellipse") {
+      const cx = at(tag, "cx"), cy = at(tag, "cy"), rx = kind === "circle" ? at(tag, "r") : at(tag, "rx"), ry = kind === "circle" ? rx : at(tag, "ry");
+      add(cx - rx, cy - ry); add(cx + rx, cy + ry);
+    } else if (kind === "text") {
+      const size = at(tag, "font-size") || 40, x = at(tag, "x"), y = at(tag, "y"), w = m[2].trim().length * size * 0.55;
+      const anchor = tag.match(/text-anchor\s*=\s*["'](\w+)/)?.[1];
+      const x0 = anchor === "middle" ? x - w / 2 : anchor === "end" ? x - w : x;
+      add(x0, y - size); add(x0 + w, y + size * 0.25);
+    } else {
+      const list = kind === "path" ? (tag.match(/\sd\s*=\s*["']([^"']*)/)?.[1] ?? "") : (tag.match(/points\s*=\s*["']([^"']*)/)?.[1] ?? "");
+      // Paths: absolute coordinates only (relative moves and arc radii would mislead the box, so skip those paths).
+      if (kind === "path" && /[a-yzA]/.test(list.replace(/e-?\d/gi, ""))) continue;
+      const n = (list.match(/-?\d*\.?\d+(?:e-?\d+)?/gi) ?? []).map(Number);
+      const hv = kind === "path" && /[HV]/.test(list);
+      if (!hv) for (let i = 0; i + 1 < n.length; i += 2) add(n[i], n[i + 1]);
+    }
+  }
+  if (xs.length < 2) return svg;
+  const pad = 20;
+  const x0 = Math.min(...xs) - pad, y0 = Math.min(...ys) - pad, w = Math.max(...xs) - Math.min(...xs) + pad * 2, h = Math.max(...ys) - Math.min(...ys) + pad * 2;
+  if (w < 40 || h < 40) return svg;
+  const vb = `viewBox="${Math.round(x0)} ${Math.round(y0)} ${Math.round(w)} ${Math.round(h)}"`;
+  return /viewBox\s*=/.test(svg) ? svg.replace(/viewBox\s*=\s*"[^"]*"/i, vb) : svg.replace(/<svg/i, `<svg ${vb}`);
 }
 
 /** Gemini's [ymin, xmin, ymax, xmax] in 0-1000 → x/y/width/height in 0-1. */

@@ -1,6 +1,7 @@
 // Builds clean, formatted SVG pages from Gemini's reading: headings, paragraphs, lists, equations and tables typeset in
 // reading order, with each diagram placed as Gemini's own SVG redrawing. These are the "formatted notes" the customer
 // previews on the phone; the pen plotter later writes the same content in the customer's handwriting.
+import { tighten } from "./gemini.ts";
 import type { Block, Extraction } from "./gemini.ts";
 
 const W = 1000; // page width in SVG units (A4 proportions)
@@ -31,12 +32,14 @@ function wrap(text: string, size: number, width: number): string[] {
 }
 
 /** Reads width/height from an SVG's viewBox (defaults to 1000×600). */
-function viewBox(svg: string): { w: number; h: number; inner: string } {
+function viewBox(svg: string): { x: number; y: number; w: number; h: number; inner: string } {
   const vb = svg.match(/viewBox\s*=\s*"([\d.\-\s,]+)"/i)?.[1].trim().split(/[\s,]+/).map(Number);
+  const x = vb && Number.isFinite(vb[0]) ? vb[0] : 0;
+  const y = vb && Number.isFinite(vb[1]) ? vb[1] : 0;
   const w = vb && vb[2] > 0 ? vb[2] : 1000;
   const h = vb && vb[3] > 0 ? vb[3] : 600;
   const inner = svg.replace(/^[\s\S]*?<svg[^>]*>/i, "").replace(/<\/svg>\s*$/i, "");
-  return { w, h, inner };
+  return { x, y, w, h, inner };
 }
 
 interface Piece { height: number; render: (y: number) => string }
@@ -115,45 +118,109 @@ export function imageSize(base64: string): { w: number; h: number } | null {
 }
 
 /**
- * Same layout as the original page: every block sits where it was, at the size it was written. Text size comes from the
- * block's height and how many lines it needs; diagrams are Gemini's drawing fitted into their original box.
- * One SVG per source page; `sizes[i]` is that page's pixel size (A4 proportions when unknown).
+ * Formatted notebook pages: ruled lines and a margin, every line of text sitting on a ruled line, headings larger and
+ * underlined, list items and sub-parts indented, tables as real grids on the lines, and each diagram (Gemini's drawing)
+ * at the same share of the page width it had on the original. Content keeps the original order; nothing overlaps; long
+ * notes continue onto new pages. `sizes` are the source pages' pixel sizes (their proportions set the page shape).
  */
 export function composeLayout(x: Extraction, sizes: ({ w: number; h: number } | null)[]): string[] {
-  return x.pages.map((p, i) => {
-    const s = sizes[i];
-    const pageH = s && s.w > 0 ? Math.round((W * s.h) / s.w) : H;
-    const parts: string[] = [];
+  const first = sizes.find((s) => s && s.w > 0);
+  const pageH = first ? Math.max(1100, Math.min(1600, Math.round((W * first.h) / first.w))) : H;
+  const pitch = 52;                 // ruled line spacing
+  const top = pitch * 2;            // first ruled line
+  const left = 100;                 // text starts right of the margin line
+  const right = W - 50;
+  const body = 31;                  // body text size on a line
+  const rows = Math.floor((pageH - top - 40) / pitch);
+
+  const pages: string[][] = [[]];
+  let row = 0;
+  const page = () => pages[pages.length - 1];
+  const need = (n: number) => {
+    if (row + n > rows && row > 0) {
+      pages.push([]);
+      row = 0;
+    }
+  };
+  const baseline = (r: number) => top + r * pitch - 9;
+
+  for (const p of x.pages) {
     for (const b of p.blocks) {
-      const bx = b.box.x * W, by = b.box.y * pageH, bw = Math.max(40, b.box.width * W), bh = Math.max(20, b.box.height * pageH);
       if (b.kind === "diagram") {
         if (!b.svg) continue;
-        const { w, h, inner } = viewBox(b.svg);
-        parts.push(`<svg x="${bx}" y="${by}" width="${bw}" height="${bh}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">${inner}</svg>`);
+        const { x: vx, y: vy, w, h, inner } = viewBox(tighten(b.svg));
+        const width = Math.max(0.5, Math.min(0.9, (b.box.width || 0.6) * 1.4)) * (right - left);
+        let height = width * (h / w);
+        const maxRows = Math.max(4, rows - 2);
+        let n = Math.ceil((height + pitch * 0.5) / pitch);
+        if (n > maxRows) { n = maxRows; height = n * pitch - pitch * 0.5; }
+        need(n);
+        const x0 = left + ((right - left) - Math.min(width, height * (w / h))) / 2;
+        page().push(`<svg x="${x0.toFixed(1)}" y="${(top + row * pitch - pitch * 0.75).toFixed(1)}" width="${Math.min(width, height * (w / h)).toFixed(1)}" height="${height.toFixed(1)}" viewBox="${vx} ${vy} ${w} ${h}" preserveAspectRatio="xMidYMid meet">${inner}</svg>`);
+        row += n;
         continue;
       }
-      const raw = b.kind === "list_item" && !/^([-•*]|\d+[.)]|[a-z][.)])\s/i.test(b.text.trim()) ? `• ${b.text.trim()}` : b.text.trim();
-      if (!raw) continue;
-      // Find the font size at which the text, wrapped to the box width, fills the box height (like the original).
-      let lines = raw.split("\n");
-      let size = bh / (lines.length * 1.25);
-      for (let k = 0; k < 4; k++) {
-        lines = b.kind === "table" ? raw.split("\n") : wrap(raw, size, bw);
-        size = Math.min(bh / (lines.length * 1.25), (bw / Math.max(...lines.map((l) => l.length), 1)) / 0.5);
+      if (b.kind === "table") {
+        const cells = b.text.split("\n").map((r) => r.split("|").map((c) => c.trim())).filter((r) => r.some(Boolean));
+        if (!cells.length) continue;
+        need(cells.length + 1);
+        page().push(table(b.text, left, top + row * pitch - pitch * 0.85, right - left, cells.length * pitch, body));
+        row += cells.length + 1;
+        continue;
       }
-      size = Math.max(12, Math.min(72, size));
-      const lh = size * 1.25;
-      const weight = b.kind === "heading" ? ' font-weight="700"' : "";
+      const text = b.text.trim();
+      if (!text) continue;
+      const heading = b.kind === "heading";
+      const size = heading ? (b.level <= 1 ? body * 1.35 : body * 1.15) : body;
+      // Sub-parts like "(b) …" or "b) …" and list items are indented; numbered questions stay at the margin.
+      const sub = /^\(?[a-z]\)|^\(?[ivx]+\)\s/i.test(text);
+      const numbered = /^(\d+[.)]|Q\d+[.)])\s/i.test(text);
+      const indent = (b.kind === "list_item" && !numbered) || sub ? 34 : 0;
+      const shown = b.kind === "list_item" && !/^([-•*]|\d+[.)]|[a-z][.)])\s/i.test(text) ? `• ${text}` : text;
+      const lines = wrap(shown, size, right - left - indent);
+      const gapBefore = heading && row > 0 ? 1 : 0;
+      need(lines.length + gapBefore);
+      row += row > 0 ? gapBefore : 0;
       lines.forEach((line, n) => {
-        parts.push(`<text x="${bx}" y="${by + lh * n + size}" font-size="${size.toFixed(1)}"${weight}>${esc(line)}</text>`);
+        const y = baseline(row + n);
+        const hang = n > 0 && (b.kind === "list_item") ? 22 : 0;
+        page().push(`<text x="${left + indent + hang}" y="${y.toFixed(1)}" font-size="${size.toFixed(1)}"${heading ? ' font-weight="700"' : ""}${b.kind === "equation" ? ' font-style="italic"' : ""}>${esc(line)}</text>`);
+        if (heading) {
+          const len = Math.min(right - left, line.length * size * 0.54);
+          page().push(`<line x1="${left}" y1="${(y + 6).toFixed(1)}" x2="${(left + len).toFixed(1)}" y2="${(y + 6).toFixed(1)}" stroke="#111" stroke-width="2"/>`);
+        }
       });
-      if (b.kind === "heading") {
-        const y = by + lh * (lines.length - 1) + size * 1.15;
-        parts.push(`<line x1="${bx}" y1="${y}" x2="${bx + Math.min(bw, lines[lines.length - 1].length * size * 0.52)}" y2="${y}" stroke="#111" stroke-width="${Math.max(1.5, size / 16)}"/>`);
-      }
+      row += lines.length;
     }
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${pageH}" width="${W}" height="${pageH}">` +
-      `<rect width="${W}" height="${pageH}" fill="white"/>` +
-      `<g font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#111">${parts.join("")}</g></svg>`;
+  }
+
+  const ruling = Array.from({ length: rows + 1 }, (_, r) => `<line x1="0" y1="${top + r * pitch}" x2="${W}" y2="${top + r * pitch}" stroke="#c9d6ee" stroke-width="1.5"/>`).join("") +
+    `<line x1="${left - 18}" y1="0" x2="${left - 18}" y2="${pageH}" stroke="#e6a7a7" stroke-width="1.5"/>`;
+  return pages.filter((pg) => pg.length).map((body) =>
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${pageH}" width="${W}" height="${pageH}">` +
+    `<rect width="${W}" height="${pageH}" fill="white"/>${ruling}` +
+    `<g font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif" fill="#1b2f8a">${body.join("")}</g></svg>`
+  );
+}
+
+/** A real table: rows split by newlines, cells by " | ", columns sized to their longest cell, with borders. */
+function table(text: string, x: number, y: number, w: number, h: number, body: number): string {
+  const rows = text.split("\n").map((r) => r.split("|").map((c) => c.trim())).filter((r) => r.some(Boolean));
+  if (!rows.length) return "";
+  const cols = Math.max(...rows.map((r) => r.length));
+  const longest = Array.from({ length: cols }, (_, c) => Math.max(3, ...rows.map((r) => (r[c] ?? "").length)));
+  const total = longest.reduce((a, b) => a + b, 0);
+  const size = Math.min(body, (w / total) / 0.55);
+  const rowH = Math.max(size * 1.6, h / rows.length);
+  const colW = longest.map((l) => (l / total) * w);
+  const out: string[] = [];
+  rows.forEach((r, ri) => {
+    let cx = x;
+    for (let c = 0; c < cols; c++) {
+      out.push(`<rect x="${cx.toFixed(1)}" y="${(y + ri * rowH).toFixed(1)}" width="${colW[c].toFixed(1)}" height="${rowH.toFixed(1)}" fill="none" stroke="#111" stroke-width="1.5"/>`);
+      out.push(`<text x="${(cx + size * 0.4).toFixed(1)}" y="${(y + ri * rowH + rowH / 2 + size * 0.35).toFixed(1)}" font-size="${size.toFixed(1)}"${ri === 0 ? ' font-weight="700"' : ""}>${esc(r[c] ?? "")}</text>`);
+      cx += colW[c];
+    }
   });
+  return out.join("");
 }
