@@ -163,7 +163,16 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   once); we write on A4 sheets ruled like their notebook, with cut lines, to cut and stick in. Pages only, one-way delivery.
 - Barcode: live scanner on a real iPhone (VisionKit DataScanner), plus "Read the barcode from a photo" (VNDetectBarcodesRequest) that also
   works in the Simulator. The page scanner and barcode scanner need the camera: they can't run in the Simulator.
-- AI reading (built, OFF): `supabase/functions/extract-notes` sends pages to Claude (claude-opus-5-5, structured output) and returns
-  blocks in reading order plus diagram boxes; the app crops diagrams from them. To turn on: deploy the function, set its ANTHROPIC_API_KEY
-  secret, set app_settings.ai_extraction = true, and set `Config.aiReading = true` in the iOS app. Until then pages are read on the phone.
+- AI reading is ON and uses **Google Gemini** (user's choice, 10 Nov 2026): `supabase/functions/extract-notes` (deployed, JWT required)
+  sends photos or a PDF to Gemini (`gemini.ts`: plain REST, JSON schema output, models gemini-3.5-flash → 3.8/3.7-flash → pro-latest
+  with retries; the key is on Google's free plan, so Pro answers 429) and returns exact text in reading order plus a box per diagram;
+  the app crops each diagram from the photo/rendered PDF page. Needs the Supabase secret `GEMINI_API_KEY` (the user adds it in
+  Dashboard → Edge Functions → Secrets; storing secrets through the MCP tool is paused). app_settings.ai_extraction = true and
+  `Config.aiReading = true`. If the function is off/busy, the app falls back to reading on the phone. Tested on a sample page:
+  exact text, heading, equation, bullets and a force diagram boxed correctly (~23 s). Never commit the key.
+- Review step: `Views/PagedPreview.swift` shows every page, swipeable, in the customer's handwriting with diagrams as cropped images.
+  Page breaks are an estimate (rows per page from the notebook size); the plotter layout is final.
+- Barcodes: the catalog started empty; the `learn_notebook` trigger (migration 20261110000001, live) adds a notebook the first time a
+  customer orders sheets for it with a barcode and measurements. The scan button shows whenever the device supports it and asks for
+  camera permission on tap; photo reading tries Vision's newest and oldest barcode revisions (the Simulator needs the old one).
   `supabase/functions` is excluded from the Next.js tsconfig (Deno imports); check it with `deno check`.

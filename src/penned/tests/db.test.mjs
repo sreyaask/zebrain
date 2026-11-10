@@ -142,3 +142,12 @@ test("customers can't read or write app settings or burn order codes", async () 
 test("order codes can only be taken by placing an order", async () => {
   await assert.rejects(as(CUSTOMER, "select public.next_order_code()"), /assigned when an order is placed/);
 });
+
+test("a measured notebook is remembered for the next customer who scans it", async () => {
+  const spec = `'{"width_mm": 172, "height_mm": 270, "line_pitch_mm": 7.5, "margin_mm": 22, "ruled": true}'::jsonb`;
+  await as(CUSTOMER, orderSql("ruled-notebook", 3, 1, { notebook_source: "'own'", notebook_barcode: "'8901234567897'", notebook_spec: spec }));
+  const [hit] = await as(OTHER, "select width_mm, height_mm, line_pitch_mm, ruled from public.notebook_catalog where barcode = '8901234567897'");
+  assert.equal(Number(hit.width_mm), 172);
+  assert.equal(Number(hit.line_pitch_mm), 7.5);
+  assert.equal(hit.ruled, true);
+});

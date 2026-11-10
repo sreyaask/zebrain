@@ -281,6 +281,12 @@ enum TextRecognizer {
         }
     }
 
+    /// One page of a PDF rendered on white, for cropping diagrams found by AI reading.
+    static func pageImage(pdf data: Data, index: Int) -> UIImage? {
+        guard let doc = PDFDocument(data: data), let page = doc.page(at: index), let cg = render(page) else { return nil }
+        return UIImage(cgImage: cg)
+    }
+
     /// Crops a region (0…1, top-left origin) of a photo to a PNG, for diagrams found by AI reading.
     static func cropDiagram(_ image: UIImage, box: CGRect) -> Data? {
         guard let page = upright(image) else { return nil }

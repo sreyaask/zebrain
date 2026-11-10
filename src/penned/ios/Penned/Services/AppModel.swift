@@ -317,13 +317,26 @@ final class AppModel {
         guard Config.aiReading, !images.isEmpty else { return nil }
         let pages = images.compactMap { $0.jpegForUpload(maxEdge: 2000) }.map { AIPage(media_type: "image/jpeg", data: $0.base64EncodedString()) }
         guard pages.count == images.count else { return nil }
+        return await aiRead(pages: pages, pageCount: images.count) { images[$0] }
+    }
+
+    /// Reads a whole PDF with AI (up to about 4 MB, the most one request can carry). Diagrams are cropped from the
+    /// rendered pages.
+    func aiRead(pdf data: Data, pageCount: Int) async -> Extraction? {
+        guard Config.aiReading, pageCount > 0, data.count <= 4_000_000 else { return nil }
+        return await aiRead(pages: [AIPage(media_type: "application/pdf", data: data.base64EncodedString())], pageCount: pageCount) {
+            TextRecognizer.pageImage(pdf: data, index: $0)
+        }
+    }
+
+    private func aiRead(pages: [AIPage], pageCount: Int, pageImage: (Int) -> UIImage?) async -> Extraction? {
         do {
             let response: AIResponse = try await client.functions.invoke(
                 "extract-notes", options: FunctionInvokeOptions(body: AIRequest(pages: pages)))
-            var out = Extraction(text: response.text, pages: images.count)
-            for d in response.diagrams where (1...images.count).contains(d.page) {
+            var out = Extraction(text: response.text, pages: pageCount)
+            for d in response.diagrams where (1...pageCount).contains(d.page) {
                 let box = CGRect(x: d.box.x, y: d.box.y, width: d.box.width, height: d.box.height)
-                if let png = TextRecognizer.cropDiagram(images[d.page - 1], box: box) {
+                if let image = pageImage(d.page - 1), let png = TextRecognizer.cropDiagram(image, box: box) {
                     out.diagrams.append(ExtractedDiagram(id: d.id, png: png))
                 } else {
                     out.text = out.text.replacingOccurrences(of: "[[diagram:\(d.id)]]", with: "")

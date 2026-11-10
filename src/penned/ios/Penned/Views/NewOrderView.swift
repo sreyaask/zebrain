@@ -490,8 +490,22 @@ struct NewOrderView: View {
                     }
                 if lookingUp { ProgressView() }
             }
-            if BarcodeScanner.isAvailable {
-                Button("Scan the barcode", systemImage: "barcode.viewfinder") { scanningBarcode = true }
+            if BarcodeScanner.isSupported {
+                Button("Scan the barcode", systemImage: "barcode.viewfinder") {
+                    Task {
+                        if await BarcodeScanner.requestAccess() == .granted {
+                            barcodeMessage = nil
+                            scanningBarcode = true
+                        } else {
+                            barcodeMessage = "Penned can't use the camera. Allow it in Settings → Penned → Camera, or read the barcode from a photo."
+                            Sounds.shared.play(.error)
+                        }
+                    }
+                }
+            } else {
+                Text("Live scanning needs the iPhone camera (it can't run in the Simulator). Use a photo of the barcode, or type the number.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
             // Works everywhere, including the Simulator and phones without the live scanner.
             PhotosPicker(selection: $barcodePhoto, matching: .images) {
@@ -813,25 +827,17 @@ struct NewOrderView: View {
         return pageSize.mm
     }
 
-    /// Page 1 in the customer's own handwriting, so they see what they're paying for.
+    /// Every page in the customer's own handwriting, swipeable, with the diagrams exactly as on their notes.
     @ViewBuilder private var pagePreview: some View {
-        let pageText = text.components(separatedBy: "\n").filter { !$0.hasPrefix("[[diagram:") }.joined(separator: "\n")
-        let size = previewSize
         Section {
-            HandwritingPage(text: String(pageText.prefix(700)), glyphs: glyphs, ink: ink, ruled: paper == .ruledNotebook,
-                            lineSpacing: spacing, margin: margin / size.w, headingStyle: heading, pageWidthMm: size.w)
-                .aspectRatio(CGFloat(size.w / size.h), contentMode: .fit)
-                .frame(maxWidth: 240)
-                .background(Theme.paper)
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Theme.ink, lineWidth: 1.5))
-                .overlay(alignment: .bottomTrailing) {
-                    Text("Page 1 of \(max(1, pages))").font(.caption2.weight(.heavy)).foregroundStyle(Theme.paper)
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Theme.ink, in: Capsule()).padding(8)
+            PagedPreview(
+                text: text, glyphs: glyphs, ink: ink, ruled: paper == .ruledNotebook, lineSpacing: spacing,
+                marginMm: margin, headingStyle: heading, pageMm: previewSize,
+                diagramImage: { id in
+                    files.first { $0.uploadName == "diagram-\(id).png" }.flatMap { UIImage(data: $0.data) }
                 }
-                .frame(maxWidth: .infinity)
-                .listRowBackground(Color.clear)
+            )
+            .listRowBackground(Color.clear)
         } header: {
             Text("Preview")
         } footer: {
@@ -909,7 +915,9 @@ struct NewOrderView: View {
                 error = "Couldn't open \(url.lastPathComponent)."
                 continue
             }
-            let result = await TextRecognizer.read(pdf: data)
+            var result = await TextRecognizer.read(pdf: data)
+            // Gemini reads the exact text and finds the diagrams; the phone's reading is the fallback.
+            if result.pages > 0, let ai = await model.aiRead(pdf: data, pageCount: result.pages) { result = ai }
             if result.pages == 0 {
                 error = "\(url.lastPathComponent) isn't a readable PDF."
                 continue
@@ -950,7 +958,10 @@ struct NewOrderView: View {
         catalogHit = await model.notebook(barcode: code)
         lookupMissed = catalogHit == nil
         if let hit = catalogHit { ownRuled = hit.ruled }
-        Sounds.shared.play(catalogHit != nil ? .success : .tap)
+        barcodeMessage = catalogHit == nil
+            ? "Barcode \(code) read. We haven't seen this notebook yet: measure it once below, and we'll remember it for everyone with the same notebook."
+            : nil
+        Sounds.shared.play(.success)
     }
 
     private func place() async {

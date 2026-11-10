@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 import UIKit
 import Vision
@@ -7,7 +8,20 @@ import VisionKit
 struct BarcodeScanner: UIViewControllerRepresentable {
     let onFound: (String) -> Void
 
-    @MainActor static var isAvailable: Bool { DataScannerViewController.isSupported && DataScannerViewController.isAvailable }
+    /// The device can run the live scanner (a real iPhone; never the Simulator). Camera permission is asked on tap:
+    /// `DataScannerViewController.isAvailable` stays false until it's granted, so it can't decide whether to show the button.
+    @MainActor static var isSupported: Bool { DataScannerViewController.isSupported }
+
+    enum Access { case granted, denied }
+
+    /// Asks for the camera if needed. Denied means the customer must allow it in Settings.
+    static func requestAccess() async -> Access {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized: return .granted
+        case .notDetermined: return await AVCaptureDevice.requestAccess(for: .video) ? .granted : .denied
+        default: return .denied
+        }
+    }
 
     func makeUIViewController(context: Context) -> DataScannerViewController {
         let vc = DataScannerViewController(
@@ -18,12 +32,17 @@ struct BarcodeScanner: UIViewControllerRepresentable {
             isHighlightingEnabled: true
         )
         vc.delegate = context.coordinator
+        // Start once the camera view is actually on screen (starting earlier can be silently refused).
+        Task { @MainActor in
+            for _ in 0..<10 where !vc.isScanning {
+                try? await Task.sleep(for: .milliseconds(200))
+                if vc.view.window != nil { try? vc.startScanning() }
+            }
+        }
         return vc
     }
 
-    func updateUIViewController(_ vc: DataScannerViewController, context: Context) {
-        if !vc.isScanning { try? vc.startScanning() }
-    }
+    func updateUIViewController(_ vc: DataScannerViewController, context: Context) {}
 
     static func dismantleUIViewController(_ vc: DataScannerViewController, coordinator: Coordinator) {
         vc.stopScanning()
@@ -34,16 +53,21 @@ struct BarcodeScanner: UIViewControllerRepresentable {
     /// Reads a barcode from a still photo (works on every device and in the Simulator, where the live scanner can't run).
     static func read(from image: UIImage) async -> String? {
         guard let cg = image.cgImage else { return nil }
-        let request = VNDetectBarcodesRequest()
-        request.symbologies = [.ean13, .ean8, .upce, .code128, .code39, .qr]
         let orientation = CGImagePropertyOrientation(rawValue: UInt32(image.imageOrientation.exifValue)) ?? .up
-        do {
-            try VNImageRequestHandler(cgImage: cg, orientation: orientation).perform([request])
-        } catch {
-            return nil
+        // Try the newest reader, then the oldest one: the newer revisions fail in the Simulator and on some photos.
+        for revision in [VNDetectBarcodesRequest.currentRevision, VNDetectBarcodesRequestRevision1] {
+            let request = VNDetectBarcodesRequest()
+            request.revision = revision
+            do {
+                try VNImageRequestHandler(cgImage: cg, orientation: orientation).perform([request])
+            } catch {
+                continue
+            }
+            if let code = (request.results ?? []).compactMap(\.payloadStringValue).lazy.compactMap({ Coordinator.clean($0) }).first {
+                return code
+            }
         }
-        let values = (request.results ?? []).compactMap(\.payloadStringValue)
-        return values.lazy.compactMap { Coordinator.clean($0) }.first
+        return nil
     }
 
     final class Coordinator: NSObject, DataScannerViewControllerDelegate {
@@ -52,11 +76,21 @@ struct BarcodeScanner: UIViewControllerRepresentable {
         init(onFound: @escaping (String) -> Void) { self.onFound = onFound }
 
         func dataScanner(_ scanner: DataScannerViewController, didAdd items: [RecognizedItem], allItems: [RecognizedItem]) {
+            take(items, from: scanner)
+        }
+
+        /// Tapping a highlighted barcode also picks it.
+        func dataScanner(_ scanner: DataScannerViewController, didTapOn item: RecognizedItem) {
+            take([item], from: scanner)
+        }
+
+        private func take(_ items: [RecognizedItem], from scanner: DataScannerViewController) {
             guard !done else { return }
             for item in items {
                 if case let .barcode(code) = item, let value = code.payloadStringValue, let clean = Self.clean(value) {
                     done = true
                     scanner.stopScanning()
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
                     onFound(clean)
                     return
                 }
