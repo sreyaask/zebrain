@@ -7,6 +7,8 @@ import Vision
 struct ExtractedDiagram: Identifiable {
     let id: String
     let png: Data
+    /// Gemini's clean redrawing of the diagram, when AI read the page. The plotter draws this instead of tracing the photo.
+    var svg: String? = nil
 }
 
 /// Everything read from the customer's pages, in reading order.
@@ -14,12 +16,18 @@ struct Extraction {
     var text: String = ""
     var pages: Int = 0
     var diagrams: [ExtractedDiagram] = []
+    /// Formatted pages (SVG) built by the server from Gemini's reading, for the phone preview.
+    var formatted: [String] = []
+    /// True when Gemini read these pages (false: read on the phone).
+    var byAI = false
 
     mutating func append(_ other: Extraction) {
         let t = other.text.trimmingCharacters(in: .whitespacesAndNewlines)
         if !t.isEmpty { text += (text.isEmpty ? "" : "\n\n") + t }
         pages += other.pages
         diagrams += other.diagrams
+        formatted += other.formatted
+        byAI = byAI || other.byAI
     }
 }
 

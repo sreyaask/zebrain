@@ -176,3 +176,18 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   customer orders sheets for it with a barcode and measurements. The scan button shows whenever the device supports it and asks for
   camera permission on tap; photo reading tries Vision's newest and oldest barcode revisions (the Simulator needs the old one).
   `supabase/functions` is excluded from the Next.js tsconfig (Deno imports); check it with `deno check`.
+
+## Gemini formatting pipeline (added 10 Nov 2026)
+- `extract-notes` v2 (deployed): one Gemini request per page, all pages in parallel (`extractPages`). Each page races
+  gemini-3.5-flash (then 3.8-flash) against gemini-3.1-flash-lite started 5 s later (`extractFast`); `thinkingLevel: "low"`.
+  Measured 8–10 s a page on the free plan (was 20–150 s with default thinking and serial retries). Gemini returns exact text blocks
+  and, for every diagram, a box plus a clean SVG redrawing (`cleanSvg` strips scripts/handlers/links/images).
+  `compose.ts` builds formatted SVG pages (typeset text + Gemini's diagram SVGs), returned as `formatted` and saved to
+  `uploads/<uid>/formatted/<batch>/page-N.svg` (migration 20261110000002 allows SVG in the uploads bucket, live).
+- The function answers 503 "switched off" in ~2 s when the `GEMINI_API_KEY` secret is missing; as of 10 Nov 2026 the user had NOT added
+  it yet (Dashboard → Edge Functions → Secrets). The app now says so ("Gemini isn't set up yet…") instead of falling back silently.
+- iOS: photos and PDFs (rendered page by page on the phone, batches of 10 in parallel) go to Gemini; each diagram is saved as
+  `diagram-<id>.png` (crop) and `diagram-<id>.svg` (Gemini's drawing). "See formatted pages" opens `FormattedPagesView` (swipeable,
+  WKWebView with JavaScript off). PagedPreview shows the SVG diagrams.
+- Engine `lib/engine/svg.ts`: `svgToDrawing` turns line/polyline/polygon/rect/circle/ellipse/path into pen strokes and keeps `<text>`
+  labels; `withHandwrittenLabels` writes those labels in the customer's glyphs. PlotterPanel prefers `diagram-<id>.svg`, else traces the PNG.

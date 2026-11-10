@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { Select } from "@/components/ui/Input";
 import {
-  binarize, layoutHandwriting, pageSpecFor, pageToSvg, pagesToGcode, estimateMinutes, plotterPresets, traceDiagram, DIAGRAM_LINE,
+  binarize, layoutHandwriting, svgToDrawing, withHandwrittenLabels, pageSpecFor, pageToSvg, pagesToGcode, estimateMinutes, plotterPresets, traceDiagram, DIAGRAM_LINE,
   type Diagram, type GlyphSet, type LayoutResult, type PageSpec, type PlotterSettings,
 } from "@/lib/engine/index.ts";
 import { getPageSize } from "@/lib/mock";
@@ -69,6 +69,22 @@ export function PlotterPanel({ order, text, glyphSet, files, onSaved }: Props) {
     const out: Record<string, Diagram> = {};
     for (let i = 0; i < ids.length; i++) {
       const id = ids[i];
+      // Gemini's clean SVG drawing when there is one (exact shapes; labels written in the customer's hand),
+      // otherwise the cropped photo, traced.
+      const svgFile = files.find((f) => f.path.endsWith(`diagram-${id}.svg`));
+      if (svgFile && glyphSet) {
+        setPreparing(`Drawing diagram ${i + 1} of ${ids.length}`);
+        try {
+          const { data: blob } = await supabase().storage.from("uploads").download(svgFile.path);
+          const drawing = blob ? svgToDrawing(await blob.text()) : null;
+          if (drawing && drawing.strokes.length) {
+            out[id] = withHandwrittenLabels(drawing, glyphSet);
+            continue;
+          }
+        } catch {
+          /* fall back to the photo below */
+        }
+      }
       const file = files.find((f) => f.path.endsWith(`diagram-${id}.png`));
       if (!file) continue;
       setPreparing(`Tracing diagram ${i + 1} of ${ids.length}`);

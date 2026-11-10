@@ -31,6 +31,10 @@ struct NewOrderView: View {
     @State private var files: [ScannedFile] = []
     @State private var text = ""
     @State private var reading = false
+    /// Formatted pages from Gemini (SVG), and whether the last reading came from Gemini or the phone.
+    @State private var formattedPages: [String] = []
+    @State private var showingFormatted = false
+    @State private var readByAI = false
     @State private var scanning = false
     @State private var photos: [PhotosPickerItem] = []
     @State private var importingPDF = false
@@ -120,7 +124,7 @@ struct NewOrderView: View {
 
     private var notebookSource: NotebookSource { notebook == .own ? .own : .new }
 
-    private var diagramCount: Int { files.filter(\.isDiagram).count }
+    private var diagramCount: Int { Set(files.compactMap(\.diagramID)).count }
 
     /// Pages detected from the text and diagrams, on the notebook being written in.
     private var detectedPages: Int {
@@ -221,6 +225,7 @@ struct NewOrderView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingFormatted) { FormattedPagesView(pages: formattedPages) }
             .sheet(isPresented: $scanningBarcode) {
                 NavigationStack {
                     BarcodeScanner { code in
@@ -405,14 +410,30 @@ struct NewOrderView: View {
             if reading {
                 HStack(spacing: 12) {
                     ProgressView()
-                    Text("Reading the text on your pages")
+                    Text(Config.aiReading ? "Gemini is reading and formatting your pages" : "Reading the text on your pages")
                         .foregroundStyle(.secondary)
+                }
+            } else if readByAI {
+                Label("Read and formatted by Gemini", systemImage: "checkmark.seal.fill")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.success)
+            } else if let problem = model.aiProblem, !files.isEmpty {
+                Label(problem, systemImage: "exclamationmark.triangle")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            if !formattedPages.isEmpty {
+                Button {
+                    Sounds.shared.play(.tap)
+                    showingFormatted = true
+                } label: {
+                    Label("See formatted pages (\(formattedPages.count))", systemImage: "doc.richtext")
                 }
             }
         } header: {
             Text(kind == .missedNotes ? "Class notes or handouts" : "Your notes")
         } footer: {
-            Text("Text and diagrams are read on your phone, so you can check them below.")
+            Text("Gemini reads every word and redraws each diagram in seconds. Check the text below before you pay.")
         }
         Section {
             TextEditor(text: $text).frame(minHeight: 180).font(.body)
@@ -835,6 +856,9 @@ struct NewOrderView: View {
                 marginMm: margin, headingStyle: heading, pageMm: previewSize,
                 diagramImage: { id in
                     files.first { $0.uploadName == "diagram-\(id).png" }.flatMap { UIImage(data: $0.data) }
+                },
+                diagramSVG: { id in
+                    files.first { $0.uploadName == "diagram-\(id).svg" }.flatMap { String(data: $0.data, encoding: .utf8) }
                 }
             )
             .listRowBackground(Color.clear)
@@ -933,15 +957,23 @@ struct NewOrderView: View {
         let t = e.text.trimmingCharacters(in: .whitespacesAndNewlines)
         if !t.isEmpty { text += (text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : "\n\n") + t }
         for d in e.diagrams {
-            files.append(ScannedFile(data: d.png, kind: "image", pages: 1, name: "Diagram", uploadName: "diagram-\(d.id).png"))
+            if !d.png.isEmpty {
+                files.append(ScannedFile(data: d.png, kind: "image", pages: 1, name: "Diagram", uploadName: "diagram-\(d.id).png"))
+            }
+            // Gemini's clean drawing: the pen plotter draws this one.
+            if let svg = d.svg, let data = svg.data(using: .utf8) {
+                files.append(ScannedFile(data: data, kind: "image", pages: 1, name: "Diagram drawing", uploadName: "diagram-\(d.id).svg"))
+            }
         }
+        formattedPages += e.formatted
+        readByAI = e.byAI
         if !t.isEmpty || !e.diagrams.isEmpty { error = nil }
     }
 
     /// Removing a page also drops the diagrams that are no longer in the text.
     private func removeFile(_ f: ScannedFile) {
         files.removeAll { $0.id == f.id }
-        files.removeAll { d in d.isDiagram && !text.contains("[[diagram:\(d.uploadName!.dropFirst(8).dropLast(4))]]") }
+        files.removeAll { d in d.diagramID.map { !text.contains("[[diagram:\($0)]]") } ?? false }
     }
 
     private func choose(_ n: NotebookChoice) {

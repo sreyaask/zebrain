@@ -241,7 +241,8 @@ final class AppModel {
             // Diagrams keep their names (diagram-<id>.png): the text refers to them by id.
             let name = file.uploadName ?? "\(i + 1).\(file.kind == "pdf" ? "pdf" : "jpg")"
             let path = "\(uid.uuidString.lowercased())/\(order.id.uuidString.lowercased())/\(name)"
-            let type = file.kind == "pdf" ? "application/pdf" : (name.hasSuffix(".png") ? "image/png" : "image/jpeg")
+            let type = file.kind == "pdf" ? "application/pdf"
+                : name.hasSuffix(".svg") ? "image/svg+xml" : name.hasSuffix(".png") ? "image/png" : "image/jpeg"
             try await client.storage.from("uploads").upload(path, data: file.data, options: FileOptions(contentType: type, upsert: true))
             try await client.from("order_files")
                 .upsert(NewOrderFile(orderId: order.id, path: path, kind: file.kind, pages: file.pages), onConflict: "order_id,path", ignoreDuplicates: true)
@@ -303,47 +304,81 @@ final class AppModel {
     }
 
     /// Demo payment. Replace with a payment gateway (and its webhook) before launch.
-    // MARK: AI reading (off unless Config.aiReading and the server switch are on)
+    // MARK: AI reading with Gemini (the extract-notes function); the phone's own reading is the fallback
 
     private struct AIPage: Encodable { let media_type: String; let data: String }
     private struct AIRequest: Encodable { let pages: [AIPage] }
     private struct AIBox: Decodable { let x: Double; let y: Double; let width: Double; let height: Double }
-    private struct AIDiagram: Decodable { let id: String; let page: Int; let box: AIBox }
-    private struct AIResponse: Decodable { let text: String; let diagrams: [AIDiagram] }
+    private struct AIDiagram: Decodable { let id: String; let page: Int; let box: AIBox; let svg: String? }
+    private struct AIResponse: Decodable { let text: String; let diagrams: [AIDiagram]; let formatted: [String]? }
+    private struct AIErrorBody: Decodable { let error: String? }
 
-    /// Reads photos of notes with AI: every word in order, plus diagrams cropped from the photos. nil when AI reading
-    /// is off or fails, so the caller reads on the phone instead.
+    /// Why the last AI reading didn't happen (switched off, busy, offline), so the screen can say so instead of
+    /// silently using the phone's reading.
+    var aiProblem: String?
+
+    /// Reads photos of notes with Gemini: exact text in order, each diagram as a clean drawing (and cropped from the
+    /// photo), and formatted pages. Up to 10 pages per request; bigger batches go in parallel. nil = read on the phone.
     func aiRead(images: [UIImage]) async -> Extraction? {
         guard Config.aiReading, !images.isEmpty else { return nil }
         let pages = images.compactMap { $0.jpegForUpload(maxEdge: 2000) }.map { AIPage(media_type: "image/jpeg", data: $0.base64EncodedString()) }
         guard pages.count == images.count else { return nil }
-        return await aiRead(pages: pages, pageCount: images.count) { images[$0] }
+        // Batches of 10 (the function's limit), all at the same time; results are put back in page order.
+        let batches = stride(from: 0, to: pages.count, by: 10).map { Array(pages[$0..<min($0 + 10, pages.count)]) }
+        let results: [(Int, Extraction?)] = await withTaskGroup(of: (Int, Extraction?).self) { group in
+            for (b, batch) in batches.enumerated() {
+                let first = b * 10
+                group.addTask { [self] in
+                    (b, await self.aiRead(pages: batch, pageCount: batch.count) { images[first + $0] })
+                }
+            }
+            var out: [(Int, Extraction?)] = []
+            for await r in group { out.append(r) }
+            return out.sorted { $0.0 < $1.0 }
+        }
+        guard results.allSatisfy({ $0.1 != nil }) else { return nil }
+        var all = Extraction()
+        for case let (_, e?) in results { all.append(e) }
+        return all
     }
 
-    /// Reads a whole PDF with AI (up to about 4 MB, the most one request can carry). Diagrams are cropped from the
-    /// rendered pages.
+    /// Reads a PDF with Gemini page by page: each page is rendered on the phone and sent as an image, so all pages
+    /// are read at the same time and diagrams can be cropped from the same picture.
     func aiRead(pdf data: Data, pageCount: Int) async -> Extraction? {
-        guard Config.aiReading, pageCount > 0, data.count <= 4_000_000 else { return nil }
-        return await aiRead(pages: [AIPage(media_type: "application/pdf", data: data.base64EncodedString())], pageCount: pageCount) {
-            TextRecognizer.pageImage(pdf: data, index: $0)
-        }
+        guard Config.aiReading, pageCount > 0 else { return nil }
+        let images = (0..<min(pageCount, 60)).compactMap { TextRecognizer.pageImage(pdf: data, index: $0) }
+        guard images.count == min(pageCount, 60) else { return nil }
+        var result = await aiRead(images: images)
+        result?.pages = pageCount
+        return result
     }
 
     private func aiRead(pages: [AIPage], pageCount: Int, pageImage: (Int) -> UIImage?) async -> Extraction? {
         do {
             let response: AIResponse = try await client.functions.invoke(
                 "extract-notes", options: FunctionInvokeOptions(body: AIRequest(pages: pages)))
-            var out = Extraction(text: response.text, pages: pageCount)
+            var out = Extraction(text: response.text, pages: pageCount, formatted: response.formatted ?? [], byAI: true)
             for d in response.diagrams where (1...pageCount).contains(d.page) {
                 let box = CGRect(x: d.box.x, y: d.box.y, width: d.box.width, height: d.box.height)
-                if let image = pageImage(d.page - 1), let png = TextRecognizer.cropDiagram(image, box: box) {
-                    out.diagrams.append(ExtractedDiagram(id: d.id, png: png))
+                let png = pageImage(d.page - 1).flatMap { TextRecognizer.cropDiagram($0, box: box) }
+                let svg = d.svg.flatMap { $0.isEmpty ? nil : $0 }
+                if png != nil || svg != nil {
+                    out.diagrams.append(ExtractedDiagram(id: d.id, png: png ?? Data(), svg: svg))
                 } else {
                     out.text = out.text.replacingOccurrences(of: "[[diagram:\(d.id)]]", with: "")
                 }
             }
+            aiProblem = nil
             return out
+        } catch let FunctionsError.httpError(code, data) {
+            let message = (try? JSONDecoder().decode(AIErrorBody.self, from: data))?.error
+            aiProblem = code == 503 && message?.contains("switched off") == true
+                ? "Gemini isn't set up yet, so the pages were read on the phone."
+                : (message ?? "Gemini couldn't read these pages (\(code)), so they were read on the phone.")
+            print("[Penned] AI reading failed (\(code)): \(message ?? "")")
+            return nil
         } catch {
+            aiProblem = "Couldn't reach Gemini, so the pages were read on the phone."
             print("[Penned] AI reading unavailable, reading on the phone: \(error)")
             return nil
         }
@@ -384,8 +419,13 @@ struct ScannedFile: Identifiable {
     let name: String
     /// Fixed upload file name, e.g. "diagram-<id>.png". nil = numbered by position.
     var uploadName: String? = nil
-    /// Diagrams are uploaded for tracing but not listed as pages.
+    /// Diagrams are uploaded for drawing but not listed as pages.
     var isDiagram: Bool { uploadName?.hasPrefix("diagram-") ?? false }
+    /// "abc123" for "diagram-abc123.png" or "diagram-abc123.svg".
+    var diagramID: String? {
+        guard let name = uploadName, name.hasPrefix("diagram-") else { return nil }
+        return String(name.dropFirst(8).split(separator: ".").first ?? "")
+    }
 }
 
 private struct RatedRow: Decodable {

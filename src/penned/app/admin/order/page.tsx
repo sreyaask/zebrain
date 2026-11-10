@@ -117,7 +117,7 @@ function OrderDetail() {
     try {
       const blobs = [];
       // Diagram crops are traced by the plotter panel, not read as text.
-      for (const f of files.filter((x) => !/diagram-[\w-]+\.png$/.test(x.path))) {
+      for (const f of files.filter((x) => !/diagram-[\w-]+\.(png|svg)$/.test(x.path))) {
         const { data: blob, error } = await supabase().storage.from("uploads").download(f.path);
         if (error || !blob) throw new Error(`Couldn't download ${f.path.split("/").pop()}`);
         blobs.push({ blob, kind: f.kind });

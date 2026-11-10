@@ -8,12 +8,16 @@
 // Request  (POST, signed-in customer's JWT in Authorization):
 //   { "pages": [ { "media_type": "image/jpeg" | "image/png" | "application/pdf", "data": "<base64>" } ] }
 //   Up to 10 images, or one PDF. Send pages in order.
-// Response: { "text": "<Penned order text>", "diagrams": [ { id, page, box, description } ], "pages": [ { page, blocks } ] }
+// Response: { "text": "<Penned order text>", "diagrams": [ { id, page, box, description, svg } ], "pages": [ { page, blocks } ],
+//             "formatted": ["<svg>…", …], "formatted_paths": ["<uid>/formatted/<batch>/page-1.svg", …] }
+//   "formatted" are clean typeset pages (text + Gemini's diagram drawings) for the phone preview; they're also saved to the
+//   customer's folder in the uploads bucket so the team and the plotter can use them.
 //   "text" uses the order format the admin portal already understands: "# " headings, plain lines,
 //   and "[[diagram:<id>]]" where each diagram goes. Boxes are 0-1 of the page, top-left origin.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { extract, GeminiError, toOrder, type Page } from "./gemini.ts";
+import { extractFast, extractPages, GeminiError, toOrder, type Page } from "./gemini.ts";
+import { composePages } from "./compose.ts";
 
 const MAX_IMAGES = 10;
 
@@ -47,8 +51,23 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const result = await extract(pages, apiKey);
-    return json(200, { ...toOrder(result), pages: result.pages });
+    // Images: one request per page, all at once. A PDF goes as one request (the app sends rendered pages when it can).
+    const result = images.length ? await extractPages(images, apiKey) : await extractFast(pdfs, apiKey);
+    const order = toOrder(result);
+    const svgByBlock = result.pages.flatMap((p) => p.blocks.filter((b) => b.kind === "diagram").map((b) => b.svg));
+    const diagrams = order.diagrams.map((d, i) => ({ ...d, svg: svgByBlock[i] ?? "" }));
+    const formatted = composePages(result);
+
+    // Save the formatted pages next to the customer's uploads (best effort: the preview doesn't depend on it).
+    const batch = crypto.randomUUID();
+    const formatted_paths: string[] = [];
+    await Promise.all(formatted.map(async (svg, i) => {
+      const path = `${user.user!.id}/formatted/${batch}/page-${i + 1}.svg`;
+      const { error } = await admin.storage.from("uploads").upload(path, new Blob([svg], { type: "image/svg+xml" }), { contentType: "image/svg+xml" });
+      if (error) console.error(`saving ${path}: ${error.message}`);
+      else formatted_paths[i] = path;
+    }));
+    return json(200, { text: order.text, diagrams, pages: result.pages, formatted, formatted_paths: formatted_paths.filter(Boolean) });
   } catch (error) {
     if (error instanceof GeminiError) {
       console.error(error.message);

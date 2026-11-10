@@ -192,3 +192,25 @@ test("a single character wider than the line still makes progress", () => {
   const r = layoutHandwriting("W W", set as never, spec, { headingStyle: "plain", seed: "x" });
   assert.ok(r.pages.length >= 1);
 });
+
+import { svgToDrawing, withHandwrittenLabels } from "../lib/engine/index.ts";
+
+test("Gemini's SVG diagrams become pen strokes, with labels kept for handwriting", () => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 400">
+    <rect x="400" y="150" width="200" height="150" stroke="black" fill="none"/>
+    <line x1="100" y1="300" x2="900" y2="300"/>
+    <path d="M600 225 L800 225 M780 210 l20 15 l-20 15 Z"/>
+    <circle cx="50" cy="50" r="20"/>
+    <text x="500" y="240" font-size="40" text-anchor="middle">m</text>
+  </svg>`;
+  const d = svgToDrawing(svg);
+  assert.equal(d.width, 1000);
+  assert.equal(d.height, 400);
+  assert.ok(d.strokes.length >= 5, `strokes: ${d.strokes.length}`);
+  assert.deepEqual(d.strokes[0][0], { x: 400, y: 150 });
+  assert.equal(d.labels.length, 1);
+  assert.equal(d.labels[0].text, "m");
+  const set = { glyphs: { m: [{ char: "m", strokes: [[{ x: 0, y: 0 }, { x: 0.8, y: 1 }]], width: 0.9, top: 1, bottom: 0 }] } };
+  const written = withHandwrittenLabels(d, set as never);
+  assert.equal(written.strokes.length, d.strokes.length + 1);
+});

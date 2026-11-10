@@ -13,6 +13,8 @@ struct PagedPreview: View {
     let pageMm: (w: Double, h: Double)
     /// The cropped picture for a `[[diagram:<id>]]` line, if there is one.
     let diagramImage: (String) -> UIImage?
+    /// Gemini's clean drawing for a diagram, shown in preference to the cropped photo.
+    var diagramSVG: (String) -> String? = { _ in nil }
 
     @State private var current = 0
     @ScaledMetric(relativeTo: .body) private var pageWidth: CGFloat = 270
@@ -106,7 +108,9 @@ struct PagedPreview: View {
                         .frame(height: row * (CGFloat(rows) + 1))
                 case let .diagram(id, rows):
                     Group {
-                        if let image = diagramImage(id) {
+                        if let svg = diagramSVG(id) {
+                            SVGView(svg: svg)
+                        } else if let image = diagramImage(id) {
                             Image(uiImage: image)
                                 .resizable()
                                 .interpolation(.high)
