@@ -42,7 +42,7 @@ function specFor(order: DbOrder): PageSpec {
       marginLeftMm: Math.max(0, margin),
       marginRightMm: 8,
       topMm: pitch * 2,
-      bottomMm: 10,
+      bottomMm: 12, // same as the customer's preview and price (supabase/functions/extract-notes/compose.ts, lib/pricing.ts)
       linePitchMm: pitch,
       xHeightMm: Math.min(2.6, pitch * 0.36),
     };

@@ -191,3 +191,21 @@ It is unrelated to the Zebrain app in `src/zebrain`, and the test-mode / `revert
   WKWebView with JavaScript off). PagedPreview shows the SVG diagrams.
 - Engine `lib/engine/svg.ts`: `svgToDrawing` turns line/polyline/polygon/rect/circle/ellipse/path into pen strokes and keeps `<text>`
   labels; `withHandwrittenLabels` writes those labels in the customer's glyphs. PlotterPanel prefers `diagram-<id>.svg`, else traces the PNG.
+
+## One layout for price, preview and pen (added 12 Nov 2026)
+- The order text (`toOrder` in `supabase/functions/extract-notes/gemini.ts`) is exactly what the plotter writes: "# " headings
+  with a blank line before, numbered questions at the margin, sub-parts "(a)" and bullets indented two spaces, a blank line
+  between source pages, and `[[diagram:<id>]]` for diagrams AND tables (tables become grid SVGs via `tableSvg`, labels written
+  in the customer's hand). The engine (`lib/engine/layout.ts`) reads two leading spaces as a 6 mm indent and hangs wrapped
+  lines of "Q1." / "(a)" / "-" under the text.
+- Three implementations of the same page geometry must stay identical: the plotter (`layoutHandwriting`), the preview
+  (`composeOrder` in `extract-notes/compose.ts`) and the price estimate (`estimatePagesOn` in `lib/pricing.ts`, mirrored by
+  `estimatePages` in `ios/Penned/Models/Pricing.swift`). Lines per page = floor((h − 2·pitch − 12 mm)/pitch) + 1; 2.3 mm a
+  character, 1.95 mm a word space; text runs on across pages; a diagram that doesn't fit starts a new page.
+  `tests/engine.test.mts` pins estimate = plotter. Preview = plotter was checked with Deno on real Gemini output.
+- The app draws ONE continuous preview of all photos (compose mode of extract-notes) at the chosen notebook; when it is
+  current and the text unedited, its page count is the price's page count. Otherwise the text estimate is used (it counts a
+  diagram as a third of a page, so it errs long).
+- Gemini (extract-notes v6): Flash-Lite first (`gemini-3.1-flash-lite`, then `-latest`), Flash only if Lite hasn't answered in
+  10 s or failed; the loser is aborted (pay once). Busy → one retry after 1.5 s; bad JSON or an empty answer → next model;
+  45 s limit per page (the app waits ~60 s), then the app retries twice and finally reads that page on the phone.

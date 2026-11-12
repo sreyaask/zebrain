@@ -15,12 +15,13 @@
 //             "formatted": ["<svg>…", …], "formatted_paths": ["<uid>/formatted/<batch>/page-1.svg", …] }
 //   "formatted" are clean typeset pages (text + Gemini's diagram drawings) for the phone preview; they're also saved to the
 //   customer's folder in the uploads bucket so the team and the plotter can use them.
-//   "text" uses the order format the admin portal already understands: "# " headings, plain lines,
-//   and "[[diagram:<id>]]" where each diagram goes. Boxes are 0-1 of the page, top-left origin.
+//   "text" is the order text the pen writes: "# " headings, one line per written line, sub-parts and bullets indented
+//   two spaces, and "[[diagram:<id>]]" where each diagram or table goes (tables are drawn as grids; every diagram has
+//   its "svg"). Boxes are 0-1 of the page, top-left origin.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { type Block, cleanSvg, type Extraction, extractFast, extractPages, GeminiError, toOrder, type Page } from "./gemini.ts";
-import { composeLayout, notebookFrom } from "./compose.ts";
+import { composeLayout, composeOrder, notebookFrom } from "./compose.ts";
 
 const MAX_IMAGES = 10;
 
@@ -82,11 +83,11 @@ Deno.serve(async (req) => {
   try {
     // Images: one request per page, all at once. A PDF goes as one request (the app sends rendered pages when it can).
     const result = images.length ? await extractPages(images, apiKey) : await extractFast(pdfs, apiKey);
+    // The order text is exactly what the pen writes; each diagram (and each table, drawn as a grid) has its SVG.
     const order = toOrder(result);
-    const svgByBlock = result.pages.flatMap((p) => p.blocks.filter((b) => b.kind === "diagram").map((b) => b.svg));
-    const diagrams = order.diagrams.map((d, i) => ({ ...d, svg: svgByBlock[i] ?? "" }));
-    // Formatted pages at the notebook's measurements: what the pen will write, line for line.
-    const formatted = composeLayout(result, notebook);
+    const diagrams = order.diagrams;
+    // Formatted pages: that same text laid out with the plotter's rules at the notebook's measurements.
+    const formatted = composeOrder(order.text, Object.fromEntries(diagrams.map((d) => [d.id, d.svg])), notebook);
 
     // Save the formatted pages next to the customer's uploads (best effort: the preview doesn't depend on it).
     const batch = crypto.randomUUID();

@@ -214,3 +214,40 @@ test("Gemini's SVG diagrams become pen strokes, with labels kept for handwriting
   const written = withHandwrittenLabels(d, set as never);
   assert.equal(written.strokes.length, d.strokes.length + 1);
 });
+
+// A glyph set whose letters are the average width the price estimate assumes (2.3 mm a character with spacing).
+function evenSet(): GlyphSet {
+  const glyphs: GlyphSet["glyphs"] = {};
+  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,()?:-=×'";
+  for (const ch of chars) glyphs[ch] = [{ char: ch, strokes: [[{ x: 0, y: 0 }, { x: 0.5, y: 1 }]], width: 2.3 / 2.6 - 0.22, top: 1, bottom: 0 }];
+  return { version: 1, glyphs } as GlyphSet;
+}
+
+test("the page estimate used for the price matches the plotter's layout", async () => {
+  const { estimatePagesOn } = await import("../lib/pricing.ts");
+  const spec = pageSpecFor({ widthMm: 175, heightMm: 275 }, 18, 1.3);
+  const geometry = { widthMm: 175, heightMm: 275, marginLeftMm: 18, marginRightMm: 18, linePitchMm: spec.linePitchMm };
+  const para = "Q2. A wire of resistance 4 ohm carries a current of 0.5 A. Find the potential difference across it and explain.";
+  const texts = [
+    "# Physics\n" + para,
+    Array.from({ length: 40 }, (_, i) => `Q${i + 1}. ${para}`).join("\n"),
+    Array.from({ length: 30 }, (_, i) => `# Topic ${i}\n${para}\n  (a) Define resistivity and write its SI unit please.\n\n`).join("\n"),
+    "word ".repeat(2000),
+  ];
+  for (const t of texts) {
+    const real = layoutHandwriting(t, evenSet(), spec, { headingStyle: "underline", seed: "x", variation: 0 }).pages.length;
+    assert.equal(estimatePagesOn(t, geometry), real, `estimate for ${t.slice(0, 30)}…`);
+  }
+});
+
+test("indented sub-parts and hanging numbers are written where the preview shows them", () => {
+  const spec = pageSpecFor({ widthMm: 175, heightMm: 275 }, 18, 1.3);
+  const r = layoutHandwriting("  (b) Write its unit.\nQ2. " + "long words here ".repeat(12), evenSet(), spec, { headingStyle: "underline", seed: "x", variation: 0 });
+  const xs = r.pages[0].strokes.map((s) => s[0]);
+  const startOf = (rowY: number) => Math.min(...xs.filter((p) => Math.abs(p.y - rowY) < 4).map((p) => p.x));
+  const rows = [...new Set(xs.map((p) => Math.round(p.y / spec.linePitchMm)))].sort((a, b) => a - b);
+  const y = (i: number) => rows[i] * spec.linePitchMm;
+  assert.ok(Math.abs(startOf(y(0)) - (18 + 6)) < 0.5, "sub-part indented 6 mm");
+  assert.ok(Math.abs(startOf(y(1)) - 18) < 0.5, "question at the margin");
+  assert.ok(startOf(y(2)) > 18 + 5, "wrapped line hangs under the text after Q2.");
+});

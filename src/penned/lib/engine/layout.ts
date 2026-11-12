@@ -22,6 +22,11 @@ export interface Diagram {
   height: number;
 }
 
+/** Each two leading spaces on a line indent it this much (sub-parts like "(b)", bullets). */
+export const INDENT_MM = 6;
+/** A first word that is a question/point number or bullet: wrapped lines hang under the text after it. */
+export const MARKER = /^(Q?\d+[.)]|\(?[a-z]{1,3}\)|[a-z][.)]|[-•*–])$/i;
+
 /** A line containing only `[[diagram:<id>]]` marks where a diagram goes. */
 export const DIAGRAM_LINE = /^\[\[diagram:([\w-]+)\]\]$/;
 
@@ -138,7 +143,7 @@ export function layoutHandwriting(text: string, set: GlyphSet, spec: PageSpec, o
   const linesPerPage = Math.max(1, Math.floor((spec.heightMm - spec.topMm - spec.bottomMm) / spec.linePitchMm) + 1);
 
   // 1) Break the text into visual lines.
-  type VLine = { words: string[]; scale: number; heading: boolean; diagram?: string };
+  type VLine = { words: string[]; scale: number; heading: boolean; diagram?: string; indent?: number };
   const vlines: VLine[] = [];
   const measure = (word: string, scale: number) =>
     Array.from(word).reduce((w, ch) => {
@@ -159,32 +164,40 @@ export function layoutHandwriting(text: string, set: GlyphSet, spec: PageSpec, o
       vlines.push({ words: [], scale, heading: false });
       continue;
     }
+    const space = SPACE * spec.xHeightMm * scale;
+    // Indent: two leading spaces per level (kept within half the line). Wrapped lines of a numbered point or bullet hang
+    // under the text after its number, the way people write.
+    const lead = heading ? 0 : (raw.match(/^ +/)?.[0].length ?? 0);
+    const first = Math.min(Math.floor(lead / 2) * INDENT_MM, usable / 2);
+    const hang = MARKER.test(words[0]) && words.length > 1 ? Math.min(measure(words[0], scale) + space, usable / 3) : 0;
+    let indent = first;
+    const room = () => usable - indent;
     let cur: string[] = [];
     let width = 0;
-    const space = SPACE * spec.xHeightMm * scale;
+    const flush = () => {
+      vlines.push({ words: cur, scale, heading, indent });
+      indent = first + hang;
+      cur = [];
+      width = 0;
+    };
     for (let word of words) {
       // Words longer than a whole line are broken by characters.
-      while (measure(word, scale) > usable) {
+      while (measure(word, scale) > room()) {
+        if (cur.length) flush();
         let cut = word.length - 1;
-        while (cut > 1 && measure(word.slice(0, cut), scale) > usable) cut--;
+        while (cut > 1 && measure(word.slice(0, cut), scale) > room()) cut--;
         cut = Math.max(1, cut); // always make progress, even for one very wide character
-        if (cur.length) vlines.push({ words: cur, scale, heading });
-        vlines.push({ words: [word.slice(0, cut)], scale, heading });
-        cur = [];
-        width = 0;
+        cur = [word.slice(0, cut)];
+        flush();
         word = word.slice(cut);
       }
       if (!word) continue;
       const w = measure(word, scale);
-      if (cur.length && width + space + w > usable) {
-        vlines.push({ words: cur, scale, heading });
-        cur = [];
-        width = 0;
-      }
+      if (cur.length && width + space + w > room()) flush();
       width += (cur.length ? space : 0) + w;
       cur.push(word);
     }
-    if (cur.length) vlines.push({ words: cur, scale, heading });
+    if (cur.length) flush();
   }
   // Drop trailing blank lines.
   while (vlines.length && !vlines[vlines.length - 1].words.length && vlines[vlines.length - 1].diagram === undefined) vlines.pop();
@@ -235,7 +248,7 @@ export function layoutHandwriting(text: string, set: GlyphSet, spec: PageSpec, o
     const baseline = spec.topMm + row * spec.linePitchMm - 0.35 + jit(0.25);
     row += 1;
     const lineSlope = jit(0.004); // the whole line drifts very slightly
-    let x = spec.marginLeftMm + jit(0.6);
+    let x = spec.marginLeftMm + (line.indent ?? 0) + jit(0.6);
     const startX = x;
 
     line.words.forEach((word, wi) => {

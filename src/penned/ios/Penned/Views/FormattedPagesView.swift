@@ -42,54 +42,67 @@ func svgAspect(_ svg: String) -> CGFloat {
     return 1000.0 / 1414.0
 }
 
-/// One page the customer added, with what Gemini made of it.
+/// One photo (or PDF page) the customer added, with what Gemini read from it.
 struct NotePagePreview: Identifiable {
     let id = UUID()
     /// The upload this page came from (removing the upload removes its preview).
     let fileID: UUID
-    /// "Photo 2", "Physics.pdf · page 3".
+    /// "Page 2", "Physics.pdf · page 3".
     let label: String
     let original: UIImage?
-    /// Formatted pages for this photo, at the chosen notebook's measurements (long pages continue onto a second).
+    /// This page on its own, formatted (used until the whole notebook has been drawn).
     var formatted: [String]
-    /// Gemini's reading of this page, so the preview can be redrawn when the notebook changes.
+    /// Gemini's reading of this page; empty when it was read on the phone.
     var read: [ReadPage] = []
-    /// The notebook `formatted` was drawn for.
-    var drawnFor: PreviewNotebook? = nil
-    /// What was read from this page, for pages without a formatted version (read on the phone).
+    /// What was read from this page.
     let text: String
 }
 
-/// Everything shown in the preview, one slide per formatted page, in order.
+/// One slide in the preview: a written page, a photo, or (for a page read on the phone) its text.
 struct PreviewSlide: Identifiable {
     let id: String
-    let page: NotePagePreview
-    let svg: String?
     let title: String
+    var svg: String? = nil
+    var image: UIImage? = nil
+    var text: String? = nil
 }
 
-func previewSlides(_ pages: [NotePagePreview]) -> [PreviewSlide] {
-    pages.flatMap { p -> [PreviewSlide] in
-        if p.formatted.isEmpty { return [PreviewSlide(id: "\(p.id)", page: p, svg: nil, title: p.label)] }
-        return p.formatted.enumerated().map { i, svg in
-            PreviewSlide(id: "\(p.id)-\(i)", page: p, svg: svg,
-                         title: p.formatted.count > 1 ? "\(p.label) · part \(i + 1) of \(p.formatted.count)" : p.label)
+/// "What we'll write": the notebook pages exactly as the pen will write them, all photos flowing on from one another (or,
+/// before those are drawn, each photo's own pages); pages read on the phone are shown as text. "Your photo": the photos.
+func previewSlides(written: [String], photos: [NotePagePreview], showOriginal: Bool) -> [PreviewSlide] {
+    if showOriginal {
+        return photos.map { p in
+            p.original.map { PreviewSlide(id: "\(p.id)", title: p.label, image: $0) }
+                ?? PreviewSlide(id: "\(p.id)", title: p.label, text: p.text)
         }
+    }
+    let phoneRead = photos.filter { $0.read.isEmpty }.map {
+        PreviewSlide(id: "\($0.id)-text", title: "\($0.label) · read on the phone", text: $0.text)
+    }
+    if !written.isEmpty {
+        return written.enumerated().map { i, svg in
+            PreviewSlide(id: "w\(i)", title: "Notebook page \(i + 1) of \(written.count)", svg: svg)
+        } + phoneRead
+    }
+    return photos.flatMap { p -> [PreviewSlide] in
+        if p.formatted.isEmpty { return [PreviewSlide(id: "\(p.id)-text", title: "\(p.label) · read on the phone", text: p.text)] }
+        return p.formatted.enumerated().map { i, svg in PreviewSlide(id: "\(p.id)-\(i)", title: p.label, svg: svg) }
     }
 }
 
-/// Swipe through every page: what we'll write, or the customer's own photo of it, side by side in order.
+/// Swipe through the preview: what we'll write, or the customer's own photos.
 struct NotePagesCarousel: View {
-    let pages: [NotePagePreview]
+    let written: [String]
+    let photos: [NotePagePreview]
     @Binding var current: Int
     @Binding var showOriginal: Bool
 
     var body: some View {
-        let slides = previewSlides(pages)
+        let slides = previewSlides(written: written, photos: photos, showOriginal: showOriginal)
         VStack(spacing: 8) {
             Picker("Show", selection: $showOriginal) {
                 Text("What we'll write").tag(false)
-                Text("Your photo").tag(true)
+                Text("Your photos").tag(true)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
@@ -106,17 +119,18 @@ struct NotePagesCarousel: View {
                     .padding(.bottom, 30) // room for the page dots
                     .tag(i)
                     .accessibilityElement(children: .contain)
-                    .accessibilityLabel("Page \(i + 1) of \(slides.count), \(slide.title)")
+                    .accessibilityLabel("\(i + 1) of \(slides.count), \(slide.title)")
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: slides.count > 1 ? .always : .never))
             .indexViewStyle(.page(backgroundDisplayMode: .always))
             .onChange(of: slides.count) { _, n in if current >= n { current = max(0, n - 1) } }
+            .onChange(of: showOriginal) { _, _ in current = 0 }
         }
     }
 
     @ViewBuilder private func slideView(_ slide: PreviewSlide) -> some View {
-        if showOriginal, let image = slide.page.original {
+        if let image = slide.image {
             framed(Image(uiImage: image).resizable().scaledToFit(), aspect: image.size.width / max(image.size.height, 1))
         } else if let svg = slide.svg {
             framed(SVGView(svg: svg), aspect: svgAspect(svg))
@@ -127,7 +141,7 @@ struct NotePagesCarousel: View {
                     Label("Read on the phone, not by Gemini. Check this text.", systemImage: "exclamationmark.triangle")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(.secondary)
-                    Text(slide.page.text.isEmpty ? "No text found on this page." : slide.page.text)
+                    Text((slide.text ?? "").isEmpty ? "No text found on this page." : slide.text!)
                         .font(.body)
                         .foregroundStyle(Theme.ink)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -151,7 +165,8 @@ struct NotePagesCarousel: View {
 
 /// The same preview, full screen.
 struct FormattedPagesView: View {
-    let pages: [NotePagePreview]
+    let written: [String]
+    let photos: [NotePagePreview]
     @Binding var current: Int
     @Binding var showOriginal: Bool
     @Environment(\.dismiss) private var dismiss
@@ -159,8 +174,8 @@ struct FormattedPagesView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 12) {
-                NotePagesCarousel(pages: pages, current: $current, showOriginal: $showOriginal)
-                Text("This is exactly what Gemini read from each photo. We write the same text in your handwriting, with the diagrams drawn by the pen.")
+                NotePagesCarousel(written: written, photos: photos, current: $current, showOriginal: $showOriginal)
+                Text("Drawn at your notebook's real size: the same lines, margins and words per line the pen will write. Diagrams are drawn by the pen too.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
