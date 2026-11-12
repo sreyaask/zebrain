@@ -89,8 +89,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </a>
         <aside className="border-b border-line bg-surface lg:sticky lg:top-0 lg:h-dvh lg:border-b-0 lg:border-r">
           <div className="flex items-center justify-between gap-4 px-5 py-4 lg:block">
-            <Link href="/admin/" className="font-serif text-xl text-ink">
-              Penned <span className="font-sans text-xs font-medium text-muted">Admin</span>
+            <Link href="/admin/" className="font-display text-xl font-light tracking-[0.12em] text-accent">
+              penned<span className="text-ink">.</span> <span className="font-sans text-xs font-medium tracking-normal text-muted">Admin</span>
             </Link>
             <nav aria-label="Admin" className="flex gap-1 lg:mt-8 lg:flex-col">
               {nav.map((n) => (

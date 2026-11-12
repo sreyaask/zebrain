@@ -45,7 +45,7 @@ function Slider({
         value={value}
         aria-valuetext={display}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-3 w-full accent-[#1E3A8A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4"
+        className="mt-3 w-full accent-[#C88660] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4"
       />
     </div>
   );

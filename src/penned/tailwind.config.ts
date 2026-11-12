@@ -4,19 +4,24 @@ const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      // Penned's theme (from the "handwriting AI company" infographic): near-black page, dark cards with hairline borders,
+      // warm copper accent. `accent` is the copper for text, borders and rings (5.9:1 on the page); `accent-deep` is the
+      // fill behind white text (6:1). Paper renderings (notebook previews, the pen demo) stay cream: `sheet` / `sheet-ink`.
       colors: {
-        paper: "#FAF9F6",
-        ink: "#111111",
-        accent: { DEFAULT: "#1E3A8A", soft: "#E8ECF6" },
-        line: "#E6E3DC",
-        muted: "#55534E",
-        surface: "#FFFFFF",
-        danger: "#B42318",
-        success: "#1F6F43",
-        pen: { blue: "#1E3A8A", black: "#1A1A1A" },
+        paper: "#070707",
+        ink: "#F2EFEA",
+        accent: { DEFAULT: "#C88660", deep: "#8C5233", soft: "#22160F" },
+        line: "#2A2826",
+        muted: "#A8A39C",
+        surface: "#121212",
+        danger: "#F07A6E",
+        success: "#5BBF87",
+        sheet: { DEFAULT: "#F4EFE7", ink: "#1A1A1A", line: "#CBD5E8" },
+        pen: { blue: "#22409A", black: "#1A1A1A" },
       },
       fontFamily: {
         sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-inter)", "ui-sans-serif", "sans-serif"],
         serif: ["var(--font-serif)", "Georgia", "serif"],
         hand: ["var(--font-caveat)", "cursive"],
       },

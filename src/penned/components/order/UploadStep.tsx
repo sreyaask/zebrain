@@ -74,7 +74,7 @@ export function UploadStep({ draft, update, error }: Props) {
             type="checkbox"
             checked={draft.contentsPage}
             onChange={(e) => update({ contentsPage: e.target.checked })}
-            className="mt-0.5 h-4 w-4 shrink-0 accent-[#1E3A8A]"
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[#C88660]"
           />
           <span>
             <span className="block text-[15px] font-medium text-ink">Start with a contents list</span>

@@ -62,7 +62,7 @@ function OrdersList() {
             onClick={() => setFilter(f)}
             className={cn(
               "rounded-lg px-3.5 py-1.5 text-sm capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-              filter === f ? "bg-paper font-medium text-ink shadow-[0_0_0_1px_#E6E3DC]" : "text-muted hover:text-ink",
+              filter === f ? "bg-paper font-medium text-ink shadow-[0_0_0_1px_#3A3734]" : "text-muted hover:text-ink",
             )}
           >
             {f}

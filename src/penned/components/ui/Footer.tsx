@@ -6,9 +6,10 @@ export function Footer() {
     <footer className="border-t border-line">
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 sm:px-8 md:grid-cols-[1.3fr_1fr_1fr_1fr]">
         <div>
-          <p className="font-serif text-xl text-ink">Penned</p>
-          <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">
-            Handwritten notes, ready to study from. Written with a real pen and delivered across Hyderabad in 2–3 hours.
+          <p className="font-display text-xl font-light tracking-[0.12em] text-accent">penned<span className="text-ink">.</span></p>
+          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-muted">ai &amp; robotic solutions</p>
+          <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted">
+            Your notes. Your handwriting. Written by a machine. Delivered across Hyderabad.
           </p>
         </div>
         <div>
@@ -26,6 +27,8 @@ export function Footer() {
         <div>
           <h2 className="text-sm font-medium text-ink">Penned</h2>
           <ul className="mt-3 space-y-2 text-sm text-muted">
+            <li><Link className="hover:text-ink" href="/technology/">Technology</Link></li>
+            <li><Link className="hover:text-ink" href="/business/">For business</Link></li>
             <li><Link className="hover:text-ink" href="/order/">Get started</Link></li>
             <li><Link className="hover:text-ink" href="/setup/">Set up your handwriting</Link></li>
             <li><Link className="hover:text-ink" href="/pricing/">Pricing</Link></li>

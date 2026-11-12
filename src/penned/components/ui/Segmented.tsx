@@ -24,7 +24,7 @@ export function Segmented<T extends string>({ label, value, options, onChange, c
             className={cn(
               "flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-sm transition-colors",
               "focus-within:ring-2 focus-within:ring-accent",
-              value === o.value ? "bg-surface font-medium text-ink shadow-[0_0_0_1px_#E6E3DC]" : "text-muted hover:text-ink",
+              value === o.value ? "bg-surface font-medium text-ink shadow-[0_0_0_1px_#3A3734]" : "text-muted hover:text-ink",
             )}
           >
             <input type="radio" name={name} value={o.value} checked={value === o.value} onChange={() => onChange(o.value)} className="sr-only" />

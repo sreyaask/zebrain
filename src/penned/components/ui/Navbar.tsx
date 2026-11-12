@@ -10,10 +10,10 @@ import { hasSavedSession, live, signOutLive, watchSavedSession } from "@/lib/ses
 import { LinkButton } from "./Button";
 
 const links = [
+  { href: "/technology", label: "Technology" },
+  { href: "/business", label: "For business" },
   { href: "/#products", label: "What we write" },
-  { href: "/#how-it-works", label: "How it works" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/setup", label: "Handwriting" },
   { href: "/orders", label: "My orders" },
 ];
 
@@ -21,9 +21,10 @@ export function Wordmark({ className }: { className?: string }) {
   return (
     <Link
       href="/"
-      className={cn("rounded font-serif text-[22px] font-medium tracking-tight text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent", className)}
+      aria-label="Penned home"
+      className={cn("rounded font-display text-[24px] font-light tracking-[0.12em] text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent", className)}
     >
-      Penned
+      penned<span className="text-ink">.</span>
     </Link>
   );
 }

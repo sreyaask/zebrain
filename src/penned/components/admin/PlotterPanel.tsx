@@ -197,7 +197,7 @@ export function PlotterPanel({ order, text, glyphSet, files, onSaved }: Props) {
           <TextField label="Pen down" value={settings.penDown} onChange={(v) => setSettings({ ...settings, penDown: v })} />
           <NumField label="Y offset (mm)" value={settings.offsetYMm} onChange={(v) => setSettings({ ...settings, offsetYMm: v })} />
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={settings.flipY} onChange={(e) => setSettings({ ...settings, flipY: e.target.checked })} className="h-4 w-4 accent-[#1E3A8A]" />
+            <input type="checkbox" checked={settings.flipY} onChange={(e) => setSettings({ ...settings, flipY: e.target.checked })} className="h-4 w-4 accent-[#C88660]" />
             Origin at bottom-left (flip Y)
           </label>
         </div>

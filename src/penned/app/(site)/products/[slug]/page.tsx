@@ -33,7 +33,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
               <span aria-hidden="true"> / </span>
               <span className="text-ink">{product.name}</span>
             </nav>
-            <h1 className="mt-4 text-4xl font-semibold leading-[1.1] tracking-tight text-ink [text-wrap:balance] sm:text-5xl">{product.tagline}</h1>
+            <h1 className="mt-4 font-display text-4xl font-light leading-[1.08] tracking-tight text-ink [text-wrap:balance] sm:text-[52px]">{product.tagline}</h1>
             <p className="mt-5 max-w-lg text-base leading-relaxed text-muted sm:text-lg">{product.description}</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <LinkButton href={`/order/?product=${product.slug}`} size="lg">
@@ -53,7 +53,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
       {/* What it's for */}
       <section aria-labelledby="uses" className="py-14 sm:py-20">
         <Container className="grid gap-10 md:grid-cols-[1fr_1.4fr]">
-          <h2 id="uses" className="text-2xl font-semibold tracking-tight text-ink">Made for</h2>
+          <h2 id="uses" className="font-display text-[26px] font-light lowercase tracking-tight text-ink">Made for</h2>
           {product.highlights ? (
             <dl className="divide-y divide-line border-y border-line">
               {product.highlights.map((h) => (
@@ -76,7 +76,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
       {/* How it works for this product */}
       <section aria-labelledby="steps" className="border-t border-line bg-surface py-14 sm:py-20">
         <Container>
-          <h2 id="steps" className="text-2xl font-semibold tracking-tight text-ink">How it works</h2>
+          <h2 id="steps" className="font-display text-[26px] font-light lowercase tracking-tight text-ink">How it works</h2>
           <ol className="mt-8 grid gap-8 md:grid-cols-3">
             {product.steps.map((s, i) => (
               <li key={s.title} className="border-t border-ink/80 pt-5">
@@ -93,7 +93,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
       <section aria-labelledby="price" className="border-t border-line py-14 sm:py-20">
         <Container className="grid gap-10 md:grid-cols-[1fr_1.4fr]">
           <div>
-            <h2 id="price" className="text-2xl font-semibold tracking-tight text-ink">Price</h2>
+            <h2 id="price" className="font-display text-[26px] font-light lowercase tracking-tight text-ink">Price</h2>
             <p className="mt-3 text-3xl font-semibold tabular-nums tracking-tight text-ink">{product.priceLabel}</p>
             <p className="mt-2 text-[15px] leading-relaxed text-muted">{product.priceNote}</p>
             <p className="mt-2 text-[15px] leading-relaxed text-muted">
@@ -128,7 +128,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
       {/* Product FAQ */}
       <section aria-labelledby="pfaq" className="border-t border-line bg-surface py-14 sm:py-20">
         <Container className="grid gap-10 md:grid-cols-[1fr_1.4fr]">
-          <h2 id="pfaq" className="text-2xl font-semibold tracking-tight text-ink">Questions about {product.name}</h2>
+          <h2 id="pfaq" className="font-display text-[26px] font-light lowercase tracking-tight text-ink">Questions about {product.name}</h2>
           <dl className="space-y-6">
             {product.faqs.map((f) => (
               <div key={f.q}>
@@ -143,7 +143,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
       {/* Other products */}
       <section aria-labelledby="more" className="border-t border-line py-14 sm:py-20">
         <Container>
-          <h2 id="more" className="text-2xl font-semibold tracking-tight text-ink">We also write</h2>
+          <h2 id="more" className="font-display text-[26px] font-light lowercase tracking-tight text-ink">We also write</h2>
           <ul className="mt-6 divide-y divide-line border-y border-line">
             {others.map((p) => (
               <li key={p.slug}>

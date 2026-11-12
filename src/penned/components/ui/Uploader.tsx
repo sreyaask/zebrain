@@ -236,7 +236,7 @@ export function Uploader({ label, hint, files, onAdd, onRemove, onReorder, allow
           {camera && (
             <label
               className={cn(
-                "inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-xl bg-accent px-4 text-sm font-medium text-white hover:bg-[#182f72] sm:w-auto",
+                "inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-xl bg-accent-deep px-4 text-sm font-medium text-white hover:bg-[#9A5C3A] sm:w-auto",
                 "focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2",
                 disabled && "pointer-events-none",
               )}
@@ -360,11 +360,11 @@ export function Uploader({ label, hint, files, onAdd, onRemove, onReorder, allow
                   ) : (
                     <div className="flex h-full items-center justify-center text-xs font-semibold uppercase text-muted">{f.kind}</div>
                   )}
-                  <span className="absolute left-1.5 top-1.5 rounded-md bg-ink/80 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white">
+                  <span className="absolute left-1.5 top-1.5 rounded-md bg-black/75 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white">
                     p. {ranges[i]}
                   </span>
                   {f.kind === "pdf" && (
-                    <span className="absolute bottom-1.5 left-1.5 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-medium text-ink">PDF · {f.pages}p</span>
+                    <span className="absolute bottom-1.5 left-1.5 rounded-md bg-black/75 px-1.5 py-0.5 text-[11px] font-medium text-white">PDF · {f.pages}p</span>
                   )}
                 </div>
                 <p className="mt-1 truncate text-xs text-muted" title={f.name}>

@@ -5,8 +5,9 @@
 @layer base {
   html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
   body { @apply bg-paper text-ink antialiased; font-feature-settings: "cv11", "ss01"; }
-  ::selection { background: #1E3A8A22; }
-  :focus-visible { outline-color: #1E3A8A; }
+  ::selection { background: #C8866055; }
+  :focus-visible { outline-color: #C88660; }
+  html { color-scheme: dark; }
 }
 
 /* Pen machine demo (components/home/PenMachineHero.tsx): hidden except while its line is being written. */

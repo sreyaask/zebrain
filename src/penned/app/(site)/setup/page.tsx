@@ -134,7 +134,7 @@ export default function SetupPage() {
                     <p className="mt-2 text-xs text-muted">Created {formatDate(p.createdAt)}</p>
                   </div>
                   {p.status === "ready" ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-[#EEF6F1] px-2.5 py-0.5 text-xs font-medium text-success">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-[#0F2017] px-2.5 py-0.5 text-xs font-medium text-success">
                       <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
                       Ready
                     </span>
@@ -153,7 +153,7 @@ export default function SetupPage() {
                     <p className={cn("font-hand text-2xl leading-none", ink === "blue" ? "text-pen-blue" : "text-pen-black")}>{name}</p>
                     <p className="mt-2 text-xs text-muted">Created just now</p>
                   </div>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-[#EEF6F1] px-2.5 py-0.5 text-xs font-medium text-success">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-[#0F2017] px-2.5 py-0.5 text-xs font-medium text-success">
                     <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
                     Ready
                   </span>
@@ -274,7 +274,7 @@ export default function SetupPage() {
                       <span
                         className={cn(
                           "flex h-4 w-4 items-center justify-center rounded-full border text-[10px]",
-                          i < stageIndex ? "border-accent bg-accent text-white" : i === stageIndex ? "border-accent" : "border-line",
+                          i < stageIndex ? "border-accent bg-accent-deep text-white" : i === stageIndex ? "border-accent" : "border-line",
                         )}
                         aria-hidden="true"
                       >

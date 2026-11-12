@@ -30,7 +30,7 @@ function Timeline({ order }: { order: Order }) {
             <span
               className={cn(
                 "relative mt-1 flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-full border",
-                e.state === "done" && "border-accent bg-accent",
+                e.state === "done" && "border-accent-deep bg-accent-deep",
                 e.state === "current" && "border-accent bg-surface",
                 e.state === "pending" && "border-line bg-surface",
               )}

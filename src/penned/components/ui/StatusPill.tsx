@@ -6,9 +6,9 @@ import { cn } from "@/lib/cn";
 const styles: Record<PillStatus, { label: string; cls: string; dot: string }> = {
   received: { label: "Received", cls: "border-line bg-surface text-ink", dot: "bg-muted" },
   writing: { label: "Writing", cls: "border-accent/20 bg-accent-soft text-accent", dot: "bg-accent animate-pulse" },
-  quality_check: { label: "Quality check", cls: "border-[#8A6D1E]/25 bg-[#FBF6E9] text-[#6B5414]", dot: "bg-[#8A6D1E]" },
+  quality_check: { label: "Quality check", cls: "border-[#D9B45A]/30 bg-[#211B0C] text-[#E3C478]", dot: "bg-[#D9B45A]" },
   out_for_delivery: { label: "Out for delivery", cls: "border-accent/20 bg-accent-soft text-accent", dot: "bg-accent animate-pulse" },
-  delivered: { label: "Delivered", cls: "border-success/20 bg-[#EEF6F1] text-success", dot: "bg-success" },
+  delivered: { label: "Delivered", cls: "border-success/25 bg-[#0F2017] text-success", dot: "bg-success" },
   cancelled: { label: "Cancelled", cls: "border-line bg-surface text-muted", dot: "bg-muted" },
 };
 

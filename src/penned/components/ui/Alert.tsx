@@ -5,8 +5,8 @@ type Tone = "info" | "error" | "success";
 
 const tones: Record<Tone, string> = {
   info: "border-accent/20 bg-accent-soft text-accent",
-  error: "border-danger/25 bg-[#FDF2F1] text-danger",
-  success: "border-success/25 bg-[#EEF6F1] text-success",
+  error: "border-danger/30 bg-[#241210] text-danger",
+  success: "border-success/25 bg-[#0F2017] text-success",
 };
 
 export function Alert({ tone = "info", title, children, className }: { tone?: Tone; title?: string; children?: ReactNode; className?: string }) {

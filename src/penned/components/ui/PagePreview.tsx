@@ -33,7 +33,7 @@ export function PagePreview({ text, layout, paper = "ruled-notebook", className,
   return (
     <figure className={cn("w-full", className)}>
       <div
-        className="relative w-full overflow-hidden rounded-[4px] border border-line bg-white shadow-[0_1px_2px_rgba(17,17,17,0.04)] [container-type:inline-size]"
+        className="relative w-full overflow-hidden rounded-[4px] border border-line bg-sheet shadow-[0_1px_2px_rgba(17,17,17,0.04)] [container-type:inline-size]"
         style={{ aspectRatio: `${size.widthMm} / ${size.heightMm}` }}
         aria-label={`Preview of a ${size.label} page in ${layout.ink} ink`}
         role="img"
@@ -64,7 +64,7 @@ export function PagePreview({ text, layout, paper = "ruled-notebook", className,
           }}
         >
           {blocks.length === 0 ? (
-            <p className="text-ink/30">Your text will appear here.</p>
+            <p className="text-sheet-ink/30">Your text will appear here.</p>
           ) : (
             blocks.map((line, i) => {
               const isHeading = line.startsWith("# ");

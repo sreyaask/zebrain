@@ -22,7 +22,7 @@ export default function AdminLogin() {
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-5">
-      <p className="font-serif text-2xl">Penned</p>
+      <p className="font-display text-2xl font-light tracking-[0.12em] text-accent">penned<span className="text-ink">.</span></p>
       <h1 className="mt-6 text-xl font-semibold">Admin sign in</h1>
       <form onSubmit={submit} noValidate className="mt-6 space-y-4">
         <Input label="Email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />

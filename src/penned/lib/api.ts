@@ -244,6 +244,30 @@ export async function uploadStyle(file: File, name: string, ink: "blue" | "black
 
 // ---------- Early list ----------
 
+export interface BusinessEnquiry {
+  segment: string;
+  organisation: string;
+  name: string;
+  email: string;
+  phone?: string;
+  quantity?: number;
+  message?: string;
+}
+
+/** A sample or quote request from the "For business" page. Admins read these in the business_enquiries table. */
+export async function sendBusinessEnquiry(e: BusinessEnquiry) {
+  const { error } = await supabase().from("business_enquiries").insert({
+    segment: e.segment,
+    organisation: e.organisation.trim().slice(0, 160),
+    name: e.name.trim().slice(0, 120),
+    email: e.email.trim().toLowerCase(),
+    phone: e.phone?.trim().slice(0, 30) || null,
+    quantity: e.quantity && e.quantity > 0 ? Math.round(e.quantity) : null,
+    message: e.message?.trim().slice(0, 2000) || null,
+  });
+  if (error) throw new Error(error.message);
+}
+
 export async function joinEarlyList(email: string, area: string) {
   const { error } = await supabase().from("early_list").insert({ email: email.trim().toLowerCase(), area: area || null });
   // Already on the list counts as success.

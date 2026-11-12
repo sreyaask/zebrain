@@ -19,7 +19,7 @@ export function RadioCard({ name, value, checked, onChange, title, description, 
       className={cn(
         "relative flex cursor-pointer gap-3 rounded-xl border bg-surface p-4 transition-colors",
         "focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2 focus-within:ring-offset-paper",
-        checked ? "border-accent shadow-[0_0_0_1px_#1E3A8A]" : "border-line hover:border-ink/25",
+        checked ? "border-accent shadow-[0_0_0_1px_#C88660]" : "border-line hover:border-ink/25",
         disabled && "cursor-not-allowed opacity-50",
         className,
       )}

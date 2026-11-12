@@ -12,8 +12,8 @@ const base =
   "disabled:cursor-not-allowed disabled:opacity-50";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-accent text-white hover:bg-[#182f72] active:bg-[#14285f]",
-  secondary: "border border-line bg-surface text-ink hover:border-ink/30 hover:bg-white",
+  primary: "bg-accent-deep text-white hover:bg-[#9A5C3A] active:bg-[#7A4629]",
+  secondary: "border border-line bg-surface text-ink hover:border-ink/30 hover:bg-[#1A1A1A]",
   ghost: "text-ink hover:bg-ink/5",
 };
 
